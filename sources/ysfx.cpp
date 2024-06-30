@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Modifications by Joep Vanlier, 2024
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 
 #include "ysfx.hpp"
 #include "ysfx_config.hpp"
 #include "ysfx_eel_utils.hpp"
+#include "ysfx_api_eel.hpp"
 #include <type_traits>
 #include <algorithm>
 #include <functional>
@@ -217,9 +221,16 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
             return false;
         }
 
-        ysfx::stdio_text_reader reader(stream.get());
+        ysfx::stdio_text_reader raw_reader(stream.get());
 
         ysfx_parse_error error;
+        std::string preprocessed;
+        if (!ysfx_preprocess(raw_reader, &error, preprocessed)) {
+            ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
+            return false;
+        }
+        ysfx::string_text_reader reader = ysfx::string_text_reader(preprocessed.c_str());
+
         if (!ysfx_parse_toplevel(reader, main->toplevel, &error)) {
             ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
             return false;
@@ -304,11 +315,19 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
             if (!seen.insert(imported_uid).second)
                 return true;
 
-            // parse it
             ysfx_source_unit_u unit{new ysfx_source_unit_t};
-            ysfx::stdio_text_reader reader(stream.get());
+            ysfx::stdio_text_reader raw_reader(stream.get());
 
+            // run the preprocessor first
             ysfx_parse_error error;
+            std::string preprocessed;
+            if (!ysfx_preprocess(raw_reader, &error, preprocessed)) {
+                ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(imported_path.c_str()).c_str(), error.line + 1, error.message.c_str());
+                return false;
+            }
+            ysfx::string_text_reader reader = ysfx::string_text_reader(preprocessed.c_str());
+
+            // then parse it
             if (!ysfx_parse_toplevel(reader, unit->toplevel, &error)) {
                 ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(imported_path.c_str()).c_str(), error.line + 1, error.message.c_str());
                 return false;
