@@ -68,12 +68,6 @@ FILE *g_eel_dump_fp, *g_eel_dump_fp2;
   #define COMPUTABLE_EXTRA_SPACE 16 // safety buffer, if EEL_VALIDATE_WORKTABLE_USE set, used for magic-value-checking
 #endif
 
-#ifdef NSEEL_ATOF
-  double NSEEL_ATOF(const char *);
-#else
-  #define NSEEL_ATOF atof
-#endif
-
 
 /*
   P1 is rightmost parameter
@@ -113,7 +107,7 @@ FILE *g_eel_dump_fp, *g_eel_dump_fp2;
 
 #include "glue_ppc.h"
 
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
 
 #include "glue_aarch64.h"
 
@@ -623,6 +617,8 @@ static functionType fnTable1[] = {
   {"__memtop",_asm_generic1parm,1,{&__NSEEL_RAM_MemTop},NSEEL_PProc_RAM},
   {"mem_set_values",_asm_generic2parm_retd,2|BIF_TAKES_VARPARM|BIF_RETURNSONSTACK,{&__NSEEL_RAM_Mem_SetValues},NSEEL_PProc_RAM},
   {"mem_get_values",_asm_generic2parm_retd,2|BIF_TAKES_VARPARM|BIF_RETURNSONSTACK,{&__NSEEL_RAM_Mem_GetValues},NSEEL_PProc_RAM},
+  {"mem_multiply_sum",_asm_generic3parm_retd, 3|BIF_RETURNSONSTACK,{&__NSEEL_RAM_MemSumProducts},NSEEL_PProc_RAM},
+  {"mem_insert_shuffle",_asm_generic3parm_retd, 3|BIF_RETURNSONSTACK, {&__NSEEL_RAM_MemInsertShuffle},NSEEL_PProc_RAM},
 
   {"stack_push",nseel_asm_stack_push,1|BIF_FPSTACKUSE(0),{0,},NSEEL_PProc_Stack},
   {"stack_pop",nseel_asm_stack_pop,  1|BIF_FPSTACKUSE(1),{0,},NSEEL_PProc_Stack},
@@ -740,6 +736,8 @@ void NSEEL_addfunc_ret_type(const char *name, int np, int ret_type,  NSEEL_PPPRO
     stub = (ret_type == 1 ? (char*)_asm_generic##np##parm_retd : (char*)_asm_generic##np##parm); \
   }
 
+  WDL_ASSERT(np >= 1 && np <= 3); // use np=1 if you want "zero" parameters
+
   if (np == 1) DOSTUB(1)
   else if (np == 2) DOSTUB(2)
   else if (np == 3) DOSTUB(3)
@@ -851,7 +849,22 @@ static void *__newBlock_align(llBlock **start, int size, int align, int is_for_c
     const int code_page_size = eel_get_page_size();
     alloc_amt = (sizeof(*llb) + size + code_page_size - 1) & ~(code_page_size-1);
     #ifdef _WIN32
-      llb = (llBlock *)VirtualAlloc(NULL,alloc_amt,MEM_COMMIT,PAGE_READWRITE);
+      #ifdef _M_ARM64EC
+      {
+        MEM_EXTENDED_PARAMETER ext;
+        memset(&ext,0,sizeof(ext));
+        ext.Type = MemExtendedParameterAttributeFlags;
+        ext.ULong64 = MEM_EXTENDED_PARAMETER_EC_CODE;
+        llb = (llBlock *)VirtualAlloc2(NULL,NULL,alloc_amt,MEM_COMMIT,PAGE_EXECUTE_READ,&ext,1);
+        if (WDL_NORMALLY(llb))
+        {
+          DWORD ov;
+          VirtualProtect(llb, alloc_amt, PAGE_READWRITE, &ov);
+        }
+      }
+      #else
+        llb = (llBlock *)VirtualAlloc(NULL,alloc_amt,MEM_COMMIT,PAGE_READWRITE);
+      #endif
       if (llb == NULL) return NULL;
     #else
       #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
@@ -1852,7 +1865,7 @@ static void *nseel_getEELFunctionAddress(compileContext *ctx,
       fn->canHaveDenormalOutput=0;
 
       sz = compileOpcodes(ctx,fn->opcodes,NULL,128*1024*1024,&fn->tmpspace_req,
-          wantCodeGenerated ? &local_namespace : NULL,RETURNVALUE_NORMAL|RETURNVALUE_FPSTACK,
+          wantCodeGenerated ? &local_namespace : NULL,RETURNVALUE_FPSTACK,
           &fn->rvMode,&fn->fpStackUsage,&fn->canHaveDenormalOutput);
       if (sz<0) return NULL;
 
@@ -1889,7 +1902,7 @@ static void *nseel_getEELFunctionAddress(compileContext *ctx,
       {
         fn->canHaveDenormalOutput=0;
         if (fn->isCommonFunction) ctx->isGeneratingCommonFunction++;
-        sz=compileOpcodes(ctx,fn->opcodes,(unsigned char*)p,sz,&fn->tmpspace_req,&local_namespace,RETURNVALUE_NORMAL|RETURNVALUE_FPSTACK,&fn->rvMode,&fn->fpStackUsage,&fn->canHaveDenormalOutput);
+        sz=compileOpcodes(ctx,fn->opcodes,(unsigned char*)p,sz,&fn->tmpspace_req,&local_namespace,RETURNVALUE_FPSTACK,&fn->rvMode,&fn->fpStackUsage,&fn->canHaveDenormalOutput);
         if (fn->isCommonFunction) ctx->isGeneratingCommonFunction--;
         // recompile function with native context pointers
         if (sz>0)
@@ -1906,7 +1919,7 @@ static void *nseel_getEELFunctionAddress(compileContext *ctx,
       fn->fpStackUsage=0;
       fn->canHaveDenormalOutput=0;
       if (fn->isCommonFunction) ctx->isGeneratingCommonFunction++;
-      codeCall=compileCodeBlockWithRet(ctx,fn->opcodes,&fn->tmpspace_req,&local_namespace,RETURNVALUE_NORMAL|RETURNVALUE_FPSTACK,&fn->rvMode,&fn->fpStackUsage,&fn->canHaveDenormalOutput);
+      codeCall=compileCodeBlockWithRet(ctx,fn->opcodes,&fn->tmpspace_req,&local_namespace,RETURNVALUE_FPSTACK,&fn->rvMode,&fn->fpStackUsage,&fn->canHaveDenormalOutput);
       if (fn->isCommonFunction) ctx->isGeneratingCommonFunction--;
       if (codeCall)
       {
@@ -2073,13 +2086,18 @@ start_over: // when an opcode changed substantially in optimization, goto here t
           {
             case FN_MOD:
               {
-                int a = (int) op->parms.parms[1]->parms.dv.directValue;
+                EEL_F ret = 0.0;
+                int a = (int) fabs(op->parms.parms[1]->parms.dv.directValue);
                 if (a) 
                 {
-                  a = (int) op->parms.parms[0]->parms.dv.directValue % a;
-                  if (a<0) a=-a;
+#ifdef GLUE_MOD_IS_64
+                  ret = ((WDL_INT64) fabs(op->parms.parms[0]->parms.dv.directValue)) % a;
+#else
+                  ret = ((int) fabs(op->parms.parms[0]->parms.dv.directValue)) % a;
+#endif
+                  if (WDL_NOT_NORMALLY(ret<0)) ret = -ret;
                 }
-                RESTART_DIRECTVALUE((EEL_F)a);
+                RESTART_DIRECTVALUE(ret);
               }
             break;
             case FN_SHL:      RESTART_DIRECTVALUE(((int)op->parms.parms[0]->parms.dv.directValue) << ((int)op->parms.parms[1]->parms.dv.directValue));
@@ -2137,7 +2155,7 @@ start_over: // when an opcode changed substantially in optimization, goto here t
                 }
                 break;
               }
-              // fall through, if dv1 we can remove +0.0
+              WDL_FALLTHROUGH; // fall through, if dv1 we can remove +0.0
 
             case FN_ADD:
               if (dvalue == 0.0) 
@@ -2150,7 +2168,7 @@ start_over: // when an opcode changed substantially in optimization, goto here t
               if ((WDL_INT64)dvalue) break;
               dvalue = 0.0; // treat x&0 as x*0, which optimizes to 0
             
-              // fall through
+              WDL_FALLTHROUGH; // fall through
             case FN_MULTIPLY:
               if (dvalue == 0.0) // remove multiply by 0.0 (using 0.0 direct value as replacement), unless the nonzero side did something
               {
@@ -2434,7 +2452,7 @@ start_over: // when an opcode changed substantially in optimization, goto here t
               {
                 case OPCODETYPE_VALUE_FROM_NAMESPACENAME:
                   if (first_parm->namespaceidx != second_parm->namespaceidx) break;
-                  // fall through
+                  WDL_FALLTHROUGH; // fall through
                 case OPCODETYPE_VARPTR:
                   if (first_parm->relname && second_parm->relname && !stricmp(second_parm->relname,first_parm->relname)) second_parm=NULL;
                 break;
@@ -2806,7 +2824,7 @@ static int compileNativeFunctionCall(compileContext *ctx, opcodeRec *op, unsigne
     const int max_params=16384; // arm uses up to two instructions, should be good for at leaast 64k (16384*4)
 #elif defined(__ppc__)
     const int max_params=4096; // 32kb max offset addressing for stack, so 4096*4 = 16384, should be safe
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
     const int max_params=32768; 
 #else
     const int max_params=32768; // sanity check, the stack is free to grow on x86/x86-64
@@ -3820,21 +3838,19 @@ static int compileOpcodesInternal(compileContext *ctx, opcodeRec *op, unsigned c
 
     {
       int sz2, fUse2=0;
-      unsigned char *destbuf;
       const int testsz=op->fntype == FN_LOGICAL_OR ? sizeof(GLUE_JMP_IF_P1_NZ) : sizeof(GLUE_JMP_IF_P1_Z);
       if (bufOut_len < parm_size+testsz) RET_MINUS1_FAIL_FALLBACK("band/bor size fail",doNonInlinedAndOr_)
 
-      if (bufOut)  memcpy(bufOut+parm_size,op->fntype == FN_LOGICAL_OR ? GLUE_JMP_IF_P1_NZ : GLUE_JMP_IF_P1_Z,testsz); 
+      if (bufOut) memcpy(bufOut+parm_size,op->fntype == FN_LOGICAL_OR ? GLUE_JMP_IF_P1_NZ : GLUE_JMP_IF_P1_Z,testsz); 
       parm_size += testsz;
-      destbuf = bufOut + parm_size;
 
-      sz2= compileOpcodes(ctx,op->parms.parms[1],bufOut?bufOut+parm_size:NULL,bufOut_len-parm_size, computTableSize, namespacePathToThis, retType, NULL,&fUse2, NULL);
+      sz2 = compileOpcodes(ctx,op->parms.parms[1],bufOut?bufOut+parm_size:NULL,bufOut_len-parm_size, computTableSize, namespacePathToThis, retType, NULL,&fUse2, NULL);
 
       CHECK_SIZE_FORJMP(sz2,doNonInlinedAndOr_)
       if (sz2<0) RET_MINUS1_FAIL("band/bor coc fail")
 
+      if (bufOut) GLUE_JMP_SET_OFFSET(bufOut + parm_size, sz2);
       parm_size+=sz2;
-      if (bufOut) GLUE_JMP_SET_OFFSET(destbuf, (bufOut + parm_size) - destbuf);
 
       if (fUse2 > *fpStackUse) *fpStackUse=fUse2;
       return rv_offset + parm_size;
@@ -4165,7 +4181,7 @@ doNonInlineIf_:
           }
 #endif
         }
-        // fall through
+        WDL_FALLTHROUGH; // fall through
     case OPCODETYPE_DIRECTVALUE_TEMPSTRING:
     case OPCODETYPE_VALUE_FROM_NAMESPACENAME:
     case OPCODETYPE_VARPTR:
@@ -5289,6 +5305,25 @@ int NSEEL_VM_setramsize(NSEEL_VMCTX _ctx, int maxent)
   return ctx->ram_state->maxblocks * NSEEL_RAM_ITEMSPERBLOCK;
 }
 
+void NSEEL_VM_preallocram(NSEEL_VMCTX _ctx, int maxent)
+{
+  compileContext *ctx = (compileContext *)_ctx;
+  int x;
+  if (!ctx || !maxent) return;
+
+  if (maxent < 0)
+  {
+    maxent = ctx->ram_state->maxblocks;
+  }
+  else
+  {
+    maxent = (maxent + NSEEL_RAM_ITEMSPERBLOCK - 1)/NSEEL_RAM_ITEMSPERBLOCK;
+    if (maxent > ctx->ram_state->maxblocks) maxent = ctx->ram_state->maxblocks;
+  }
+  for (x = 0; x < maxent; x ++)
+    __NSEEL_RAMAlloc(ctx->ram_state->blocks,x * NSEEL_RAM_ITEMSPERBLOCK);
+}
+
 void NSEEL_VM_SetFunctionValidator(NSEEL_VMCTX _ctx, const char * (*validateFunc)(const char *fn_name, void *user), void *user)
 {
   if (_ctx)
@@ -5763,7 +5798,7 @@ opcodeRec *nseel_translate(compileContext *ctx, const char *tmp, size_t tmplen) 
       return nseel_createCompiledValue(ctx,ctx->onNamedString(ctx->caller_this,buf+1));
     }
   }
-  return nseel_createCompiledValue(ctx,(EEL_F)NSEEL_ATOF(tmp));
+  return nseel_createCompiledValue(ctx,(EEL_F)atof(tmp));
 }
 
 void NSEEL_VM_set_var_resolver(NSEEL_VMCTX _ctx, EEL_F *(*res)(void *userctx, const char *name), void *userctx)

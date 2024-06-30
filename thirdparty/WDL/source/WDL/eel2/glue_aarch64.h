@@ -1,6 +1,8 @@
 #ifndef _NSEEL_GLUE_AARCH64_H_
 #define _NSEEL_GLUE_AARCH64_H_
 
+#define GLUE_MOD_IS_64
+
 // x0=return value, first parm, x1-x2 parms (x3-x7 more params)
 // x8 return struct?
 // x9-x15 temporary
@@ -213,29 +215,27 @@ static int GLUE_COPY_VALUE_AT_P1_TO_PTR(unsigned char *buf, void *destptr)
 }
 
 
-#ifndef _MSC_VER
 #define GLUE_CALL_CODE(bp, cp, rt) do { \
-  unsigned long f; \
+  GLUE_SCR_TYPE f; \
+  static const double consttab[] = {  \
+    NSEEL_CLOSEFACTOR, \
+    0.0, \
+    1.0, \
+    -1.0, \
+    -0.5, /* for invsqrt */ \
+    1.5, \
+  }; \
   if (!(h->compile_flags&NSEEL_CODE_COMPILE_FLAG_NOFPSTATE) && \
       !((f=glue_getscr())&(1<<24))) {  \
     glue_setscr(f|(1<<24)); \
-    eel_callcode64(bp, cp, rt); \
+    eel_callcode64(bp, cp, rt, (void *)consttab); \
     glue_setscr(f); \
-  } else eel_callcode64(bp, cp, rt);\
+  } else eel_callcode64(bp, cp, rt, (void *)consttab);\
   } while(0)
 
-static void eel_callcode64(INT_PTR bp, INT_PTR cp, INT_PTR rt) 
+#ifndef _MSC_VER
+static void eel_callcode64(INT_PTR bp, INT_PTR cp, INT_PTR rt, void *consttab)
 {
- //fwrite((void *)cp,4,20,stdout);
- //return;
-  static const double consttab[] = { 
-    NSEEL_CLOSEFACTOR, 
-    0.0,
-    1.0,
-    -1.0,
-    -0.5, // for invsqrt
-    1.5,
-  };
   __asm__(
           "mov x1, %2\n"
           "mov x2, %3\n"
@@ -259,11 +259,14 @@ static void eel_callcode64(INT_PTR bp, INT_PTR cp, INT_PTR rt)
 							    "v8","v9","v10","v11","v12","v13","v14","v15");
              
 };
+#else
+void eel_callcode64(INT_PTR bp, INT_PTR cp, INT_PTR rt, void *consttab);
 #endif
 
 static unsigned char *EEL_GLUE_set_immediate(void *_p, INT_PTR newv)
 {
   unsigned int *p=(unsigned int *)_p;
+  WDL_ASSERT(!(newv>>48));
 //    0xd2800000, // mov x0, #0000  (val<<5) | reg
  //   0xf2a00000, // movk x0, #0000, lsl 16 (val<<5) | reg
   //  0xf2c00000, // movk x0, #0000, lsl 32 (val<<5) | reg
@@ -336,7 +339,15 @@ static void *GLUE_realAddress(void *fn, int *size)
 
     fn = (int*)fn + offset;
   }
-  static const unsigned int sig[3] = { 0xaa0003e0, 0xaa0103e1, 0xaa0203e2 };
+  static const unsigned int sig[] = {
+#ifndef _MSC_VER
+    0xaa0003e0,
+#endif
+    0xaa0103e1,
+#ifndef _MSC_VER
+    0xaa0203e2
+#endif
+  };
   unsigned char *p = (unsigned char *)fn;
 
   while (memcmp(p,sig,sizeof(sig))) p+=4;
@@ -349,6 +360,9 @@ static void *GLUE_realAddress(void *fn, int *size)
 }
 
 
+
+#ifndef _MSC_VER
+#define GLUE_SCR_TYPE unsigned long
 static unsigned long __attribute__((unused)) glue_getscr()
 {
   unsigned long rv;
@@ -359,16 +373,21 @@ static void  __attribute__((unused)) glue_setscr(unsigned long v)
 {
   asm volatile ( "msr fpcr, %0" :: "r"(v));
 }
+#else
+#define GLUE_SCR_TYPE unsigned long long
+GLUE_SCR_TYPE glue_getscr();
+void glue_setscr(unsigned long long);
+#endif
 
 void eel_enterfp(int _s[2]) 
 {
-  unsigned long *s = (unsigned long*)_s;
+  GLUE_SCR_TYPE *s = (GLUE_SCR_TYPE*)_s;
   s[0] = glue_getscr();
   glue_setscr(s[0] | (1<<24));
 }
 void eel_leavefp(int _s[2]) 
 {
-  unsigned long *s = (unsigned long*)_s;
+  const GLUE_SCR_TYPE *s = (GLUE_SCR_TYPE*)_s;
   glue_setscr(s[0]);
 }
 
@@ -394,6 +413,36 @@ static int GLUE_FUSE(compileContext *ctx, unsigned char *code, int left_size, in
   }
   return 0;
 }
+
+#ifdef _M_ARM64EC
+#define DEF_F1(n) static double eel_##n(double a) { return n(a); }
+#define DEF_F2(n) static double eel_##n(double a, double b) { return n(a,b); }
+DEF_F1(cos)
+#define cos eel_cos
+DEF_F1(sin)
+#define sin eel_sin
+DEF_F1(tan)
+#define tan eel_tan
+DEF_F1(log)
+#define log eel_log
+DEF_F1(log10)
+#define log10 eel_log10
+DEF_F1(acos)
+#define acos eel_acos
+DEF_F1(asin)
+#define asin eel_asin
+DEF_F1(atan)
+#define atan eel_atan
+DEF_F1(exp)
+#define exp eel_exp
+DEF_F2(pow)
+#define pow eel_pow
+DEF_F2(atan2)
+#define atan2 eel_atan2
+// ceil and floor will be wrapped by defs in nseel-compiler.c
+
+#pragma comment(lib,"onecore.lib")
+#endif
 
 
 #endif

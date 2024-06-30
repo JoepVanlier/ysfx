@@ -4,8 +4,7 @@
 
 #if EEL_F_SIZE == 8
 
-__attribute__((naked, target("arm")))
-void nseel_asm_1pdd(void)
+__attribute__((naked)) void nseel_asm_1pdd(void)
 {
 
   __asm__ __volatile__( 
@@ -19,8 +18,7 @@ void nseel_asm_1pdd(void)
    :: );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_2pdd(void)
+__attribute__((naked)) void nseel_asm_2pdd(void)
 {
 
   __asm__ __volatile__( 
@@ -37,8 +35,7 @@ void nseel_asm_2pdd(void)
    :: );
 };
 
-__attribute__((naked, target("arm")))
-void nseel_asm_2pdds(void)
+__attribute__((naked)) void nseel_asm_2pdds(void)
 {
   __asm__ __volatile__( 
     FUNCTION_MARKER
@@ -63,8 +60,7 @@ void nseel_asm_2pdds(void)
 //---------------------------------------------------------------------------------------------------------------
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_invsqrt(void)
+__attribute__((naked)) void nseel_asm_invsqrt(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -90,8 +86,7 @@ void nseel_asm_invsqrt(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_dbg_getstackptr(void)
+__attribute__((naked)) void nseel_asm_dbg_getstackptr(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -103,8 +98,7 @@ void nseel_asm_dbg_getstackptr(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_sqr(void)
+__attribute__((naked)) void nseel_asm_sqr(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -115,8 +109,7 @@ void nseel_asm_sqr(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_abs(void)
+__attribute__((naked)) void nseel_asm_abs(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -139,8 +132,7 @@ void nseel_asm_abs(void)
    "0:\n"
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_assign(void)
+__attribute__((naked)) void nseel_asm_assign(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -154,8 +146,7 @@ void nseel_asm_assign(void)
 }
 //
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_assign_fromfp(void)
+__attribute__((naked)) void nseel_asm_assign_fromfp(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -167,8 +158,7 @@ void nseel_asm_assign_fromfp(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_assign_fast(void)
+__attribute__((naked)) void nseel_asm_assign_fast(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -180,8 +170,7 @@ void nseel_asm_assign_fast(void)
 }
 //
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_assign_fast_fromfp(void)
+__attribute__((naked)) void nseel_asm_assign_fast_fromfp(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -194,8 +183,7 @@ void nseel_asm_assign_fast_fromfp(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_add(void)
+__attribute__((naked)) void nseel_asm_add(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -204,8 +192,7 @@ void nseel_asm_add(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_add_op(void)
+__attribute__((naked)) void nseel_asm_add_op(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -218,8 +205,7 @@ void nseel_asm_add_op(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_add_op_fast(void)
+__attribute__((naked)) void nseel_asm_add_op_fast(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -233,8 +219,7 @@ void nseel_asm_add_op_fast(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_sub(void)
+__attribute__((naked)) void nseel_asm_sub(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -243,8 +228,7 @@ void nseel_asm_sub(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_sub_op(void)
+__attribute__((naked)) void nseel_asm_sub_op(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -257,8 +241,7 @@ void nseel_asm_sub_op(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_sub_op_fast(void)
+__attribute__((naked)) void nseel_asm_sub_op_fast(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -271,8 +254,7 @@ void nseel_asm_sub_op_fast(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_mul(void)
+__attribute__((naked)) void nseel_asm_mul(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -281,8 +263,7 @@ void nseel_asm_mul(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_mul_op(void)
+__attribute__((naked)) void nseel_asm_mul_op(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -295,8 +276,7 @@ void nseel_asm_mul_op(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_mul_op_fast(void)
+__attribute__((naked)) void nseel_asm_mul_op_fast(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -309,8 +289,7 @@ void nseel_asm_mul_op_fast(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_div(void)
+__attribute__((naked)) void nseel_asm_div(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -319,8 +298,7 @@ void nseel_asm_div(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_div_op(void)
+__attribute__((naked)) void nseel_asm_div_op(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -333,8 +311,7 @@ void nseel_asm_div_op(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_div_op_fast(void)
+__attribute__((naked)) void nseel_asm_div_op_fast(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -347,8 +324,7 @@ void nseel_asm_div_op_fast(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_mod(void)
+__attribute__((naked)) void nseel_asm_mod(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -371,8 +347,7 @@ void nseel_asm_mod(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_shl(void)
+__attribute__((naked)) void nseel_asm_shl(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -387,8 +362,7 @@ void nseel_asm_shl(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_shr(void)
+__attribute__((naked)) void nseel_asm_shr(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -403,8 +377,7 @@ void nseel_asm_shr(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_mod_op(void)
+__attribute__((naked)) void nseel_asm_mod_op(void)
 {
 
   __asm__ __volatile__(
@@ -434,8 +407,7 @@ void nseel_asm_mod_op(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_or(void)
+__attribute__((naked)) void nseel_asm_or(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -450,8 +422,7 @@ void nseel_asm_or(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_or0(void)
+__attribute__((naked)) void nseel_asm_or0(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -461,8 +432,7 @@ void nseel_asm_or0(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_or_op(void)
+__attribute__((naked)) void nseel_asm_or_op(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -481,8 +451,7 @@ void nseel_asm_or_op(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_xor(void)
+__attribute__((naked)) void nseel_asm_xor(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -497,8 +466,7 @@ void nseel_asm_xor(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_xor_op(void)
+__attribute__((naked)) void nseel_asm_xor_op(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -517,8 +485,7 @@ void nseel_asm_xor_op(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_and(void)
+__attribute__((naked)) void nseel_asm_and(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -532,8 +499,7 @@ void nseel_asm_and(void)
     FUNCTION_MARKER
   );}
 
-__attribute__((naked, target("arm")))
-void nseel_asm_and_op(void)
+__attribute__((naked)) void nseel_asm_and_op(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -553,8 +519,7 @@ void nseel_asm_and_op(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_uminus(void)
+__attribute__((naked)) void nseel_asm_uminus(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -565,8 +530,7 @@ void nseel_asm_uminus(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_sign(void)
+__attribute__((naked)) void nseel_asm_sign(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -582,8 +546,7 @@ void nseel_asm_sign(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_bnot(void)
+__attribute__((naked)) void nseel_asm_bnot(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -595,8 +558,7 @@ void nseel_asm_bnot(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_if(void)
+__attribute__((naked)) void nseel_asm_if(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -614,8 +576,7 @@ void nseel_asm_if(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_repeat(void)
+__attribute__((naked)) void nseel_asm_repeat(void)
 {
 #if NSEEL_LOOPFUNC_SUPPORT_MAXLEN > 0
   __asm__ __volatile__(
@@ -672,8 +633,7 @@ void nseel_asm_repeat(void)
 #endif
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_repeatwhile(void)
+__attribute__((naked)) void nseel_asm_repeatwhile(void)
 {
 #if NSEEL_LOOPFUNC_SUPPORT_MAXLEN > 0
   __asm__ __volatile__(
@@ -720,8 +680,7 @@ void nseel_asm_repeatwhile(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_band(void)
+__attribute__((naked)) void nseel_asm_band(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -737,8 +696,7 @@ void nseel_asm_band(void)
   :: );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_bor(void)
+__attribute__((naked)) void nseel_asm_bor(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -755,8 +713,7 @@ void nseel_asm_bor(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_equal(void)
+__attribute__((naked)) void nseel_asm_equal(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -772,8 +729,7 @@ void nseel_asm_equal(void)
   );
 }
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_equal_exact(void)
+__attribute__((naked)) void nseel_asm_equal_exact(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -787,8 +743,7 @@ void nseel_asm_equal_exact(void)
 }
 //
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_notequal_exact(void)
+__attribute__((naked)) void nseel_asm_notequal_exact(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -804,8 +759,7 @@ void nseel_asm_notequal_exact(void)
 //
 //
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_notequal(void)
+__attribute__((naked)) void nseel_asm_notequal(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -823,8 +777,7 @@ void nseel_asm_notequal(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_below(void)
+__attribute__((naked)) void nseel_asm_below(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -838,8 +791,7 @@ void nseel_asm_below(void)
 }
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_beloweq(void)
+__attribute__((naked)) void nseel_asm_beloweq(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -854,8 +806,7 @@ void nseel_asm_beloweq(void)
 
 
 //---------------------------------------------------------------------------------------------------------------
-__attribute__((naked, target("arm")))
-void nseel_asm_above(void)
+__attribute__((naked)) void nseel_asm_above(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -868,8 +819,7 @@ void nseel_asm_above(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_aboveeq(void)
+__attribute__((naked)) void nseel_asm_aboveeq(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -884,8 +834,7 @@ void nseel_asm_aboveeq(void)
 
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_min(void)
+__attribute__((naked)) void nseel_asm_min(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -898,8 +847,7 @@ void nseel_asm_min(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_max(void)
+__attribute__((naked)) void nseel_asm_max(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -914,8 +862,7 @@ void nseel_asm_max(void)
 
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_min_fp(void)
+__attribute__((naked)) void nseel_asm_min_fp(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -926,8 +873,7 @@ void nseel_asm_min_fp(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_max_fp(void)
+__attribute__((naked)) void nseel_asm_max_fp(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -944,8 +890,7 @@ void nseel_asm_max_fp(void)
 
 
 
-__attribute__((naked, target("arm")))
-void _asm_generic3parm(void)
+__attribute__((naked)) void _asm_generic3parm(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -970,8 +915,7 @@ void _asm_generic3parm(void)
  ); 
 }
 
-__attribute__((naked, target("arm")))
-void _asm_generic3parm_retd(void)
+__attribute__((naked)) void _asm_generic3parm_retd(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -997,8 +941,7 @@ void _asm_generic3parm_retd(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void _asm_generic2parm(void)
+__attribute__((naked)) void _asm_generic2parm(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1016,8 +959,7 @@ void _asm_generic2parm(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void _asm_generic2parm_retd(void)
+__attribute__((naked)) void _asm_generic2parm_retd(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1035,8 +977,7 @@ void _asm_generic2parm_retd(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void _asm_generic2xparm_retd(void)
+__attribute__((naked)) void _asm_generic2xparm_retd(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1056,8 +997,7 @@ void _asm_generic2xparm_retd(void)
  );
 }
 
-__attribute__((naked, target("arm")))
-void _asm_generic1parm(void)
+__attribute__((naked)) void _asm_generic1parm(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1076,8 +1016,7 @@ void _asm_generic1parm(void)
 
 
 
-__attribute__((naked, target("arm")))
-void _asm_generic1parm_retd(void)
+__attribute__((naked)) void _asm_generic1parm_retd(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1097,8 +1036,7 @@ void _asm_generic1parm_retd(void)
 
 
 
-__attribute__((naked, target("arm")))
-void _asm_megabuf(void)
+__attribute__((naked)) void _asm_megabuf(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1142,8 +1080,7 @@ void _asm_megabuf(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void _asm_gmegabuf(void)
+__attribute__((naked)) void _asm_gmegabuf(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1170,8 +1107,7 @@ void _asm_gmegabuf(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_fcall(void)
+__attribute__((naked)) void nseel_asm_fcall(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1186,8 +1122,7 @@ void nseel_asm_fcall(void)
 
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_stack_push(void)
+__attribute__((naked)) void nseel_asm_stack_push(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1213,8 +1148,7 @@ void nseel_asm_stack_push(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_stack_pop(void)
+__attribute__((naked)) void nseel_asm_stack_pop(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1238,8 +1172,7 @@ void nseel_asm_stack_pop(void)
 
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_stack_pop_fast(void)
+__attribute__((naked)) void nseel_asm_stack_pop_fast(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1259,8 +1192,7 @@ void nseel_asm_stack_pop_fast(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_stack_peek(void)
+__attribute__((naked)) void nseel_asm_stack_peek(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1283,8 +1215,7 @@ void nseel_asm_stack_peek(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_stack_peek_top(void)
+__attribute__((naked)) void nseel_asm_stack_peek_top(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1296,8 +1227,7 @@ void nseel_asm_stack_peek_top(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_stack_peek_int(void)
+__attribute__((naked)) void nseel_asm_stack_peek_int(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1319,8 +1249,7 @@ void nseel_asm_stack_peek_int(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_stack_exch(void)
+__attribute__((naked)) void nseel_asm_stack_exch(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1336,8 +1265,7 @@ void nseel_asm_stack_exch(void)
 }
 
 
-__attribute__((naked, target("arm")))
-void nseel_asm_booltofp(void)
+__attribute__((naked)) void nseel_asm_booltofp(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1348,8 +1276,7 @@ void nseel_asm_booltofp(void)
   );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_fptobool(void)
+__attribute__((naked)) void nseel_asm_fptobool(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER
@@ -1364,8 +1291,7 @@ void nseel_asm_fptobool(void)
           );
 }
 
-__attribute__((naked, target("arm")))
-void nseel_asm_fptobool_rev(void)
+__attribute__((naked)) void nseel_asm_fptobool_rev(void)
 {
   __asm__ __volatile__(
     FUNCTION_MARKER

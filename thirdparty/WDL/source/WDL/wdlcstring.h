@@ -31,6 +31,7 @@ C string manipulation utilities -- [v]snprintf for Win32, also snprintf_append, 
 #include <ctype.h>
 
 #include "wdltypes.h"
+#include "utf8_extended.h"
 
 #ifdef _WDL_CSTRING_IMPL_ONLY_
   #ifdef _WDL_CSTRING_IF_ONLY_
@@ -73,6 +74,9 @@ extern "C" {
 #ifndef WDL_STRCMP_LOGICAL_EX_FLAG_OLDSORT
 #define WDL_STRCMP_LOGICAL_EX_FLAG_OLDSORT 1
 #endif
+#ifndef WDL_STRCMP_LOGICAL_EX_FLAG_UTF8CONVERT
+#define WDL_STRCMP_LOGICAL_EX_FLAG_UTF8CONVERT 2
+#endif
 
 #ifdef _WDL_CSTRING_IF_ONLY_
 
@@ -89,6 +93,7 @@ extern "C" {
   size_t WDL_remove_trailing_crlf(char *str); // returns new length
   size_t WDL_remove_trailing_whitespace(char *str); // returns new length, removes crlf space tab
   const char *WDL_sanitize_ini_key_start(const char *p); // used for sanitizing the start of the "key" parameter to Write/GetPrivateProfile*. note does not fully santiize
+  char *WDL_sanitize_ini_key_full(const char *p, char *buf, int bufsz, int extra_filters); // converts = and leading [ to _. removes leading/trailing whitespace. if extra_filters&1, converts all [] to _.
 
   char *WDL_remove_trailing_decimal_zeros(char *str, unsigned int keep); // returns pointer to decimal point or end of string. removes final zeros after final decimal point only, keep=0 makes min length X, keep=1 X., keep=2 X.0, keep=3 X.00 etc, and also treats commas as decimal points
 
@@ -265,6 +270,21 @@ extern "C" {
     return p;
   }
 
+  _WDL_CSTRING_PREFIX char *WDL_sanitize_ini_key_full(const char *p, char *buf, int bufsz, int extra_filters)
+  {
+    // converts = and leading [ to _. removes leading/trailing whitespace. if extra_filters&1, converts all [] to _.
+    char *w=buf;
+    lstrcpyn_safe(buf,WDL_sanitize_ini_key_start(p),bufsz);
+    while (*w)
+    {
+      if (*w == '=' || ((extra_filters&1) && (*w=='[' || *w == ']'))) *w = '_';
+      w++;
+    }
+    while (w > buf && (w[-1] == ' ' || w[-1] == '\t' || w[-1] == '\r' || w[-1] == '\n')) *--w = 0;
+    while (--w >= buf) if (*w == '\r' || *w == '\n' || *w == '\t') *w = '_';
+    return buf;
+  }
+
   _WDL_CSTRING_PREFIX void WDL_VARARG_WARN(printf,3,4) snprintf_append(char *o, INT_PTR count, const char *format, ...)
   {
     if (count>0)
@@ -286,10 +306,61 @@ extern "C" {
     }
   }
 
-  static WDL_STATICFUNC_UNUSED int logical_char_order(int ch, int case_sensitive)
+  static WDL_STATICFUNC_UNUSED int logical_char_order(int ch, int case_sensitive, int flags, const unsigned char **ptr)
   {
     // _-<>etc, numbers, utf-8 chars, alpha chars
-    if (ch<0) return ch + 384; // utf-8 maps to 256..383
+    if (ch<0)
+    {
+      if (!(flags & WDL_STRCMP_LOGICAL_EX_FLAG_UTF8CONVERT)) return ch + 384;
+      for (;;)
+      {
+        int skip;
+        ch = **ptr;
+        skip = WDL_IS_UTF8_SKIPPABLE(ch, (*ptr)[1]);
+        if (!skip) break;
+        *ptr += skip;
+      }
+      if (ch == 0xc3)
+      {
+        const int ccf = (*ptr)[1];
+        const int cc = ccf & ~0x20;
+        if (WDL_IS_UTF8_BYTE2_LATIN1S_A(cc,ccf)) ch = (ccf&0x20) ? 'a' : 'A';
+        else if (WDL_IS_UTF8_BYTE2_LATIN1S_C(cc,ccf)) ch = (ccf&0x20) ? 'c' : 'C';
+        else if (WDL_IS_UTF8_BYTE2_LATIN1S_E(cc,ccf)) ch = (ccf&0x20) ? 'e' : 'E';
+        else if (WDL_IS_UTF8_BYTE2_LATIN1S_I(cc,ccf)) ch = (ccf&0x20) ? 'i' : 'I';
+        else if (WDL_IS_UTF8_BYTE2_LATIN1S_N(cc,ccf)) ch = (ccf&0x20) ? 'n' : 'N';
+        else if (WDL_IS_UTF8_BYTE2_LATIN1S_O(cc,ccf)) ch = (ccf&0x20) ? 'o' : 'O';
+        else if (WDL_IS_UTF8_BYTE2_LATIN1S_U(cc,ccf)) ch = (ccf&0x20) ? 'u' : 'U';
+        else if (WDL_IS_UTF8_BYTE2_LATIN1S_Y(cc,ccf)) ch = (ccf!=0x9d) ? 'y' : 'Y';
+      }
+      else if (ch == 0xc4 || ch == 0xc5)
+      {
+        const int nc = (*ptr)[1];
+        if (WDL_IS_UTF8_EXT1A_A(ch,nc)) ch = (nc&1) ? 'a' : 'A';
+        else if (WDL_IS_UTF8_EXT1A_C(ch,nc)) ch = (nc&1) ? 'c' : 'C';
+        else if (WDL_IS_UTF8_EXT1A_D(ch,nc)) ch = (nc&1) ? 'd' : 'D';
+        else if (WDL_IS_UTF8_EXT1A_E(ch,nc)) ch = (nc&1) ? 'e' : 'E';
+        else if (WDL_IS_UTF8_EXT1A_G(ch,nc)) ch = (nc&1) ? 'g' : 'G';
+        else if (WDL_IS_UTF8_EXT1A_H(ch,nc)) ch = (nc&1) ? 'h' : 'H';
+        else if (WDL_IS_UTF8_EXT1A_I(ch,nc)) ch = (nc&1) ? 'i' : 'I';
+        else if (WDL_IS_UTF8_EXT1A_J(ch,nc)) ch = (nc&1) ? 'j' : 'J';
+        else if (WDL_IS_UTF8_EXT1A_K(ch,nc)) ch = nc != 0xb6 ? 'k' : 'K';
+        else if (WDL_IS_UTF8_EXT1A_L(ch,nc)) ch = (nc&1) ? 'L' : 'l';
+        else if (WDL_IS_UTF8_EXT1A_N(ch,nc)) ch = (nc < 0x89 ? (nc&1) : !(nc&1)) ? 'N' : 'n';
+        else if (WDL_IS_UTF8_EXT1A_O(ch,nc)) ch = (nc&1) ? 'o' : 'O';
+        else if (WDL_IS_UTF8_EXT1A_R(ch,nc)) ch = (nc&1) ? 'r' : 'R';
+        else if (WDL_IS_UTF8_EXT1A_S(ch,nc)) ch = (nc&1) ? 's' : 'S';
+        else if (WDL_IS_UTF8_EXT1A_T(ch,nc)) ch = (nc&1) ? 't' : 'T';
+        else if (WDL_IS_UTF8_EXT1A_U(ch,nc)) ch = (nc&1) ? 'u' : 'U';
+        else if (WDL_IS_UTF8_EXT1A_W(ch,nc)) ch = (nc&1) ? 'w' : 'W';
+        else if (WDL_IS_UTF8_EXT1A_Y(ch,nc)) ch = (nc&1) ? 'y' : 'Y';
+        else if (WDL_IS_UTF8_EXT1A_Z(ch,nc)) ch = (nc&1) ? 'Z' : 'z';
+      }
+      if (ch >= 0x80) return ch + 128; // unknown utf-8 maps to 256..383
+      if (!ch) return 0;
+
+      *ptr += 1;
+    }
     if (ch >= '0' && ch <= '9') return ch + 128; // numbers map to 128+'0' etc
     if (ch >= 'A' && ch <= 'Z') return ch + 384; // alpha goes to 384+'A' or 384+'a' if not ignoring case
     if (ch >= 'a' && ch <= 'z') return case_sensitive ? (ch + 384) : (ch + 'A' - 'a' + 384);
@@ -323,7 +394,7 @@ extern "C" {
       }
       else
       {
-        int c1 = *s1++, c2 = *s2++;
+        int c1 = *s1, c2 = *s2;
         if (c1 != c2)
         {
           if (flags & WDL_STRCMP_LOGICAL_EX_FLAG_OLDSORT)
@@ -336,12 +407,15 @@ extern "C" {
           }
           else
           {
-            c1 = logical_char_order(c1, case_sensitive);
-            c2 = logical_char_order(c2, case_sensitive);
+            c1 = logical_char_order(c1, case_sensitive, flags, (const unsigned char **)&s1);
+            c2 = logical_char_order(c2, case_sensitive, flags, (const unsigned char **)&s2);
+            if (!c1) return c1-c2;
           }
           if (c1 != c2) return c1-c2;
         }
         else if (!c1) return 0;
+        s1++;
+        s2++;
       }
     }
   }
