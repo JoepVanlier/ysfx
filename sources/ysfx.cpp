@@ -883,6 +883,16 @@ const char *ysfx_slider_get_name(ysfx_t *fx, uint32_t index)
     return slider.desc.c_str();
 }
 
+const char *ysfx_slider_get_identifier(ysfx_t *fx, uint32_t index)
+{
+    ysfx_source_unit_t *main = fx->source.main.get();
+    if (index >= ysfx_max_sliders || !main)
+        return "";
+
+    ysfx_slider_t &slider = main->header.sliders[index];
+    return slider.var.c_str();
+}
+
 bool ysfx_slider_get_range(ysfx_t *fx, uint32_t index, ysfx_slider_range_t *range)
 {
     ysfx_source_unit_t *main = fx->source.main.get();
@@ -1638,6 +1648,13 @@ int32_t ysfx_insert_file(ysfx_t *fx, ysfx_file_t *file)
     return (uint32_t)pos;
 }
 
+void restore_slider_defaults(ysfx_t *fx)
+{
+    // restore the sliders
+    for (uint32_t i = 0; i < ysfx_max_sliders; ++i)
+        *fx->var.slider[i] = fx->source.main->header.sliders[i].def;
+}
+
 bool ysfx_load_state(ysfx_t *fx, ysfx_state_t *state)
 {
     if (!fx->code.compiled)
@@ -1737,6 +1754,91 @@ ysfx_state_t *ysfx_save_state(ysfx_t *fx)
 
     //
     return state.release();
+}
+
+ysfx_state_t *ysfx_convert_state(ysfx_t *from_fx, ysfx_t *to_fx, const ysfx_state_t *state)
+{
+    if (!from_fx || !to_fx || !state)
+        return nullptr;
+
+    if (!from_fx->source.main || !to_fx->source.main)
+        return nullptr;
+
+    ysfx_state_u state_out{new ysfx_state_t};
+
+    // Copy serialized state verbatim.
+    state_out->data_size = state->data_size;
+    state_out->data = new uint8_t[state->data_size];
+
+    if (state->data_size)
+        memcpy(state_out->data, state->data, state->data_size);
+
+    // Build the destination slider state.
+    uint32_t slider_count = 0;
+
+    for (uint32_t i = 0; i < ysfx_max_sliders; ++i)
+        slider_count += to_fx->source.main->header.sliders[i].exists;
+
+    state_out->slider_count = slider_count;
+    state_out->sliders = new ysfx_state_slider_t[slider_count]{};
+
+    // Start with destination defaults.
+    for (uint32_t i = 0, j = 0; i < ysfx_max_sliders; ++i) {
+        const ysfx_slider_t &slider = to_fx->source.main->header.sliders[i];
+
+        if (!slider.exists)
+            continue;
+
+        state_out->sliders[j].index = i;
+        state_out->sliders[j].value = slider.def;
+        ++j;
+    }
+
+    // Get a list of destination slider names
+    std::unordered_map<std::string, uint32_t> slider_indices;
+    for (uint32_t i=0; i < ysfx_max_sliders; ++i) {
+        if (ysfx_slider_exists(to_fx, i)) {
+            std::string name = ysfx_slider_get_identifier(to_fx, i);
+            std::transform(name.begin(), name.end(), name.begin(), ysfx::ascii_tolower);
+            slider_indices.emplace(name, i);
+        }
+    }
+
+    // Map source sliders to destination sliders by variable name.
+    // The value itself is copied verbatim.
+    for (uint32_t i = 0; i < state->slider_count; ++i) {
+        const ysfx_state_slider_t &src_state = state->sliders[i];
+
+        if (src_state.index >= ysfx_max_sliders)
+            continue;
+
+        if (!ysfx_slider_exists(from_fx, src_state.index)) continue;
+        
+        std::string name = ysfx_slider_get_identifier(from_fx, src_state.index);
+        std::transform(name.begin(), name.end(), name.begin(), ysfx::ascii_tolower);
+
+        const auto it = slider_indices.find(name);
+        if (it == slider_indices.end())
+            continue;
+
+        // True index of the second slider (e.g. sliderXX). We still need to find where in the
+        // state chunk we would find it normally.
+        const uint32_t dst_index = it->second;
+
+        const ysfx_slider_t &dst_slider =
+            to_fx->source.main->header.sliders[dst_index];
+
+        if (!ysfx_slider_exists(to_fx, dst_index)) continue;  // Slider doesn't exist? Log maybe?
+
+        for (uint32_t j = 0; j < state_out->slider_count; ++j) {
+            if (state_out->sliders[j].index == dst_index) {
+                state_out->sliders[j].value = src_state.value;
+                break;
+            }
+        }
+    }
+
+    return state_out.release();
 }
 
 void ysfx_state_free(ysfx_state_t *state)

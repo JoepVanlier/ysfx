@@ -191,6 +191,8 @@ typedef struct ysfx_slider_curve_s {
 YSFX_API bool ysfx_slider_exists(ysfx_t *fx, uint32_t index);
 // get the name of a slider
 YSFX_API const char *ysfx_slider_get_name(ysfx_t *fx, uint32_t index);
+// get the identifier of a slider
+YSFX_API const char *ysfx_slider_get_identifier(ysfx_t *fx, uint32_t index);
 // get the range of a slider (deprecated: use ysfx_slider_get_curve instead)
 YSFX_API bool ysfx_slider_get_range(ysfx_t *fx, uint32_t index, ysfx_slider_range_t *range);
 // get the curve of a slider
@@ -384,6 +386,10 @@ YSFX_API ysfx_state_t *ysfx_state_dup(ysfx_state_t *state);
 YSFX_API bool ysfx_is_state_equal(ysfx_state_t *state1, ysfx_state_t *state2);
 // load only serialized state
 YSFX_API bool ysfx_load_serialized_state(ysfx_t *fx, ysfx_state_t *state);
+// convert state between fx (NOTE: this function does RAW copies and does not attempt to convert slider mappings)
+YSFX_API ysfx_state_t *ysfx_convert_state(ysfx_t *from_fx, ysfx_t *to_fx, const ysfx_state_t *state);
+// reinitialize sliders to their defaults (note that this is only a partial initialization)
+YSFX_API void restore_slider_defaults(ysfx_t *fx);
 
 typedef struct ysfx_preset_s {
     // name of the preset

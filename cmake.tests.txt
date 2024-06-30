@@ -84,7 +84,8 @@ add_executable(ysfx_tests
     "tests/ysfx_test_c_api.c"
     "tests/ysfx_test_utils.hpp"
     "tests/ysfx_test_utils.cpp"
-    "tests/ysfx_test_main.cpp")
+    "tests/ysfx_test_main.cpp"
+)
 target_link_libraries(ysfx_tests
     PRIVATE
         ysfx-private
