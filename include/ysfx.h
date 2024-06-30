@@ -49,7 +49,7 @@ extern "C" {
 typedef double ysfx_real;
 
 enum {
-    ysfx_max_sliders = 64,
+    ysfx_max_sliders = 256,
     ysfx_max_channels = 64,
     ysfx_max_midi_buses = 16,
     ysfx_max_triggers = 10,
