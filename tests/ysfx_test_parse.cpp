@@ -20,6 +20,56 @@
 #include "ysfx_test_utils.hpp"
 #include <catch.hpp>
 
+TEST_CASE("preprocessor", "[basic]")
+{
+    SECTION("preprocessor ran correctly")
+    {
+        const char *text =
+            "// the header" "\n"
+            "@init" "\n"
+            "<?c = 12; c += 1; printf(\"c = %d;\", c);?>" "\n"
+            "@block" "\n";
+        
+        ysfx::string_text_reader raw_reader(text);
+
+        ysfx_parse_error err;
+        std::string processed_str;
+        REQUIRE(ysfx_preprocess(raw_reader, &err, processed_str));
+        
+        ysfx::string_text_reader processed_reader = ysfx::string_text_reader(processed_str.c_str());
+        REQUIRE(!err);
+
+        std::string line;
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "// the header");
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "@init");
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "c = 13;");
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "@block");
+    }
+
+    SECTION("preprocessor malformed preprocessor code")
+    {
+        const char *text =
+            "// the header" "\n"
+            "@init" "\n"
+            "<?c = 1a2; c += 1; printf(\"c = %d;\", c);?>" "\n"
+            "@block" "\n";
+        
+        ysfx::string_text_reader raw_reader(text);
+
+        ysfx_parse_error err;
+        std::string processed_str;
+        bool success = ysfx_preprocess(raw_reader, &err, processed_str);
+        
+        REQUIRE(!success);
+        ysfx::string_text_reader processed_reader = ysfx::string_text_reader(processed_str.c_str());
+        REQUIRE(err.message == "Invalid section: 3: preprocessor: syntax error: 'c = 1 <!> a2; c += 1; printf(\"c = %d;\", c);'");
+    }
+}
+
 TEST_CASE("section splitting", "[parse]")
 {
     SECTION("sections 1")
