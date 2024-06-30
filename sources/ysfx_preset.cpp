@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modifications by Joep Vanlier, 2024
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -173,6 +176,7 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
     if (parser.parse(text) >= 0) {
         sliders.reserve(ysfx_max_sliders);
 
+        // Grab the first 64 sliders
         for (uint32_t i = 0; i < 64; ++i) {
             const char *str = parser.gettoken_str(i);
             bool skip = str[0] == '-' && str[1] == '\0';
@@ -181,6 +185,23 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
                 slider.index = i;
                 slider.value = (ysfx_real)ysfx::dot_atof(str);
                 sliders.push_back(slider);
+            }
+        }
+
+        // Token 64 has the "name" of the preset again, but escaped weirdly (see WDL/projectcontext.cpp maybe?).
+        const char *str = parser.gettoken_str(65);  // Determines whether we continue
+
+        if (str[0] != '\0') {
+            // Grab the rest
+            for (uint32_t i = 0; i < ysfx_max_sliders - 64; ++i) {
+                const char *str = parser.gettoken_str(i + 65);
+                bool skip = str[0] == '-' && str[1] == '\0';
+                if (!skip) {
+                    ysfx_state_slider_t slider{};
+                    slider.index = i + 64;
+                    slider.value = (ysfx_real)ysfx::dot_atof(str);
+                    sliders.push_back(slider);
+                }
             }
         }
 
