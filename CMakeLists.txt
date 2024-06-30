@@ -41,7 +41,7 @@ option(YSFX_DEEP_STRIP "Strip the library clean of non-API symbols (if platform 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(BuildType)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_VISIBILITY_PRESET "hidden")
 set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
@@ -71,3 +71,4 @@ endif()
 if(YSFX_TOOLS)
     include("cmake.tools.txt")
 endif()
+include("cmake.preproc_tool.txt")

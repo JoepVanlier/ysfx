@@ -16,21 +16,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-add_executable(ysfx_tool
-    "tools/ysfx_tool.cpp")
-target_link_libraries(ysfx_tool
+add_executable(ysfx_preproc_tool
+    "tools/preproc_tool.cpp")
+target_link_libraries(ysfx_preproc_tool
     PRIVATE
         ysfx::ysfx)
 install(
-    TARGETS ysfx_tool
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
-
-
-add_executable(ysfx_preproc
-    "tools/ysfx_preproc.cpp")
-target_link_libraries(ysfx_preproc
-    PRIVATE
-        ysfx::ysfx)
-install(
-    TARGETS ysfx_preproc
+    TARGETS ysfx_preproc_tool
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
