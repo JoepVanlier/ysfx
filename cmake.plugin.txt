@@ -22,8 +22,8 @@ if(YSFX_PLUGIN_USE_SYSTEM_JUCE)
     find_package(JUCE REQUIRED)
 else()
     FetchContent_Declare(juce
-        URL "https://github.com/juce-framework/JUCE/archive/refs/tags/7.0.0.tar.gz"
-        URL_HASH "SHA512=0347380fce37eae58a2cfd2d14cf3d8025b37e8de87104656cc0699a8de914762199d4e6a214d24afd99cee548ec6aec198a7a04d804a97d0f4ceed49bf9a969")
+        URL "https://github.com/juce-framework/JUCE/archive/refs/tags/7.0.12.tar.gz"
+        URL_HASH "SHA512=2ca0d143ae1106271f6b1d6542e5388d5c57d471de5c9cac1f09b06d2de0662c03b354dea83860008526ec70cc0843115ab546481ce9af0a2c3f298adc02b328")
 
     FetchContent_GetProperties(juce)
     if(NOT juce_POPULATED)
