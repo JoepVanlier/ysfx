@@ -173,7 +173,7 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
     if (parser.parse(text) >= 0) {
         sliders.reserve(ysfx_max_sliders);
 
-        for (uint32_t i = 0; i < 64; ++i) {
+        for (uint32_t i = 0; i < ysfx_max_sliders; ++i) {
             const char *str = parser.gettoken_str(i);
             bool skip = str[0] == '-' && str[1] == '\0';
             if (!skip) {
