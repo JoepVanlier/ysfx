@@ -1275,7 +1275,7 @@ ysfx_state_t *ysfx_save_state(ysfx_t *fx)
     state->sliders = new ysfx_state_slider_t[slider_count]{};
     state->slider_count = slider_count;
 
-    for (uint32_t i = 0, j = 0; i < slider_count; ++i) {
+    for (uint32_t i = 0, j = 0; i < ysfx_max_sliders; ++i) {
         if (fx->source.main->header.sliders[i].exists) {
             state->sliders[j].index = i;
             state->sliders[j].value = *fx->var.slider[i];

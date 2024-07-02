@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modifications by Joep Vanlier, 2024
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -29,6 +32,8 @@ TEST_CASE("save and load", "[serialization]")
             "out_pin:output" "\n"
             "slider1:1<1,3,0.1>the slider 1" "\n"
             "slider2:2<1,3,0.1>the slider 2" "\n"
+            "slider4:2<1,3,0.1>the slider 4" "\n"
+            "slider256:3<1,3,0.1>the slider 256" "\n"
             "@sample" "\n"
             "spl0=0.0;" "\n";
 
@@ -44,11 +49,15 @@ TEST_CASE("save and load", "[serialization]")
         ysfx_state_u state{ysfx_save_state(fx.get())};
         REQUIRE(state);
         REQUIRE(state->data_size == 0);
-        REQUIRE(state->slider_count == 2);
+        REQUIRE(state->slider_count == 4);
         REQUIRE(state->sliders[0].index == 0);
         REQUIRE(state->sliders[1].index == 1);
         REQUIRE(state->sliders[0].value == 1);
         REQUIRE(state->sliders[1].value == 2);
+        REQUIRE(state->sliders[2].index == 3);
+        REQUIRE(state->sliders[2].value == 2);
+        REQUIRE(state->sliders[3].index == 255);
+        REQUIRE(state->sliders[3].value == 3);
 
         state->sliders[0].value = 2;
         state->sliders[1].value = 3;
