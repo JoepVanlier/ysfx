@@ -14,6 +14,11 @@ This contains a hosting library, providing a JSFX compiler and runtime.
 In addition, there is an audio plugin which can act as a JSFX host in a digital
 audio workstation.
 
+# Forked Project
+
+Note, this is a fork of YSFX with a few modifications to support newer JSFX
+features and fix some existing bugs.
+
 ## Remarks
 
 Despite what the name might suggest, JSFX is not JavaScript.
@@ -21,13 +26,16 @@ These technologies are unrelated to each other.
 
 This project is not the work of Cockos, Inc; however, it is based on several
 free and open source components from the WDL. Originally, this project was based
-on jsusfx by Pascal Gauthier, but then it became an entire rewrite made from
-scratch.
+on jsusfx by Pascal Gauthier, which was then rewritten by jpcima.
 
 Some time after the realization of this project, Cockos announced the release of
 JSFX as open source under the LGPL. This does not affect the development of this
 project, which remains a custom implementation based on the liberally licensed
 bits of the WDL.
+
+Unfortunately, the original maintainer (jpcima) seems to have disappeared, so 
+I (Joep Vanlier) have decided to fork the project to update it with some more 
+recent JSFX features and bugfixes.
 
 # Usage notes
 

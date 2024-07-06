@@ -1,5 +1,6 @@
 # -*- cmake -*-
 # Copyright 2021 Jean Pierre Cimalando
+# Copyright 2024 Joep Vanlier
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Modifications by Joep Vanlier, 2024
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -39,8 +42,8 @@ endif()
 juce_add_plugin(ysfx_plugin
   PLUGIN_CODE "ysfx"
   PLUGIN_MANUFACTURER_CODE "Jpci"
-  PRODUCT_NAME "ysfx"
-  COMPANY_NAME "Jean Pierre Cimalando"
+  PRODUCT_NAME "ysfx_saike_mod"
+  COMPANY_NAME "Jean Pierre Cimalando / Joep Vanlier"
   FORMATS VST3 AU
   NEEDS_MIDI_INPUT TRUE
   NEEDS_MIDI_OUTPUT TRUE
