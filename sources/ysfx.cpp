@@ -109,7 +109,12 @@ ysfx_t *ysfx_new(ysfx_config_t *config)
 
     auto var_resolver = [](void *userdata, const char *name) -> EEL_F * {
         ysfx_t *fx = (ysfx_t *)userdata;
-        auto it = fx->source.slider_alias.find(name);
+
+        /* Not very efficient */
+        std::string lower_name{name};
+        std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), [](unsigned char c){ return std::tolower(c); });
+
+        auto it = fx->source.slider_alias.find(lower_name);
         if (it != fx->source.slider_alias.end())
             return fx->var.slider[it->second];
         return nullptr;
@@ -258,7 +263,11 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
         for (uint32_t i = 0; i < ysfx_max_sliders; ++i) {
             if (main->header.sliders[i].exists) {
                 if (!main->header.sliders[i].var.empty())
-                    fx->source.slider_alias.insert({main->header.sliders[i].var, i});
+                {
+                    std::string data = main->header.sliders[i].var;
+                    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c){ return std::tolower(c); });
+                    fx->source.slider_alias.insert({data, i});
+                }
             }
         }
 
