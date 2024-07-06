@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modifications by Joep Vanlier, 2024
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -387,6 +390,7 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_file_open(void *opaque, EEL_F *file_)
         file.reset(new ysfx_audio_file_t(fx->vm.get(), *(ysfx_audio_format_t *)fmtobj, filepath.c_str()));
         break;
     case ysfx_file_type_none:
+        file.reset(new ysfx_raw_file_t(fx->vm.get(), filepath.c_str()));
         break;
     default:
         assert(false);
