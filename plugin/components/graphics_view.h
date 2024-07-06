@@ -38,6 +38,8 @@ protected:
     void mouseWheelMove(const juce::MouseEvent &event, const juce::MouseWheelDetails &wheel) override;
 
 private:
+    float m_pixelFactor{1.0f};
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

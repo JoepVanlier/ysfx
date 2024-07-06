@@ -58,8 +58,6 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener,
         bool m_wantRetina = false;
         juce::Image m_renderBitmap{juce::Image::ARGB, 1, 1, false};
         double m_bitmapScale = 1;
-        int m_bitmapUnscaledWidth = 0;
-        int m_bitmapUnscaledHeight = 0;
         using Ptr = std::shared_ptr<GfxTarget>;
     };
 
@@ -80,6 +78,9 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener,
 
     // whether the next @gfx is required to repaint the screen in full
     bool m_gfxDirty = true;
+
+    // whether the jsfx had a first initialization of the gfx resolution or not
+    bool m_gfxInitialized = false;
 
     //--------------------------------------------------------------------------
     struct KeyPressed {
@@ -230,6 +231,7 @@ void YsfxGraphicsView::setEffect(ysfx_t *fx)
     m_impl->m_work.stop();
 
     m_impl->m_gfxDirty = true;
+    m_impl->m_gfxInitialized = false;
 
     if (!fx || !ysfx_has_section(fx, ysfx_section_gfx)) {
         m_impl->m_gfxTimer.reset();
@@ -276,6 +278,10 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     juce::Point<int> off = m_impl->getDisplayOffset();
     Impl::GfxTarget *target = m_impl->m_gfxTarget.get();
 
+    // Get final pixel size (we want to correct for any DPI scaling that's happening by making the
+    // graphical render target larger).
+    m_pixelFactor = juce::jmax(1.0f, g.getInternalContext().getPhysicalPixelScaleFactor());
+
     ///
     std::lock_guard<std::mutex> lock{m_impl->m_asyncRepainter->m_mutex};
     juce::Image &image = m_impl->m_asyncRepainter->m_bitmap;
@@ -285,12 +291,12 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     {
         g.fillAll(juce::Colours::black);
     }
-    else if (target->m_bitmapScale == 1) {
+    else if (std::abs(target->m_bitmapScale - 1.0) < 1e-4) {
         g.drawImageAt(image, off.x, off.y);
     }
     else {
-        juce::Rectangle<int> dest{off.x, off.y, target->m_bitmapUnscaledWidth, target->m_bitmapUnscaledHeight};
-        g.drawImage(image, dest.toFloat());
+        juce::Rectangle<int> dest{off.x, off.y, target->m_gfxWidth, target->m_gfxHeight};
+        g.drawImage(image, dest.toFloat() / m_pixelFactor);
     }
 }
 
@@ -472,8 +478,11 @@ void YsfxGraphicsView::Impl::tickGfx()
     ysfx_get_gfx_dim(fx, gfxDim);
 
     bool gfxWantRetina = ysfx_gfx_wants_retina(fx);
-    if (updateGfxTarget((int)gfxDim[0], (int)gfxDim[1], gfxWantRetina))
+    
+    if (m_gfxInitialized ? updateGfxTarget(-1, -1, -1) : updateGfxTarget((int)gfxDim[0], (int)gfxDim[1], gfxWantRetina)) {
         m_gfxDirty = true;
+        m_gfxInitialized = true;
+    }
 
     ///
     std::shared_ptr<BackgroundWork::GfxMessage> msg{new BackgroundWork::GfxMessage};
@@ -503,51 +512,32 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
 {
     GfxTarget *target = m_gfxTarget.get();
 
-    ///
-    newWidth = (newWidth == -1) ? target->m_gfxWidth : newWidth;
-    newHeight = (newHeight == -1) ? target->m_gfxHeight : newHeight;
+    float pixel_factor = m_self->m_pixelFactor;
+
+    // newWidth is set when the JSFX initializes
+    newWidth = (newWidth == -1) ? m_self->getWidth() : newWidth;
+    newHeight = (newHeight == -1) ? m_self->getHeight() : newHeight;
     newRetina = (newRetina == -1) ? target->m_wantRetina : newRetina;
 
-    ///
-    bool needsUpdate = false;
-    needsUpdate = needsUpdate || (newWidth != target->m_gfxWidth);
-    needsUpdate = needsUpdate || (newHeight != target->m_gfxHeight);
-    needsUpdate = needsUpdate || ((bool)newRetina != target->m_wantRetina);
+    // Set internal JSFX texture size
+    int internal_width = static_cast<int>(newWidth * pixel_factor);
+    int internal_height = static_cast<int>(newHeight * pixel_factor);
 
-    ///
-    int unscaledWidth = newWidth;
-    int unscaledHeight = newHeight;
-
-    if (unscaledWidth <= 0)
-        unscaledWidth = m_self->getWidth();
-    if (unscaledHeight <= 0)
-        unscaledHeight = m_self->getHeight();
-
-    needsUpdate = needsUpdate || (unscaledWidth != target->m_bitmapUnscaledWidth);
-    needsUpdate = needsUpdate || (unscaledHeight != target->m_bitmapUnscaledHeight);
-
-    ///
-    double bitmapScale = 1;
-    int scaledWidth = unscaledWidth;
-    int scaledHeight = unscaledHeight;
-    if (newRetina) {
-        bitmapScale = 1; // TODO how to get the display scale factor?
-        scaledWidth = (int)std::ceil(unscaledWidth * bitmapScale);
-        scaledHeight = (int)std::ceil(unscaledHeight * bitmapScale);
-    }
-    needsUpdate = needsUpdate || (target->m_renderBitmap.getWidth() != juce::jmax(1, scaledWidth));
-    needsUpdate = needsUpdate || (target->m_renderBitmap.getHeight() != juce::jmax(1, scaledHeight));
+    bool needsUpdate = (
+        (target->m_gfxWidth != internal_width)
+        || (target->m_gfxHeight != internal_height)
+        || (target->m_wantRetina != static_cast<bool>(newRetina))
+        || (std::abs(target->m_bitmapScale - pixel_factor) > 1e-4)
+    );
 
     if (needsUpdate) {
         target = new GfxTarget;
         m_gfxTarget.reset(target);
-        target->m_gfxWidth = newWidth;
-        target->m_gfxHeight = newHeight;
+        target->m_gfxWidth = internal_width;
+        target->m_gfxHeight = internal_height;
         target->m_wantRetina = (bool)newRetina;
-        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, scaledWidth), juce::jmax(1, scaledHeight), true);
-        target->m_bitmapScale = bitmapScale;
-        target->m_bitmapUnscaledWidth = unscaledWidth;
-        target->m_bitmapUnscaledHeight = unscaledHeight;
+        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width), juce::jmax(1, internal_height), true);
+        target->m_bitmapScale = pixel_factor;
     }
 
     return needsUpdate;
@@ -581,15 +571,8 @@ void YsfxGraphicsView::Impl::updateYsfxMouseButtons(const juce::MouseEvent &even
 
 juce::Point<int> YsfxGraphicsView::Impl::getDisplayOffset() const
 {
-    int w = m_self->getWidth();
-    int h = m_self->getHeight();
-    int bw = m_gfxTarget->m_bitmapUnscaledWidth;
-    int bh = m_gfxTarget->m_bitmapUnscaledHeight;
-
-    juce::Point<int> pt;
-    pt.x = (bw < w) ? ((w - bw) / 2) : 0;
-    pt.y = (bh < h) ? ((h - bh) / 2) : 0;
-    return pt;
+    // Let JSFX handle the UX offsetting themselves
+    return juce::Point<int>{0, 0};
 }
 
 int YsfxGraphicsView::Impl::showYsfxMenu(void *userdata, const char *desc, int32_t xpos, int32_t ypos)
@@ -786,7 +769,7 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
         gc.pixel_height = (uint32_t)bdata.height;
         gc.pixel_stride = (uint32_t)bdata.lineStride;
         gc.pixels = bdata.data;
-        gc.scale_factor = target->m_bitmapScale;
+        gc.scale_factor = 1.0;  // This is handled by setting the UI size in the plugin ourselves
         gc.show_menu = &showYsfxMenu;
         gc.set_cursor = &setYsfxCursor;
         gc.get_drop_file = &getYsfxDropFile;
