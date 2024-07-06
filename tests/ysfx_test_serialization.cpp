@@ -117,4 +117,57 @@ TEST_CASE("save and load", "[serialization]")
         REQUIRE(ysfx::unpack_f32le(&state->data[3 * sizeof(float)]) == 300);
         REQUIRE(ysfx::unpack_f32le(&state->data[4 * sizeof(float)]) == 400);
     };
+
+    SECTION("file_avail")
+    {
+        const char *text =
+            "desc:example" "\n"
+            "out_pin:output" "\n"
+            "@init" "\n"
+            "myvar1=1;" "\n"
+            "myvar2=2;" "\n"
+            "myarray=777;" "\n"
+            "myarray[0]=100;" "\n"
+            "myarray[1]=200;" "\n"
+            "myarray[2]=300;" "\n"
+            "@serialize" "\n"
+            "file_var(0, myvar1);" "\n"
+            "myvar2 = file_avail(0);" "\n"  // Should store -1 because when we are writing, it should return -1.
+            "file_var(0, myvar2);" "\n"
+            "(file_avail(0) != 0) ? file_mem(0, myarray, 3);" "\n"
+            "@sample" "\n"
+            "spl0=0.0;" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+
+        ysfx_state_u state{ysfx_save_state(fx.get())};
+        REQUIRE(state);
+        REQUIRE(state->data_size == 5 * sizeof(float));
+        REQUIRE(ysfx::unpack_f32le(&state->data[0 * sizeof(float)]) == 1);
+        REQUIRE(ysfx::unpack_f32le(&state->data[1 * sizeof(float)]) == -1);
+        REQUIRE(ysfx::unpack_f32le(&state->data[2 * sizeof(float)]) == 100);
+        REQUIRE(ysfx::unpack_f32le(&state->data[3 * sizeof(float)]) == 200);
+        REQUIRE(ysfx::unpack_f32le(&state->data[4 * sizeof(float)]) == 300);
+
+        ysfx::pack_f32le(2, &state->data[0 * sizeof(float)]);
+        ysfx::pack_f32le(3, &state->data[1 * sizeof(float)]);
+        ysfx::pack_f32le(200, &state->data[2 * sizeof(float)]);
+        ysfx::pack_f32le(300, &state->data[3 * sizeof(float)]);
+        ysfx::pack_f32le(400, &state->data[4 * sizeof(float)]);
+        ysfx_load_state(fx.get(), state.get());
+        state.reset(ysfx_save_state(fx.get()));
+        REQUIRE(state->data_size == 5 * sizeof(float));
+        REQUIRE(ysfx::unpack_f32le(&state->data[0 * sizeof(float)]) == 2);
+        REQUIRE(ysfx::unpack_f32le(&state->data[1 * sizeof(float)]) == -1);
+        REQUIRE(ysfx::unpack_f32le(&state->data[2 * sizeof(float)]) == 200);
+        REQUIRE(ysfx::unpack_f32le(&state->data[3 * sizeof(float)]) == 300);
+        REQUIRE(ysfx::unpack_f32le(&state->data[4 * sizeof(float)]) == 400);
+    };    
 }

@@ -307,7 +307,7 @@ int32_t ysfx_serializer_t::avail()
     if (m_write)
         return -1;
     else
-        return 0;
+        return (m_buffer->size() > m_pos) ? 1 : 0;
 }
 
 void ysfx_serializer_t::rewind()
