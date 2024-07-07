@@ -19,6 +19,7 @@
 //
 
 #include "ysfx.hpp"
+#include "ysfx_preprocess.hpp"
 #include "ysfx_parse.hpp"
 #include "ysfx_test_utils.hpp"
 #include <catch.hpp>

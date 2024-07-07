@@ -58,5 +58,3 @@ private:
 #define EEL_STRING_GET_FOR_INDEX(x, wr) (ysfx_string_access_unlocked((ysfx_t *)(opaque), x, wr, false))
 #define EEL_STRING_GET_FOR_WRITE(x, wr) (ysfx_string_access_unlocked((ysfx_t *)(opaque), x, wr, true))
 #define EEL_STRING_MUTEXLOCK_SCOPE ysfx_string_scoped_lock lock{(ysfx_t *)(opaque)};
-
-bool ysfx_preprocess(ysfx::text_reader &reader, ysfx_parse_error *error, std::string &str);

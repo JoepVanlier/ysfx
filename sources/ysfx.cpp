@@ -22,6 +22,7 @@
 #include "ysfx_config.hpp"
 #include "ysfx_eel_utils.hpp"
 #include "ysfx_api_eel.hpp"
+#include "ysfx_preprocess.hpp"
 #include <type_traits>
 #include <algorithm>
 #include <functional>

@@ -169,5 +169,5 @@ TEST_CASE("save and load", "[serialization]")
         REQUIRE(ysfx::unpack_f32le(&state->data[2 * sizeof(float)]) == 200);
         REQUIRE(ysfx::unpack_f32le(&state->data[3 * sizeof(float)]) == 300);
         REQUIRE(ysfx::unpack_f32le(&state->data[4 * sizeof(float)]) == 400);
-    };    
+    };
 }
