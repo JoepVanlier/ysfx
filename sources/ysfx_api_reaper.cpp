@@ -416,6 +416,41 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_midirecv_str(void *opaque, EEL_F *offset_,
     return event.size;
 }
 
+
+static EEL_F NSEEL_CGEN_CALL ysfx_api_strcpy_from_slider(void *opaque, EEL_F *str_, EEL_F *slider_)
+{
+    int32_t handle = ysfx_eel_round<int32_t>(*slider_);
+    if (handle < 0)
+        return 0;
+
+    ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
+    uint32_t slider_idx = ysfx_get_slider_of_var(fx, slider_);
+    if (slider_idx >= ysfx_max_sliders) {
+        return 0;
+    }
+    
+    if (!ysfx_slider_is_enum(fx, slider_idx)) {
+        return 0;
+    }
+
+    uint32_t enum_idx = static_cast<uint32_t>(ysfx_slider_get_value(fx, slider_idx));
+    std::string root{ysfx_slider_path(fx, slider_idx)};
+    root.erase(0, 1);
+    std::string name{ysfx_slider_get_enum_name(fx, slider_idx, enum_idx)};
+    std::string full_name = root + "/" + name;
+
+    auto process_str = [](void *userdata, WDL_FastString &str) {
+        std::string *value = (std::string *)userdata;
+        str.SetRaw(value->c_str(), (int32_t)value->size());
+    };
+
+    if (!ysfx_string_access(fx, *str_, true, +process_str, &full_name))
+        return 0;
+    
+    return 1;
+}
+
+
 //------------------------------------------------------------------------------
 void ysfx_api_init_reaper()
 {
@@ -436,4 +471,6 @@ void ysfx_api_init_reaper()
     NSEEL_addfunc_retval("midirecv_buf", 3, NSEEL_PProc_THIS, &ysfx_api_midirecv_buf);
     NSEEL_addfunc_retval("midirecv_str", 2, NSEEL_PProc_THIS, &ysfx_api_midirecv_str);
     NSEEL_addfunc_retval("midisyx", 3, NSEEL_PProc_THIS, &ysfx_api_midisyx);
+
+    NSEEL_addfunc_retval("strcpy_fromslider", 2, NSEEL_PProc_THIS, &ysfx_api_strcpy_from_slider);
 }

@@ -802,6 +802,19 @@ const char *ysfx_slider_get_enum_name(ysfx_t *fx, uint32_t slider_index, uint32_
     return slider.enum_names[enum_index].c_str();
 }
 
+const char *ysfx_slider_path(ysfx_t *fx, uint32_t slider_index) {
+    ysfx_source_unit_t *main = fx->source.main.get();
+    if (slider_index >= ysfx_max_sliders || !main)
+        return 0;
+
+    ysfx_slider_t &slider = main->header.sliders[slider_index];
+    if (slider.path.empty()) {
+        return 0;
+    } else {
+        return slider.path.c_str();
+    }
+}
+
 bool ysfx_slider_is_path(ysfx_t *fx, uint32_t index)
 {
     ysfx_source_unit_t *main = fx->source.main.get();

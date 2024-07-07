@@ -79,6 +79,7 @@ add_executable(ysfx_tests
     "tests/ysfx_test_audio_flac.cpp"
     "tests/ysfx_test_filesystem.cpp"
     "tests/ysfx_test_preset.cpp"
+    "tests/ysfx_test_integration.cpp"
     "tests/ysfx_test_c_api.c"
     "tests/ysfx_test_utils.hpp"
     "tests/ysfx_test_utils.cpp"
