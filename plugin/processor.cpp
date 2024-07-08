@@ -36,6 +36,9 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     ysfx::sync_bitset64 m_sliderParametersChanged;
     YsfxInfo::Ptr m_info{new YsfxInfo};
 
+    double m_sample_rate{44100.0};
+    uint32_t m_block_size{256};
+
     //==========================================================================
     void processBlockGenerically(const void *inputs[], void *outputs[], uint32_t numIns, uint32_t numOuts, uint32_t numFrames, uint32_t processBits, juce::MidiBuffer &midiMessages);
     void processMidiInput(juce::MidiBuffer &midi);
@@ -212,6 +215,9 @@ void YsfxProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     sus.lockCallbacks();
 
     ysfx_t *fx = m_impl->m_fx.get();
+    m_impl->m_sample_rate = sampleRate;
+    m_impl->m_block_size = samplesPerBlock;
+
     ysfx_set_sample_rate(fx, sampleRate);
     ysfx_set_block_size(fx, (uint32_t)samplesPerBlock);
 
@@ -647,6 +653,10 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
     m_fx.reset(fx);
     ysfx_add_ref(fx);
     std::atomic_store(&m_info, info);
+
+    ysfx_set_sample_rate(fx, m_sample_rate);
+    ysfx_set_block_size(fx, m_block_size);
+    ysfx_init(fx);
 
     for (uint32_t i = 0; i < ysfx_max_sliders; ++i) {
         YsfxParameter *param = m_self->getYsfxParameter((int)i);
