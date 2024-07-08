@@ -518,7 +518,7 @@ void YsfxProcessor::Impl::processLatency()
 
     // NOTE: ignore pdc_bot_ch and pdc_top_ch
 
-    int samples = juce::roundToInt(latency * m_self->getSampleRate());
+    int samples = juce::roundToInt(latency);
     m_self->setLatencySamples(samples);
 }
 
