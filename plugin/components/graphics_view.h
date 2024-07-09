@@ -20,7 +20,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 
-class YsfxGraphicsView : public juce::Component {
+class YsfxGraphicsView : public juce::Component, public juce::FileDragAndDropTarget {
 public:
     YsfxGraphicsView();
     ~YsfxGraphicsView() override;
@@ -36,6 +36,10 @@ protected:
     void mouseDrag(const juce::MouseEvent &event) override;
     void mouseUp(const juce::MouseEvent &event) override;
     void mouseWheelMove(const juce::MouseEvent &event, const juce::MouseWheelDetails &wheel) override;
+
+    // FileDragAndDropTarget implementation
+    bool isInterestedInFileDrag(const juce::StringArray &files) override;
+    void filesDropped(const juce::StringArray &files, int x, int y) override;
 
 private:
     float m_pixelFactor{1.0f};

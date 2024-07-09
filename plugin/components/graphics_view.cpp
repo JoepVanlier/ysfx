@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modifications by Joep Vanlier, 2024
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,8 +33,7 @@
 #include <cmath>
 #include <cstdio>
 
-struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener,
-                                      public juce::FileDragAndDropTarget {
+struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
     static uint32_t translateKeyCode(int code);
     static uint32_t translateModifiers(juce::ModifierKeys mods);
     static void translateKeyPress(const juce::KeyPress &key, uint32_t &ykey, uint32_t &ymods);
@@ -105,10 +107,6 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener,
     std::mutex m_droppedFilesMutex;
     juce::StringArray m_droppedFiles;
     juce::String m_droppedFileReturned;
-
-    // FileDragAndDropTarget implementation
-    bool isInterestedInFileDrag(const juce::StringArray &files) override;
-    void filesDropped(const juce::StringArray &files, int x, int y) override;
 
     //--------------------------------------------------------------------------
     // The background thread will trigger these async updates.
@@ -390,6 +388,21 @@ void YsfxGraphicsView::mouseWheelMove(const juce::MouseEvent &event, const juce:
     Impl::GfxInputState *gfxInputState = m_impl->m_gfxInputState.get();
     gfxInputState->m_ysfxWheel += wheel.deltaY;
     gfxInputState->m_ysfxHWheel += wheel.deltaX;
+}
+
+//------------------------------------------------------------------------------
+bool YsfxGraphicsView::isInterestedInFileDrag(const juce::StringArray &files)
+{
+    (void)files;
+    return true;
+}
+
+void YsfxGraphicsView::filesDropped(const juce::StringArray &files, int x, int y)
+{
+    (void)x;
+    (void)y;
+    std::lock_guard<std::mutex> lock{m_impl->m_droppedFilesMutex};
+    m_impl->m_droppedFiles = files;
 }
 
 //------------------------------------------------------------------------------
@@ -871,21 +884,6 @@ void YsfxGraphicsView::Impl::endPopupMenu(int menuResult)
     updater->m_completionFlag = true;
     updater->m_completionValue = menuResult;
     updater->m_completionVariable.notify_one();
-}
-
-//------------------------------------------------------------------------------
-bool YsfxGraphicsView::Impl::isInterestedInFileDrag(const juce::StringArray &files)
-{
-    (void)files;
-    return true;
-}
-
-void YsfxGraphicsView::Impl::filesDropped(const juce::StringArray &files, int x, int y)
-{
-    (void)x;
-    (void)y;
-    std::lock_guard<std::mutex> lock{m_droppedFilesMutex};
-    m_droppedFiles = files;
 }
 
 //------------------------------------------------------------------------------
