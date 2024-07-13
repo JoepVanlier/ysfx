@@ -60,6 +60,14 @@ void RTSemaphore::wait()
         throw std::system_error(ec);
 }
 
+void RTSemaphore::clear()
+{
+    std::error_code ec;
+    clear(ec);
+    if (ec)
+        throw std::system_error(ec);
+}
+
 bool RTSemaphore::try_wait()
 {
     std::error_code ec;
@@ -118,6 +126,15 @@ void RTSemaphore::wait(std::error_code& ec) noexcept
             return;
         }
     } while (1);
+}
+
+void RTSemaphore::clear(std::error_code& ec) noexcept
+{
+    ec.clear();
+    mach_timespec_t timeout;
+    timeout.tv_sec = 0 / 1000;
+    timeout.tv_nsec = (0 % 1000) * (1000L * 1000L);
+    while (semaphore_timedwait(sem_, timeout) == KERN_SUCCESS);
 }
 
 bool RTSemaphore::try_wait(std::error_code& ec) noexcept
@@ -187,6 +204,12 @@ void RTSemaphore::post(std::error_code& ec) noexcept
     ec.clear();
     if (ReleaseSemaphore(sem_, 1, nullptr) == 0)
         ec = std::error_code(GetLastError(), std::system_category());
+}
+
+void RTSemaphore::clear(std::error_code& ec) noexcept
+{
+    ec.clear();
+    while (WaitForSingleObject(sem_, 0) == WAIT_OBJECT_0);
 }
 
 void RTSemaphore::wait(std::error_code& ec) noexcept
@@ -303,6 +326,17 @@ static bool absolute_timeout(uint32_t milliseconds, timespec &result, std::error
 
     result = abs;
     return true;
+}
+
+void RTSemaphore::clear(std::error_code& ec) noexcept
+{
+    ec.clear();
+    timespec abs;
+    absolute_timeout(0, abs, ec);
+
+    // Note that we don't really need to update the absolute timestep because if there are
+    // still events pending, it will just pop them off the stack.
+    while (sem_timedwait(&sem_, &abs) == 0);
 }
 
 bool RTSemaphore::timed_wait(uint32_t milliseconds, std::error_code& ec) noexcept

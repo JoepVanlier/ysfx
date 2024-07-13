@@ -717,6 +717,8 @@ void YsfxGraphicsView::Impl::BackgroundWork::stop()
     std::lock_guard<std::mutex> lock{m_messagesMutex};
     while (!m_messages.empty())
         m_messages.pop();
+
+    m_sema.clear();
 }
 
 void YsfxGraphicsView::Impl::BackgroundWork::postMessage(std::shared_ptr<Message> message)
@@ -737,10 +739,12 @@ void YsfxGraphicsView::Impl::BackgroundWork::run()
         std::shared_ptr<Message> msg = popNextMessage();
         jassert(msg);
 
-        switch (msg->m_type) {
-        case '@gfx':
-            processGfxMessage(static_cast<GfxMessage &>(*msg));
-            break;
+        if (msg) {
+            switch (msg->m_type) {
+            case '@gfx':
+                processGfxMessage(static_cast<GfxMessage &>(*msg));
+                break;
+            }
         }
     }
 }
