@@ -100,6 +100,7 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     setLookAndFeel(&lnf);
     juce::LookAndFeel::setDefaultLookAndFeel(&lnf);
 
+    setOpaque(true);
     setSize(defaultEditorWidth, defaultEditorHeight);
     setResizable(true, true);
     m_impl->createUI();
