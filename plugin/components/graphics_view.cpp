@@ -826,12 +826,21 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
         juce::Image::BitmapData src{imgsrc, juce::Image::BitmapData::readOnly};
         juce::Image::BitmapData dst{imgdst, juce::Image::BitmapData::writeOnly};
 
-        if (src.lineStride == dst.lineStride) {
-            memcpy(dst.data, src.data, (size_t)(h * src.lineStride));
-        }
-        else {
-            for (int row = 0; row < h; ++row)
-                memcpy(dst.getLinePointer(row), src.getLinePointer(row), (size_t)(w * src.pixelStride));
+        // Drop alpha channel explicitly
+        for (int row = 0; row < h; ++row)
+        {
+            juce::uint8* from = src.getLinePointer(row);
+            juce::uint8* to = dst.getLinePointer(row);
+            for (int pix = 0; pix < w; ++pix)
+            {
+                *to = *from;
+                *(to + 1) = *(from + 1);
+                *(to + 2) = *(from + 2);
+                *(to + 3) = 255;
+
+                from += src.pixelStride;
+                to += src.pixelStride;
+            }
         }
 
         msg.m_asyncRepainter->m_hasBitmapChanged = true;
