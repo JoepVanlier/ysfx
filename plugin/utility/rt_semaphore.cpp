@@ -131,7 +131,10 @@ void RTSemaphore::wait(std::error_code& ec) noexcept
 void RTSemaphore::clear(std::error_code& ec) noexcept
 {
     ec.clear();
-    while (semaphore_wait(sem_) == KERN_SUCCESS);
+    mach_timespec_t timeout;
+    timeout.tv_sec = 0 / 1000;
+    timeout.tv_nsec = (0 % 1000) * (1000L * 1000L);
+    while (semaphore_timedwait(sem_, timeout) == KERN_SUCCESS);
 }
 
 bool RTSemaphore::try_wait(std::error_code& ec) noexcept
