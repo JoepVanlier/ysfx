@@ -203,6 +203,8 @@ YsfxGraphicsView::YsfxGraphicsView()
     m_impl->m_asyncMouseCursor->addListener(m_impl.get());
     m_impl->m_asyncShowMenu->addListener(m_impl.get());
 
+    setOpaque(true);
+
     setWantsKeyboardFocus(true);
 }
 
@@ -281,6 +283,7 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     m_pixelFactor = juce::jmax(1.0f, g.getInternalContext().getPhysicalPixelScaleFactor());
 
     ///
+    g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
     std::lock_guard<std::mutex> lock{m_impl->m_asyncRepainter->m_mutex};
     juce::Image &image = m_impl->m_asyncRepainter->m_bitmap;
 
@@ -293,8 +296,8 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
         g.drawImageAt(image, off.x, off.y);
     }
     else {
-        juce::Rectangle<int> dest{off.x, off.y, target->m_gfxWidth, target->m_gfxHeight};
-        g.drawImage(image, dest.toFloat() / m_pixelFactor);
+        g.setOpacity(1.0f);
+        g.drawImageTransformed(image, juce::AffineTransform::translation(0.0f, 0.0f).scaled(1.0f / m_pixelFactor), false);
     }
 }
 

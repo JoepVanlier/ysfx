@@ -38,6 +38,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::PopupMenu> m_presetsPopup;
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
+    bool m_justResized = true;
 
     //==========================================================================
     void updateInfo();
@@ -100,6 +101,7 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     setLookAndFeel(&lnf);
     juce::LookAndFeel::setDefaultLookAndFeel(&lnf);
 
+    setOpaque(true);
     setSize(defaultEditorWidth, defaultEditorHeight);
     setResizable(true, true);
     m_impl->createUI();
@@ -107,6 +109,20 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->relayoutUILater();
 
     m_impl->updateInfo();
+}
+
+void YsfxEditor::paint (juce::Graphics& g)
+{
+    if (m_impl && m_impl->m_justResized) {
+        g.fillAll(juce::Colours::black);
+        m_impl->m_justResized = false;
+    } else {
+        // Redraw only the top.
+        const juce::Rectangle<int> bounds = getLocalBounds();
+        g.setColour(juce::Colours::black);
+        g.setOpacity(1.0f);
+        g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), 70));
+    }
 }
 
 YsfxEditor::~YsfxEditor()
@@ -442,6 +458,7 @@ void YsfxEditor::Impl::relayoutUI()
     }
 
     m_centerViewPort->setViewedComponent(viewed, false);
+    m_justResized = true;
 
     if (m_relayoutTimer)
         m_relayoutTimer->stopTimer();

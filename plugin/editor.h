@@ -27,6 +27,7 @@ public:
 
 protected:
     void resized() override;
+    void paint (juce::Graphics& g) override;
 
 private:
     struct Impl;
