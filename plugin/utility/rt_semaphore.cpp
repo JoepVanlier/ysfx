@@ -60,6 +60,14 @@ void RTSemaphore::wait()
         throw std::system_error(ec);
 }
 
+void RTSemaphore::clear()
+{
+    std::error_code ec;
+    clear(ec);
+    if (ec)
+        throw std::system_error(ec);
+}
+
 bool RTSemaphore::try_wait()
 {
     std::error_code ec;
@@ -118,6 +126,12 @@ void RTSemaphore::wait(std::error_code& ec) noexcept
             return;
         }
     } while (1);
+}
+
+void RTSemaphore::clear(std::error_code& ec) noexcept
+{
+    ec.clear();
+    while (semaphore_wait(sem_) == KERN_SUCCESS);
 }
 
 bool RTSemaphore::try_wait(std::error_code& ec) noexcept
@@ -187,6 +201,12 @@ void RTSemaphore::post(std::error_code& ec) noexcept
     ec.clear();
     if (ReleaseSemaphore(sem_, 1, nullptr) == 0)
         ec = std::error_code(GetLastError(), std::system_category());
+}
+
+void RTSemaphore::clear(std::error_code& ec) noexcept
+{
+    ec.clear();
+    while (WaitForSingleObject(sem_, 0) == WAIT_OBJECT_0);
 }
 
 void RTSemaphore::wait(std::error_code& ec) noexcept
