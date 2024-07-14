@@ -25,6 +25,9 @@ public:
     YsfxGraphicsView();
     ~YsfxGraphicsView() override;
     void setEffect(ysfx_t *fx);
+    void toggleScaling();
+    float getScaling();
+    std::string getScalingString();
 
 protected:
     void paint(juce::Graphics &g) override;
@@ -43,6 +46,8 @@ protected:
 
 private:
     float m_pixelFactor{1.0f};
+    float m_outputScalingFactor{1.0f};
+    bool m_clearPaint{true};
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

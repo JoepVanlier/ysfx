@@ -38,7 +38,6 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::PopupMenu> m_presetsPopup;
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
-    bool m_justResized = true;
 
     //==========================================================================
     void updateInfo();
@@ -70,6 +69,8 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::TextButton> m_btnEditCode;
     std::unique_ptr<juce::TextButton> m_btnLoadPreset;
     std::unique_ptr<juce::TextButton> m_btnSwitchEditor;
+    std::unique_ptr<juce::TextButton> m_btnGfxScaling;
+
     std::unique_ptr<juce::Label> m_lblFilePath;
     std::unique_ptr<juce::Label> m_lblIO;
     std::unique_ptr<juce::Viewport> m_centerViewPort;
@@ -113,16 +114,14 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
 
 void YsfxEditor::paint (juce::Graphics& g)
 {
-    if (m_impl && m_impl->m_justResized) {
-        g.fillAll(juce::Colours::black);
-        m_impl->m_justResized = false;
-    } else {
-        // Redraw only the top.
-        const juce::Rectangle<int> bounds = getLocalBounds();
-        g.setColour(juce::Colours::black);
-        g.setOpacity(1.0f);
-        g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), 70));
-    }
+    // Redraw only parts that aren't covered already.
+    const juce::Rectangle<int> bounds = getLocalBounds();
+    g.setColour(juce::Colours::black);
+    g.setOpacity(1.0f);
+    g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), 70));
+    g.fillRect(juce::Rectangle<int>(0, 0, 20, bounds.getHeight()));
+    g.fillRect(juce::Rectangle<int>(bounds.getWidth() - 20, 0, 20, bounds.getHeight()));
+    g.fillRect(juce::Rectangle<int>(0, bounds.getHeight() - 20, bounds.getWidth(), 20));
 }
 
 YsfxEditor::~YsfxEditor()
@@ -365,6 +364,9 @@ void YsfxEditor::Impl::createUI()
     m_self->addAndMakeVisible(*m_btnRecentFiles);
     m_btnEditCode.reset(new juce::TextButton(TRANS("Edit")));
     m_self->addAndMakeVisible(*m_btnEditCode);
+    m_btnGfxScaling.reset(new juce::TextButton(TRANS("x1")));
+    m_self->addAndMakeVisible(*m_btnGfxScaling);
+    m_btnGfxScaling->setTooltip("Render JSFX UI at lower resolution and upscale the result. Ths is intended for JSFX that do not implement scaling themselves. For JSFX that do, it is better to simply resize the plugin.");
     m_btnLoadPreset.reset(new juce::TextButton(TRANS("Preset")));
     m_self->addAndMakeVisible(*m_btnLoadPreset);
     m_btnSwitchEditor.reset(new juce::TextButton(TRANS("Sliders")));
@@ -417,8 +419,14 @@ void YsfxEditor::Impl::relayoutUI()
     ysfx_get_gfx_dim(fx, gfxDim);
 
     if (m_mustResizeToGfx) {
-        int w = juce::jmax(defaultEditorWidth, (int)gfxDim[0] + 10);
-        int h = juce::jmax(defaultEditorHeight, (int)gfxDim[1] + 50 + 10);
+        float scaling_factor = 1.0f;
+        if (m_graphicsView) {
+            scaling_factor = m_graphicsView->getScaling();
+        }
+
+        int w = juce::jmax(defaultEditorWidth, (int)(gfxDim[0] * scaling_factor) + 22);
+        int h = juce::jmax(defaultEditorHeight, (int)(gfxDim[1] * scaling_factor) + 50 + 20);
+
         m_self->setSize(w, h);
         m_mustResizeToGfx = false;
     }
@@ -441,6 +449,9 @@ void YsfxEditor::Impl::relayoutUI()
     temp.removeFromRight(10);
     m_btnEditCode->setBounds(temp.removeFromRight(80));
     temp.removeFromRight(10);
+    m_btnGfxScaling->setBounds(temp.removeFromRight(80));
+    temp.removeFromRight(10);
+
     m_lblIO->setBounds(temp.removeFromRight(100));
     temp.removeFromRight(10);
     m_lblFilePath->setBounds(temp);
@@ -458,7 +469,6 @@ void YsfxEditor::Impl::relayoutUI()
     }
 
     m_centerViewPort->setViewedComponent(viewed, false);
-    m_justResized = true;
 
     if (m_relayoutTimer)
         m_relayoutTimer->stopTimer();
@@ -468,5 +478,5 @@ void YsfxEditor::Impl::relayoutUILater()
 {
     if (!m_relayoutTimer)
         m_relayoutTimer.reset(FunctionalTimer::create([this]() { relayoutUI(); }));
-    m_relayoutTimer->startTimer(0);
+    m_relayoutTimer->startTimer(1);
 }

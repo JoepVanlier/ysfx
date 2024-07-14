@@ -256,6 +256,35 @@ void YsfxGraphicsView::setEffect(ysfx_t *fx)
     setMouseCursor(juce::MouseCursor{juce::MouseCursor::NormalCursor});
 }
 
+void YsfxGraphicsView::toggleScaling()
+{
+    if (m_outputScalingFactor > 1.6f) {
+        m_outputScalingFactor = 1.0f;
+    } else if (m_outputScalingFactor > 1.4f) {
+        m_outputScalingFactor = 2.0f;
+    } else {
+        m_outputScalingFactor = 1.5f;
+    }
+}
+
+std::string YsfxGraphicsView::getScalingString()
+{
+    if (m_outputScalingFactor > 1.6f) {
+        return std::string("x2");
+    } else if (m_outputScalingFactor > 1.4f) {
+        return std::string("x1.5");
+    } else {
+        return std::string("x1");
+    }
+}
+
+float YsfxGraphicsView::getScaling()
+{
+    // We rescale this only when we have active UI rescaling on under the assumption that that mode
+    // is used mostly for JSFX that do not have the inherent ability to scale with the UI.
+    return m_outputScalingFactor / (m_outputScalingFactor > 1.1f ? m_pixelFactor : 1.0f);
+}
+
 void YsfxGraphicsView::paint(juce::Graphics &g)
 {
     ysfx_t *fx = m_impl->m_fx.get();
@@ -288,17 +317,13 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     juce::Image &image = m_impl->m_asyncRepainter->m_bitmap;
 
     if (image.getWidth() != target->m_renderBitmap.getWidth() ||
-        image.getHeight() != target->m_renderBitmap.getHeight())
+        image.getHeight() != target->m_renderBitmap.getHeight() )
     {
         g.fillAll(juce::Colours::black);
     }
-    else if (std::abs(target->m_bitmapScale - 1.0) < 1e-4) {
-        g.drawImageAt(image, off.x, off.y);
-    }
-    else {
-        g.setOpacity(1.0f);
-        g.drawImageTransformed(image, juce::AffineTransform::translation(0.0f, 0.0f).scaled(1.0f / m_pixelFactor), false);
-    }
+
+    g.setOpacity(1.0f);
+    g.drawImageTransformed(image, juce::AffineTransform::translation(0.0f, 0.0f).scaled(m_outputScalingFactor / m_pixelFactor), false);
 }
 
 void YsfxGraphicsView::resized()
@@ -528,11 +553,13 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
 {
     GfxTarget *target = m_gfxTarget.get();
 
-    float pixel_factor = m_self->m_pixelFactor;
+    float output_scaling = m_self->m_outputScalingFactor;
+    float pixel_factor = m_self->m_pixelFactor / output_scaling;
 
     // newWidth is set when the JSFX initializes
-    newWidth = (newWidth == -1) ? m_self->getWidth() : newWidth;
-    newHeight = (newHeight == -1) ? m_self->getHeight() : newHeight;
+    float scaling_factor = 1.0f / (output_scaling > 1.1f ? pixel_factor : 1.0f);
+    newWidth = (newWidth == -1) ? m_self->getWidth() : newWidth * scaling_factor;
+    newHeight = (newHeight == -1) ? m_self->getHeight() : newHeight * scaling_factor;
     newRetina = (newRetina == -1) ? target->m_wantRetina : newRetina;
 
     // Set internal JSFX texture size
