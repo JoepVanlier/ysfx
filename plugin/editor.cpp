@@ -88,7 +88,7 @@ struct YsfxEditor::Impl {
     void relayoutUILater();
 };
 
-static const int defaultEditorWidth = 800;
+static const int defaultEditorWidth = 700;
 static const int defaultEditorHeight = 600;
 
 YsfxEditor::YsfxEditor(YsfxProcessor &proc)
@@ -151,7 +151,7 @@ void YsfxEditor::Impl::updateInfo()
     juce::File filePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
 
     if (filePath != juce::File{}) {
-        m_lblFilePath->setText(filePath.getFileName(), juce::dontSendNotification);
+        m_lblFilePath->setText(filePath.getFileNameWithoutExtension(), juce::dontSendNotification);
         m_lblFilePath->setTooltip(filePath.getFullPathName());
     }
     else {
@@ -457,25 +457,27 @@ void YsfxEditor::Impl::relayoutUI()
     const juce::Rectangle<int> topRow = temp.removeFromTop(50);
     const juce::Rectangle<int> centerArea = temp.withTrimmedLeft(10).withTrimmedRight(10).withTrimmedBottom(10);
 
+    int width = 70;
+    int spacing = 8;
     temp = topRow.reduced(10, 10);
-    m_btnLoadFile->setBounds(temp.removeFromLeft(80));
-    temp.removeFromLeft(10);
-    m_btnRecentFiles->setBounds(temp.removeFromLeft(80));
-    temp.removeFromLeft(10);
-    m_btnReload->setBounds(temp.removeFromLeft(80));
-    temp.removeFromLeft(10);
+    m_btnLoadFile->setBounds(temp.removeFromLeft(width));
+    temp.removeFromLeft(spacing);
+    m_btnRecentFiles->setBounds(temp.removeFromLeft(width));
+    temp.removeFromLeft(spacing);
+    m_btnReload->setBounds(temp.removeFromLeft(width));
+    temp.removeFromLeft(spacing);
 
     m_btnSwitchEditor->setBounds(temp.removeFromRight(80));
-    temp.removeFromRight(10);
-    m_btnLoadPreset->setBounds(temp.removeFromRight(80));
-    temp.removeFromRight(10);
-    m_btnEditCode->setBounds(temp.removeFromRight(80));
-    temp.removeFromRight(10);
-    m_btnGfxScaling->setBounds(temp.removeFromRight(80));
-    temp.removeFromRight(10);
+    temp.removeFromRight(spacing);
+    m_btnLoadPreset->setBounds(temp.removeFromRight(width));
+    temp.removeFromRight(spacing);
+    m_btnEditCode->setBounds(temp.removeFromRight(60));
+    temp.removeFromRight(spacing);
+    m_btnGfxScaling->setBounds(temp.removeFromRight(40));
+    temp.removeFromRight(spacing);
 
-    m_lblIO->setBounds(temp.removeFromRight(100));
-    temp.removeFromRight(10);
+    m_lblIO->setBounds(temp.removeFromRight(80));
+    temp.removeFromRight(spacing);
     m_lblFilePath->setBounds(temp);
 
     m_centerViewPort->setBounds(centerArea);
