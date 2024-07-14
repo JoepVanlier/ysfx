@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modifications by Joep Vanlier, 2024
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -36,6 +39,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::FileChooser> m_fileChooser;
     std::unique_ptr<juce::PopupMenu> m_recentFilesPopup;
     std::unique_ptr<juce::PopupMenu> m_presetsPopup;
+    std::unique_ptr<juce::PropertiesFile> m_pluginProperties;
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
 
@@ -53,6 +57,11 @@ struct YsfxEditor::Impl {
     juce::RecentlyOpenedFilesList loadRecentFiles();
     void saveRecentFiles(const juce::RecentlyOpenedFilesList &recent);
     void clearRecentFiles();
+    void setScale(float newScaling);
+    void loadScaling();
+    void saveScaling();
+    void resetScaling(juce::File &jsfxFilePath);
+    juce::String getJsfxName();
 
     //==========================================================================
     class CodeWindow : public juce::DocumentWindow {
@@ -86,6 +95,7 @@ struct YsfxEditor::Impl {
     void connectUI();
     void relayoutUI();
     void relayoutUILater();
+    void initializeProperties();
 };
 
 static const int defaultEditorWidth = 700;
@@ -109,7 +119,7 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->createUI();
     m_impl->connectUI();
     m_impl->relayoutUILater();
-
+    m_impl->initializeProperties();
     m_impl->updateInfo();
 }
 
@@ -127,11 +137,24 @@ void YsfxEditor::paint (juce::Graphics& g)
 
 YsfxEditor::~YsfxEditor()
 {
+    if (m_impl) {
+        m_impl->saveScaling();
+    }
 }
 
 void YsfxEditor::resized()
 {
     m_impl->relayoutUILater();
+}
+
+juce::String YsfxEditor::Impl::getJsfxName()
+{
+    YsfxInfo::Ptr info = m_info;
+    ysfx_t *fx = info->effect.get();
+    if (!fx) return juce::String("");
+
+    juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
+    return file.getFileNameWithoutExtension();
 }
 
 void YsfxEditor::Impl::grabInfoAndUpdate()
@@ -195,7 +218,10 @@ void YsfxEditor::Impl::updateInfo()
     bool hasGfx = ysfx_has_section(fx, ysfx_section_gfx);
     switchEditor(hasGfx);
 
+    juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
     m_mustResizeToGfx = true;
+    loadScaling();
+    
     relayoutUILater();
 }
 
@@ -209,10 +235,16 @@ void YsfxEditor::Impl::chooseFileAndLoad()
 
     juce::File initialPath;
     juce::File prevFilePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-    if (prevFilePath != juce::File{})
+    if (prevFilePath != juce::File{}) {
         initialPath = prevFilePath.getParentDirectory();
-    else
-        initialPath = getDefaultEffectsDirectory();
+    } else {
+        if (m_pluginProperties->containsKey("load_path")) {
+            initialPath = m_pluginProperties->getValue("load_path");
+        }
+        if (!initialPath.isDirectory()) {
+            initialPath = getDefaultEffectsDirectory();
+        }
+    }
 
     m_fileChooser.reset(new juce::FileChooser(TRANS("Open jsfx..."), initialPath));
     m_fileChooserActive = true;
@@ -221,15 +253,79 @@ void YsfxEditor::Impl::chooseFileAndLoad()
         juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
         [this](const juce::FileChooser &chooser) {
             juce::File result = chooser.getResult();
-            if (result != juce::File())
+            if (result != juce::File()) {
+                saveScaling();
                 loadFile(result);
+            }
             m_fileChooserActive = false;
         });
 }
 
+void YsfxEditor::Impl::saveScaling()
+{
+    if (m_pluginProperties) {
+        juce::String filename_without_ext = getJsfxName();
+        if (filename_without_ext.isNotEmpty()) {
+            auto getKey = [filename_without_ext](juce::String name) {return filename_without_ext + name;};
+            {
+                juce::ScopedLock lock{m_pluginProperties->getLock()};
+                m_pluginProperties->setValue(getKey("_width"), m_self->getWidth());
+                m_pluginProperties->setValue(getKey("_height"), m_self->getHeight());
+                m_pluginProperties->needsToBeSaved();
+            }
+        }
+    }
+}
+
+void YsfxEditor::Impl::resetScaling(juce::File &jsfxFilePath)
+{
+    if (m_pluginProperties) {
+        juce::String filename_without_ext = jsfxFilePath.getFileNameWithoutExtension();
+        auto getKey = [filename_without_ext](juce::String name) {return filename_without_ext + name;};
+        {
+            juce::ScopedLock lock{m_pluginProperties->getLock()};
+            m_pluginProperties->removeValue(getKey("_width"));
+            m_pluginProperties->removeValue(getKey("_height"));
+            m_pluginProperties->needsToBeSaved();
+        }
+    }
+}
+
+void YsfxEditor::Impl::loadScaling()
+{
+    if (m_pluginProperties) {
+        juce::String filename_without_ext = getJsfxName();
+        if (filename_without_ext.isNotEmpty()) {
+            auto getKey = [filename_without_ext](juce::String name) {return filename_without_ext + name;};
+            
+            juce::String key = getKey("_scaling_factor");
+            if (m_pluginProperties->containsKey(key)) {
+                float scalingFactor = m_pluginProperties->getValue(key).getFloatValue();
+                setScale(scalingFactor);
+            } else {
+                setScale(1.0f);
+            }
+
+            int width = m_pluginProperties->getValue(getKey("_width")).getIntValue();
+            int height = m_pluginProperties->getValue(getKey("_height")).getIntValue();
+            if (width && height) {
+                m_self->setSize(width, height);
+                m_mustResizeToGfx = false;
+            }
+        }
+    }
+}
+
 void YsfxEditor::Impl::loadFile(const juce::File &file)
 {
+    {
+        juce::ScopedLock lock{m_pluginProperties->getLock()};
+        m_pluginProperties->setValue("load_path", file.getParentDirectory().getFullPathName());
+        m_pluginProperties->save();
+    }
+
     m_proc->loadJsfxFile(file.getFullPathName(), nullptr, true);
+    relayoutUILater();
 
     juce::RecentlyOpenedFilesList recent = loadRecentFiles();
     recent.addFile(file);
@@ -255,8 +351,10 @@ void YsfxEditor::Impl::popupRecentFiles()
     m_recentFilesPopup->showMenuAsync(popupOptions, [this, recent](int index) {
         if (index == 1000)
             clearRecentFiles();
-        else if (index != 0)
+        else if (index != 0) {
+            saveScaling();
             loadFile(recent.getFile(index - 100));
+        }
     });
 }
 
@@ -357,6 +455,23 @@ juce::File YsfxEditor::Impl::getDefaultEffectsDirectory()
 #endif
 }
 
+void YsfxEditor::Impl::initializeProperties()
+{
+    juce::PropertiesFile::Options options;
+
+    options.applicationName = JucePlugin_Name;
+    options.storageFormat = juce::PropertiesFile::StorageFormat::storeAsXML;
+    options.filenameSuffix = ".prefs";
+    options.osxLibrarySubFolder = "Application Support";
+    #if JUCE_LINUX
+    options.folderName = "~/.config";
+    #else
+    options.folderName = "";
+    #endif
+    
+    m_pluginProperties.reset(new juce::PropertiesFile{options});
+}
+
 void YsfxEditor::Impl::createUI()
 {
     m_btnLoadFile.reset(new juce::TextButton(TRANS("Load")));
@@ -398,6 +513,13 @@ void YsfxEditor::Impl::createUI()
     m_tooltipWindow.reset(new juce::TooltipWindow);
 }
 
+void YsfxEditor::Impl::setScale(float newScaling)
+{
+    newScaling = ((newScaling < 1.0f) || (newScaling > 2.1f)) ? 1.0f : newScaling;
+    m_graphicsView->setScaling(newScaling);
+    m_btnGfxScaling->setButtonText(TRANS(juce::String::formatted("%.1f", newScaling)));
+}
+
 void YsfxEditor::Impl::connectUI()
 {
     m_btnLoadFile->onClick = [this]() { chooseFileAndLoad(); };
@@ -411,14 +533,22 @@ void YsfxEditor::Impl::connectUI()
         if (!fx) return;
 
         juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
+        resetScaling(file);
         loadFile(file);
     };
     m_btnGfxScaling->onClick = [this] {
         if (m_graphicsView) {
-            m_graphicsView->toggleScaling();
-            m_btnGfxScaling->setButtonText(TRANS(m_graphicsView->getScalingString()));
+            float newScaling = (m_graphicsView->getScaling() + 0.5f);
+            setScale(newScaling);
             m_mustResizeToGfx = true;
-            m_relayoutTimer->startTimer(10);
+            relayoutUILater();
+
+            juce::String key = getJsfxName() + juce::String("_scaling_factor");
+            {
+                juce::ScopedLock lock{m_pluginProperties->getLock()};
+                m_pluginProperties->setValue(key, juce::String::formatted("%.3f", newScaling));
+                m_pluginProperties->save();
+            }
         }
     };
 
@@ -440,7 +570,7 @@ void YsfxEditor::Impl::relayoutUI()
     if (m_mustResizeToGfx) {
         float scaling_factor = 1.0f;
         if (m_graphicsView) {
-            scaling_factor = m_graphicsView->getScaling();
+            scaling_factor = m_graphicsView->getTotalScaling();
         }
 
         int w = juce::jmax(defaultEditorWidth, (int)(gfxDim[0] * scaling_factor) + 22);

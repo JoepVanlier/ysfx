@@ -25,9 +25,9 @@ public:
     YsfxGraphicsView();
     ~YsfxGraphicsView() override;
     void setEffect(ysfx_t *fx);
-    void toggleScaling();
+    void setScaling(float new_scaling);
     float getScaling();
-    std::string getScalingString();
+    float getTotalScaling();
 
 protected:
     void paint(juce::Graphics &g) override;
