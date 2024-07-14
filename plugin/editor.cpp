@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Modifications by Joep Vanlier, 2024
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -36,6 +39,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::FileChooser> m_fileChooser;
     std::unique_ptr<juce::PopupMenu> m_recentFilesPopup;
     std::unique_ptr<juce::PopupMenu> m_presetsPopup;
+    std::unique_ptr<juce::PropertiesFile> m_pluginProperties;
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
 
@@ -53,6 +57,7 @@ struct YsfxEditor::Impl {
     juce::RecentlyOpenedFilesList loadRecentFiles();
     void saveRecentFiles(const juce::RecentlyOpenedFilesList &recent);
     void clearRecentFiles();
+    juce::String getJsfxName();
 
     //==========================================================================
     class CodeWindow : public juce::DocumentWindow {
@@ -86,6 +91,7 @@ struct YsfxEditor::Impl {
     void connectUI();
     void relayoutUI();
     void relayoutUILater();
+    void initializeProperties();
 };
 
 static const int defaultEditorWidth = 700;
@@ -109,7 +115,7 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->createUI();
     m_impl->connectUI();
     m_impl->relayoutUILater();
-
+    m_impl->initializeProperties();
     m_impl->updateInfo();
 }
 
@@ -209,10 +215,16 @@ void YsfxEditor::Impl::chooseFileAndLoad()
 
     juce::File initialPath;
     juce::File prevFilePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-    if (prevFilePath != juce::File{})
+    if (prevFilePath != juce::File{}) {
         initialPath = prevFilePath.getParentDirectory();
-    else
-        initialPath = getDefaultEffectsDirectory();
+    } else {
+        if (m_pluginProperties->containsKey("load_path")) {
+            initialPath = m_pluginProperties->getValue("load_path");
+        }
+        if (!initialPath.isDirectory()) {
+            initialPath = getDefaultEffectsDirectory();
+        }
+    }
 
     m_fileChooser.reset(new juce::FileChooser(TRANS("Open jsfx..."), initialPath));
     m_fileChooserActive = true;
@@ -229,6 +241,12 @@ void YsfxEditor::Impl::chooseFileAndLoad()
 
 void YsfxEditor::Impl::loadFile(const juce::File &file)
 {
+    {
+        juce::ScopedLock lock{m_pluginProperties->getLock()};
+        m_pluginProperties->setValue("load_path", file.getParentDirectory().getFullPathName());
+        m_pluginProperties->save();
+    }
+
     m_proc->loadJsfxFile(file.getFullPathName(), nullptr, true);
 
     juce::RecentlyOpenedFilesList recent = loadRecentFiles();
@@ -355,6 +373,23 @@ juce::File YsfxEditor::Impl::getDefaultEffectsDirectory()
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
         .getChildFile("Application Support/REAPER/Effects");
 #endif
+}
+
+void YsfxEditor::Impl::initializeProperties()
+{
+    juce::PropertiesFile::Options options;
+
+    options.applicationName = JucePlugin_Name;
+    options.storageFormat = juce::PropertiesFile::StorageFormat::storeAsXML;
+    options.filenameSuffix = ".prefs";
+    options.osxLibrarySubFolder = "Application Support";
+    #if JUCE_LINUX
+    options.folderName = "~/.config";
+    #else
+    options.folderName = "";
+    #endif
+    
+    m_pluginProperties.reset(new juce::PropertiesFile{options});
 }
 
 void YsfxEditor::Impl::createUI()
