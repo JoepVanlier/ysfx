@@ -69,6 +69,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::TextButton> m_btnEditCode;
     std::unique_ptr<juce::TextButton> m_btnLoadPreset;
     std::unique_ptr<juce::TextButton> m_btnSwitchEditor;
+    std::unique_ptr<juce::TextButton> m_btnReload;
     std::unique_ptr<juce::TextButton> m_btnGfxScaling;
 
     std::unique_ptr<juce::Label> m_lblFilePath;
@@ -362,6 +363,8 @@ void YsfxEditor::Impl::createUI()
     m_self->addAndMakeVisible(*m_btnLoadFile);
     m_btnRecentFiles.reset(new juce::TextButton(TRANS("Recent")));
     m_self->addAndMakeVisible(*m_btnRecentFiles);
+    m_btnReload.reset(new juce::TextButton(TRANS("Reload")));
+    m_self->addAndMakeVisible(*m_btnReload);
     m_btnEditCode.reset(new juce::TextButton(TRANS("Edit")));
     m_self->addAndMakeVisible(*m_btnEditCode);
     m_btnGfxScaling.reset(new juce::TextButton(TRANS("x1")));
@@ -402,6 +405,22 @@ void YsfxEditor::Impl::connectUI()
     m_btnSwitchEditor->onClick = [this]() { switchEditor(m_btnSwitchEditor->getToggleState()); };
     m_btnEditCode->onClick = [this]() { openCodeEditor(); };
     m_btnLoadPreset->onClick = [this]() { popupPresets(); };
+    m_btnReload->onClick = [this] {
+        YsfxInfo::Ptr info = m_info;
+        ysfx_t *fx = info->effect.get();
+        if (!fx) return;
+
+        juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
+        loadFile(file);
+    };
+    m_btnGfxScaling->onClick = [this] {
+        if (m_graphicsView) {
+            m_graphicsView->toggleScaling();
+            m_btnGfxScaling->setButtonText(TRANS(m_graphicsView->getScalingString()));
+            m_mustResizeToGfx = true;
+            m_relayoutTimer->startTimer(10);
+        }
+    };
 
     m_ideView->onFileSaved = [this](const juce::File &file) { loadFile(file); };
     m_ideView->onReloadRequested = [this](const juce::File &file) { loadFile(file); };
@@ -443,6 +462,9 @@ void YsfxEditor::Impl::relayoutUI()
     temp.removeFromLeft(10);
     m_btnRecentFiles->setBounds(temp.removeFromLeft(80));
     temp.removeFromLeft(10);
+    m_btnReload->setBounds(temp.removeFromLeft(80));
+    temp.removeFromLeft(10);
+
     m_btnSwitchEditor->setBounds(temp.removeFromRight(80));
     temp.removeFromRight(10);
     m_btnLoadPreset->setBounds(temp.removeFromRight(80));
