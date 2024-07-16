@@ -298,6 +298,7 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     // Get final pixel size (we want to correct for any DPI scaling that's happening by making the
     // graphical render target larger).
     m_pixelFactor = juce::jmax(1.0f, g.getInternalContext().getPhysicalPixelScaleFactor());
+    m_hasPainted = true;
 
     ///
     g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);

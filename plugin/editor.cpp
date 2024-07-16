@@ -577,7 +577,12 @@ void YsfxEditor::Impl::relayoutUI()
         int h = juce::jmax(defaultEditorHeight, (int)(gfxDim[1] * scaling_factor) + 50 + 20);
 
         m_self->setSize(w, h);
-        m_mustResizeToGfx = false;
+
+        // FIXME: Currently, we use m_hasPainted to signal that the graphicsview has painted.
+        // This is to make sure m_graphicsView->getTotalScaling() includes the DPI scaling factor.
+        if (m_graphicsView->m_hasPainted) {
+            m_mustResizeToGfx = false;
+        };
     }
 
     juce::Rectangle<int> temp;
@@ -624,7 +629,9 @@ void YsfxEditor::Impl::relayoutUI()
 
     m_centerViewPort->setViewedComponent(viewed, false);
 
-    if (m_relayoutTimer)
+    // FIXME: Currently, we use m_hasPainted to signal that the graphicsview has painted.
+    // This is to make sure m_graphicsView->getTotalScaling() includes the DPI scaling factor.
+    if (m_relayoutTimer && m_graphicsView->m_hasPainted)
         m_relayoutTimer->stopTimer();
 }
 

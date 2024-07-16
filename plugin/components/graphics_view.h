@@ -28,6 +28,7 @@ public:
     void setScaling(float new_scaling);
     float getScaling();
     float getTotalScaling();
+    bool m_hasPainted{false};
 
 protected:
     void paint(juce::Graphics &g) override;
