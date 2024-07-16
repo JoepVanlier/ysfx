@@ -546,8 +546,8 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
 
     // newWidth is set when the JSFX initializes
     float scaling_factor = 1.0f / (output_scaling > 1.1f ? pixel_factor : 1.0f);
-    newWidth = (newWidth == -1) ? m_self->getWidth() : (int) newWidth * scaling_factor;
-    newHeight = (newHeight == -1) ? m_self->getHeight() : (int) newHeight * scaling_factor;
+    newWidth = (newWidth == -1) ? m_self->getWidth() : (int) (newWidth * scaling_factor);
+    newHeight = (newHeight == -1) ? m_self->getHeight() : (int) (newHeight * scaling_factor);
     newRetina = (newRetina == -1) ? target->m_wantRetina : newRetina;
 
     // Set internal JSFX texture size
