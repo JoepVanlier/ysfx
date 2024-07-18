@@ -29,8 +29,6 @@
 bool ysfx_preprocess(ysfx::text_reader &reader, ysfx_parse_error *error, std::string& in_str)
 {
     std::string line;
-    uint32_t lineno = 0;
-
     line.reserve(256);
 
     WDL_FastString file_str, pp_str;

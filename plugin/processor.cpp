@@ -216,7 +216,7 @@ void YsfxProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
     ysfx_t *fx = m_impl->m_fx.get();
     m_impl->m_sample_rate = sampleRate;
-    m_impl->m_block_size = samplesPerBlock;
+    m_impl->m_block_size = static_cast<uint32_t>(samplesPerBlock);
 
     ysfx_set_sample_rate(fx, sampleRate);
     ysfx_set_block_size(fx, (uint32_t)samplesPerBlock);

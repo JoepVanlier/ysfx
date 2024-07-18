@@ -292,7 +292,6 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     }
 
     ///
-    juce::Point<int> off = m_impl->getDisplayOffset();
     Impl::GfxTarget *target = m_impl->m_gfxTarget.get();
 
     // Get final pixel size (we want to correct for any DPI scaling that's happening by making the

@@ -47,7 +47,6 @@ protected:
 private:
     float m_pixelFactor{1.0f};
     float m_outputScalingFactor{1.0f};
-    bool m_clearPaint{true};
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;
