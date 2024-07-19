@@ -434,10 +434,17 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_strcpy_from_slider(void *opaque, EEL_F *st
     }
 
     uint32_t enum_idx = static_cast<uint32_t>(ysfx_slider_get_value(fx, slider_idx));
-    std::string root{ysfx_slider_path(fx, slider_idx)};
-    root.erase(0, 1);
+    
+    const char* path = ysfx_slider_path(fx, slider_idx);
     std::string name{ysfx_slider_get_enum_name(fx, slider_idx, enum_idx)};
-    std::string full_name = root + "/" + name;
+    std::string full_name;
+    if (path) {
+        std::string root{path};
+        root.erase(0, 1);
+        full_name = root + "/" + name;
+    } else {
+        full_name = name;
+    };
 
     auto process_str = [](void *userdata, WDL_FastString &str) {
         std::string *value = (std::string *)userdata;
@@ -447,9 +454,8 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_strcpy_from_slider(void *opaque, EEL_F *st
     if (!ysfx_string_access(fx, *str_, true, +process_str, &full_name))
         return 0;
     
-    return 1;
+    return *str_;
 }
-
 
 //------------------------------------------------------------------------------
 void ysfx_api_init_reaper()

@@ -70,4 +70,43 @@ TEST_CASE("integration", "[integration]")
         ysfx_string_get(fx.get(), 7, txt);
         REQUIRE((txt == "filedir/blap.txt"));
     };
+
+    SECTION("strcpy_from_slider_non_file")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "out_pin:output" "\n"
+            "slider43: 0<0,1,1{L + R,L || R}>Summed Mode" "\n"
+            "slider44: 1<0,1,1{A,F}>Summed Mode" "\n"
+            "@init" "\n"
+            "x = 5;"
+            "strcpy_fromslider(x, slider43);" "\n"
+            "x = 6;" "\n"
+            "slider43 = 1;" "\n"
+            "strcpy_fromslider(x, slider43);" "\n"
+            "x = 7;" "\n"
+            "strcpy_fromslider(x, slider44);" "\n"
+            "@sample" "\n"
+            "spl0=0.0;" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        std::string txt;
+        ysfx_string_get(fx.get(), 5, txt);
+        REQUIRE((txt == "L + R"));
+
+        ysfx_string_get(fx.get(), 6, txt);
+        REQUIRE((txt == "L || R"));
+
+        ysfx_string_get(fx.get(), 7, txt);
+        REQUIRE((txt == "F"));
+    };
 }
