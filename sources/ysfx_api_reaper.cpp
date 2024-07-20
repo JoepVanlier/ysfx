@@ -68,9 +68,12 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_next_chg(void *opaque, EEL_F *index
     return -1;
 }
 
-static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_automate(void *opaque, EEL_F *mask_or_slider_)
+static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_automate(void *opaque, INT_PTR nparms, EEL_F **parms)
 {
     //NOTE: callable from @gfx thread
+    if (nparms == 0) return 0;
+
+    EEL_F *mask_or_slider_ = parms[0];
 
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
@@ -83,6 +86,15 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_automate(void *opaque, EEL_F *mask_
 
     fx->slider.automate_mask |= mask;
     fx->slider.change_mask |= mask;
+
+    if (nparms > 1) {
+        if (ysfx_eel_round<int32_t>(parms[1][0])) {
+            fx->slider.touch_mask &= ~mask;
+        } else {
+            fx->slider.touch_mask |= mask;
+        }
+    }
+
     return 0;
 }
 
@@ -464,7 +476,7 @@ void ysfx_api_init_reaper()
     NSEEL_addfunc_retptr("slider", 1, NSEEL_PProc_THIS, &ysfx_api_slider);
 
     NSEEL_addfunc_retval("slider_next_chg", 2, NSEEL_PProc_THIS, &ysfx_api_slider_next_chg);
-    NSEEL_addfunc_retval("slider_automate", 1, NSEEL_PProc_THIS, &ysfx_api_slider_automate);
+    NSEEL_addfunc_varparm("slider_automate", 1, NSEEL_PProc_THIS, &ysfx_api_slider_automate);
     NSEEL_addfunc_retval("sliderchange", 1, NSEEL_PProc_THIS, &ysfx_api_sliderchange);
     NSEEL_addfunc_retval("slider_show", 2, NSEEL_PProc_THIS, &ysfx_api_slider_show);
 

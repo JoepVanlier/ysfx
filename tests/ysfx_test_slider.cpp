@@ -177,22 +177,92 @@ TEST_CASE("slider manipulation", "[sliders]")
 
         uint64_t changed;
         uint64_t automated;
+        uint64_t touched;
 
         changed = ysfx_fetch_slider_changes(fx.get());
         automated = ysfx_fetch_slider_automations(fx.get());
+        touched = ysfx_fetch_slider_touches(fx.get());
         REQUIRE(changed == 0);
         REQUIRE(automated == 0);
+        REQUIRE(touched == 0);
 
         ysfx_process_float(fx.get(), nullptr, nullptr, 0, 0, 1);
 
         changed = ysfx_fetch_slider_changes(fx.get());
         automated = ysfx_fetch_slider_automations(fx.get());
+        touched = ysfx_fetch_slider_touches(fx.get());
         REQUIRE(changed == ((1 << 0) | (1 << 1)));
         REQUIRE(automated == (1 << 1));
+        REQUIRE(touched == 0);
 
         changed = ysfx_fetch_slider_changes(fx.get());
         automated = ysfx_fetch_slider_automations(fx.get());
+        touched = ysfx_fetch_slider_touches(fx.get());
         REQUIRE(changed == 0);
         REQUIRE(automated == 0);
+        REQUIRE(touched == 0);
+    }
+
+    SECTION("touch automation")
+    {
+        const char *text =
+            "desc:example" "\n"
+            "out_pin:output" "\n"
+            "slider1:0<0,1,0.1>the slider 1" "\n"
+            "slider2:0<0,1,0.1>the slider 2" "\n"
+            "slider3:0<0,1,0.1>the slider 3" "\n"
+            "@block" "\n"
+            "slider_automate(slider2, 0);" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+
+        ysfx_init(fx.get());
+        ysfx_process_float(fx.get(), nullptr, nullptr, 0, 0, 1);
+
+        uint64_t touched;
+
+        touched = ysfx_fetch_slider_touches(fx.get());
+        REQUIRE(touched == (1 << 1));
+
+        touched = ysfx_fetch_slider_touches(fx.get());
+        REQUIRE(touched == (1 << 1));  // Shouldn't clear!
+    }
+
+    SECTION("release touch")
+    {
+        const char *text =
+            "desc:example" "\n"
+            "out_pin:output" "\n"
+            "slider1:0<0,1,0.1>the slider 1" "\n"
+            "slider2:0<0,1,0.1>the slider 2" "\n"
+            "slider3:0<0,1,0.1>the slider 3" "\n"
+            "@block" "\n"
+            "slider_automate(slider2, 0);" "\n"
+            "slider_automate(slider2, 1);" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+
+        ysfx_init(fx.get());
+        ysfx_process_float(fx.get(), nullptr, nullptr, 0, 0, 1);
+
+        uint64_t touched;
+        touched = ysfx_fetch_slider_touches(fx.get());
+        REQUIRE(touched == 0);
+        touched = ysfx_fetch_slider_touches(fx.get());
+        REQUIRE(touched == 0);
     }
 }

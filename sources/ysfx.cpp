@@ -986,6 +986,7 @@ void ysfx_first_init(ysfx_t *fx)
 
     fx->slider.automate_mask.store(0);
     fx->slider.change_mask.store(0);
+    fx->slider.touch_mask.store(0);
     ysfx_update_slider_visibility_mask(fx);
 }
 
@@ -1089,6 +1090,11 @@ uint64_t ysfx_fetch_slider_changes(ysfx_t *fx)
 uint64_t ysfx_fetch_slider_automations(ysfx_t *fx)
 {
     return fx->slider.automate_mask.exchange(0);
+}
+
+uint64_t ysfx_fetch_slider_touches(ysfx_t *fx)
+{
+    return fx->slider.touch_mask.load();
 }
 
 uint64_t ysfx_get_slider_visibility(ysfx_t *fx)

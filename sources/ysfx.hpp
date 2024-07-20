@@ -147,6 +147,7 @@ struct ysfx_s {
         ysfx::sync_bitset64 automate_mask;
         ysfx::sync_bitset64 change_mask;
         ysfx::sync_bitset64 visible_mask;
+        ysfx::sync_bitset64 touch_mask;
     } slider;
 
     // Triggers
