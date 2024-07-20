@@ -29,6 +29,7 @@ struct YsfxIDEView::Impl {
     std::unique_ptr<juce::CodeTokeniser> m_tokenizer;
     std::unique_ptr<juce::CodeEditorComponent> m_editor;
     std::unique_ptr<juce::TextButton> m_btnSave;
+    std::unique_ptr<juce::TextButton> m_btnUpdate;
     std::unique_ptr<juce::Label> m_lblVariablesHeading;
     std::unique_ptr<juce::Viewport> m_vpVariables;
     std::unique_ptr<juce::Component> m_compVariables;
@@ -44,6 +45,8 @@ struct YsfxIDEView::Impl {
     };
     juce::Array<VariableUI> m_vars;
     std::unique_ptr<juce::Timer> m_varsUpdateTimer;
+
+    bool m_forceUpdate{false};
 
     //==========================================================================
     void setupNewFx();
@@ -99,6 +102,11 @@ void YsfxIDEView::setStatusText(const juce::String &text)
 void YsfxIDEView::resized()
 {
     m_impl->relayoutUILater();
+}
+
+void YsfxIDEView::focusOnCodeEditor()
+{
+    m_impl->m_forceUpdate = true;
 }
 
 void YsfxIDEView::focusOfChildComponentChanged(FocusChangeType cause)
@@ -169,11 +177,15 @@ void YsfxIDEView::Impl::setupNewFx()
                 });
 
             m_varsUpdateTimer.reset(FunctionalTimer::create([this]() {
-                for (int i = 0; i < m_vars.size(); ++i) {
-                    VariableUI &ui = m_vars.getReference(i);
-                    ui.m_lblValue->setText(juce::String(*ui.m_var), juce::dontSendNotification);
-                }
+                if (m_self->isShowing() && m_btnUpdate && (m_btnUpdate->getToggleState() || m_forceUpdate)) {
+                    for (int i = 0; i < m_vars.size(); ++i) {
+                        VariableUI &ui = m_vars.getReference(i);
+                        ui.m_lblValue->setText(juce::String(*ui.m_var), juce::dontSendNotification);
+                        m_forceUpdate = false;
+                    }
+                };
             }));
+
             m_varsUpdateTimer->startTimer(100);
         }
 
@@ -260,6 +272,11 @@ void YsfxIDEView::Impl::createUI()
     m_btnSave.reset(new juce::TextButton(TRANS("Save")));
     m_btnSave->addShortcut(juce::KeyPress('s', juce::ModifierKeys::ctrlModifier, 0));
     m_self->addAndMakeVisible(*m_btnSave);
+    m_btnUpdate.reset(new juce::TextButton(TRANS("Watch (off)")));
+    m_btnUpdate->setTooltip("Enable this to continuously update variables (note this has a big performance impact currently).");
+    m_btnUpdate->setClickingTogglesState(true);
+    m_btnUpdate->setToggleState(false, juce::NotificationType::dontSendNotification);
+    m_self->addAndMakeVisible(*m_btnUpdate);
     m_lblVariablesHeading.reset(new juce::Label(juce::String{}, TRANS("Variables")));
     m_self->addAndMakeVisible(*m_lblVariablesHeading);
     m_vpVariables.reset(new juce::Viewport);
@@ -275,6 +292,7 @@ void YsfxIDEView::Impl::createUI()
 void YsfxIDEView::Impl::connectUI()
 {
     m_btnSave->onClick = [this]() { saveCurrentFile(); };
+    m_btnUpdate->onClick = [this]() { m_btnUpdate->setButtonText(m_btnUpdate->getToggleState() ? TRANS("Watch (on)") : TRANS("Watch (off)")); };
 }
 
 void YsfxIDEView::Impl::relayoutUI()
@@ -291,6 +309,7 @@ void YsfxIDEView::Impl::relayoutUI()
     ///
     temp = topRow.reduced(10, 10);
     m_btnSave->setBounds(temp.removeFromLeft(100));
+    m_btnUpdate->setBounds(temp.removeFromLeft(100));
     temp.removeFromLeft(10);
 
     ///

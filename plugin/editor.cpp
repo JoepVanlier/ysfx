@@ -393,6 +393,7 @@ void YsfxEditor::Impl::openCodeEditor()
 {
     m_codeWindow->setVisible(true);
     m_codeWindow->toFront(true);
+    m_ideView->focusOnCodeEditor();
 }
 
 juce::RecentlyOpenedFilesList YsfxEditor::Impl::loadRecentFiles()
