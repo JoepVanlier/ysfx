@@ -280,7 +280,7 @@ YSFX_API bool ysfx_send_trigger(ysfx_t *fx, uint32_t index);
 YSFX_API uint64_t ysfx_fetch_slider_changes(ysfx_t *fx);
 // get a bit mask of sliders whose values must be automated, and clear it to zero
 YSFX_API uint64_t ysfx_fetch_slider_automations(ysfx_t *fx);
-// get a bit mask of sliders whose values are currently being touched (it does _not_ get cleared)
+// get a bit mask of sliders whose values are currently being touched
 YSFX_API uint64_t ysfx_fetch_slider_touches(ysfx_t *fx);
 // get a bit mask of sliders currently visible
 YSFX_API uint64_t ysfx_get_slider_visibility(ysfx_t *fx);

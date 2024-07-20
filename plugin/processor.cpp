@@ -76,12 +76,14 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     LoadRequest::Ptr m_loadRequest;
     PresetRequest::Ptr m_presetRequest;
     ysfx::sync_bitset64 m_sliderParamsToNotify;
+    ysfx::sync_bitset64 m_sliderParamsTouching;
 
     //==========================================================================
     class SliderNotificationUpdater : public juce::AsyncUpdater {
     public:
         explicit SliderNotificationUpdater(Impl *impl) : m_impl{impl} {}
         void addSlidersToNotify(uint64_t mask) { m_sliderMask.fetch_or(mask); }
+        void updateTouch(uint64_t mask) { m_touchMask.exchange(mask); };
 
     protected:
         void handleAsyncUpdate() override;
@@ -89,6 +91,9 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     private:
         Impl *m_impl = nullptr;
         ysfx::sync_bitset64 m_sliderMask;
+
+        ysfx::sync_bitset64 m_touchMask;
+        uint64_t m_previousTouchMask{0};
     };
 
     std::unique_ptr<SliderNotificationUpdater> m_sliderNotificationUpdater;
@@ -101,7 +106,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
         void wakeUp();
     private:
         void run();
-        void processSliderNotifications(uint64_t sliderMask);
+        void processSliderNotifications(uint64_t sliderMask, uint64_t touchMask);
         void processLoadRequest(LoadRequest &req);
         void processPresetRequest(PresetRequest &req);
         Impl *m_impl = nullptr;
@@ -507,9 +512,12 @@ void YsfxProcessor::Impl::processSliderChanges()
             }
         }
 
+        uint64_t automated = ysfx_fetch_slider_automations(fx);
+        m_sliderParamsTouching.exchange(ysfx_fetch_slider_touches(fx));
+
         // this will sync parameters later (on message thread)
-        if (changed) {
-            m_sliderParamsToNotify.fetch_or(changed);
+        if (automated) {
+            m_sliderParamsToNotify.fetch_or(automated);  // Used to be changed
             m_background->wakeUp();
         }
     }
@@ -593,6 +601,7 @@ void YsfxProcessor::Impl::syncSliderToParameter(int index, bool notify)
     YsfxParameter *param = m_self->getYsfxParameter(index);
     if (param->existsAsSlider()) {
         float normValue = param->convertFromYsfxValue(ysfx_slider_get_value(m_fx.get(), (uint32_t)index));
+        
         if (notify)
             param->setValueNotifyingHost(normValue);
         else {
@@ -668,6 +677,7 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
 
     // notify parameters later, on the message thread
     m_sliderParamsToNotify.store(~(uint64_t)0);
+    m_sliderParamsTouching.store((uint64_t)0);
     m_background->wakeUp();
 }
 
@@ -684,6 +694,7 @@ void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
 
     // notify parameters later, on the message thread
     m_sliderParamsToNotify.store(~(uint64_t)0);
+    m_sliderParamsTouching.store((uint64_t)0);
     m_background->wakeUp();
 }
 
@@ -691,11 +702,30 @@ void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
 void YsfxProcessor::Impl::SliderNotificationUpdater::handleAsyncUpdate()
 {
     uint64_t sliderMask = m_sliderMask.exchange(0);
+    uint64_t currentTouchMask = m_touchMask.load();
 
-    for (int i = 0; i < ysfx_max_sliders; ++i) {
+    uint64_t startMask = ~m_previousTouchMask & currentTouchMask;
+    uint64_t endMask = m_previousTouchMask & ~currentTouchMask;
+    m_previousTouchMask = currentTouchMask;
+
+    // TODO - we really need 4 masks here!
+    for (int i = 0; i < 64; ++i) {
+        if (startMask & (uint64_t{1} << i)) {
+            YsfxParameter *param = m_impl->m_self->getYsfxParameter(i);
+            param->beginChangeGesture();
+        }
+    }
+    for (int i = 0; i < 64; ++i) {
         if (sliderMask & (uint64_t{1} << i)) {
             YsfxParameter *param = m_impl->m_self->getYsfxParameter(i);
+            //param->setValueNotifyingHost(param->getValue());
             param->sendValueChangedMessageToListeners(param->getValue());
+        }
+    }
+    for (int i = 0; i < 64; ++i) {
+        if (endMask & (uint64_t{1} << i)) {
+            YsfxParameter *param = m_impl->m_self->getYsfxParameter(i);
+            param->endChangeGesture();
         }
     }
 }
@@ -723,8 +753,10 @@ void YsfxProcessor::Impl::Background::wakeUp()
 void YsfxProcessor::Impl::Background::run()
 {
     while (m_sema.wait(), m_running.load(std::memory_order_relaxed)) {
-        if (uint64_t sliderMask = m_impl->m_sliderParamsToNotify.exchange(0))
-            processSliderNotifications(sliderMask);
+        if (uint64_t sliderMask = m_impl->m_sliderParamsToNotify.exchange(0)) {
+            uint64_t touchMask = m_impl->m_sliderParamsTouching.load();
+            processSliderNotifications(sliderMask, touchMask);
+        }
         if (LoadRequest::Ptr loadRequest = std::atomic_exchange(&m_impl->m_loadRequest, LoadRequest::Ptr{}))
             processLoadRequest(*loadRequest);
         if (PresetRequest::Ptr presetRequest = std::atomic_exchange(&m_impl->m_presetRequest, PresetRequest::Ptr{}))
@@ -732,12 +764,13 @@ void YsfxProcessor::Impl::Background::run()
     }
 }
 
-void YsfxProcessor::Impl::Background::processSliderNotifications(uint64_t sliderMask)
+void YsfxProcessor::Impl::Background::processSliderNotifications(uint64_t sliderMask, uint64_t touchMask)
 {
     Impl *impl = this->m_impl;
     Impl::SliderNotificationUpdater *updater = impl->m_sliderNotificationUpdater.get();
 
     updater->addSlidersToNotify(sliderMask);
+    updater->updateTouch(touchMask);
     updater->triggerAsyncUpdate();
 }
 
