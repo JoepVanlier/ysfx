@@ -194,8 +194,8 @@ YSFX_API bool ysfx_slider_is_initially_visible(ysfx_t *fx, uint32_t index);
 
 // get the value of the slider
 YSFX_API ysfx_real ysfx_slider_get_value(ysfx_t *fx, uint32_t index);
-// set the value of the slider, and call @slider later if value has changed
-YSFX_API void ysfx_slider_set_value(ysfx_t *fx, uint32_t index, ysfx_real value);
+// set the value of the slider, and call @slider later if the value changed and we choose to notify the effect
+YSFX_API void ysfx_slider_set_value(ysfx_t *fx, uint32_t index, ysfx_real value, bool notify);
 
 typedef enum ysfx_compile_option_e {
     // skip compiling the @serialize section

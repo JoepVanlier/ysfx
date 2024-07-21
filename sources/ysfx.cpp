@@ -842,13 +842,13 @@ ysfx_real ysfx_slider_get_value(ysfx_t *fx, uint32_t index)
     return *fx->var.slider[index];
 }
 
-void ysfx_slider_set_value(ysfx_t *fx, uint32_t index, ysfx_real value)
+void ysfx_slider_set_value(ysfx_t *fx, uint32_t index, ysfx_real value, bool notify)
 {
     if (index >= ysfx_max_sliders)
         return;
     if (*fx->var.slider[index] != value) {
         *fx->var.slider[index] = value;
-        fx->must_compute_slider = true;
+        fx->must_compute_slider = notify;
     }
 }
 
@@ -966,7 +966,10 @@ void ysfx_init(ysfx_t *fx)
     ysfx_clear_files(fx);
 
     for (size_t i = 0; i < fx->code.init.size(); ++i)
+    {
+        // TODO: @init should never run concurrently with any other thread
         NSEEL_code_execute(fx->code.init[i].get());
+    };
 
     fx->must_compute_init = false;
     fx->must_compute_slider = true;
@@ -1139,6 +1142,7 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
 
         // compute @slider if needed
         if (fx->must_compute_slider) {
+            // TODO: slider must never run concurrently with @sample or @block
             NSEEL_code_execute(fx->code.slider.get());
             fx->must_compute_slider = false;
         }
