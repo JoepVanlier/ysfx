@@ -341,13 +341,15 @@ void ysfx_gfx_enter(ysfx_t *fx, bool doinit)
             state->input_queue = {};
             state->keys_pressed = {};
 
-            // reset lice
             eel_lice_state *lice = state->lice.get();
-            LICE_WrapperBitmap framebuffer = *static_cast<LICE_WrapperBitmap *>(lice->m_framebuffer);
-            state->lice.reset();
-            lice = new eel_lice_state{fx->vm.get(), fx, ysfx_gfx_max_images, ysfx_gfx_max_fonts};
-            state->lice.reset(lice);
-            lice->m_framebuffer = new LICE_WrapperBitmap(framebuffer);
+
+            if (!lice) {
+                LICE_WrapperBitmap framebuffer = *static_cast<LICE_WrapperBitmap *>(lice->m_framebuffer);
+                state->lice.reset();
+                lice = new eel_lice_state{fx->vm.get(), fx, ysfx_gfx_max_images, ysfx_gfx_max_fonts};
+                state->lice.reset(lice);
+                lice->m_framebuffer = new LICE_WrapperBitmap(framebuffer);
+            };
 
             // load images from filenames
             uint32_t numfiles = (uint32_t)fx->source.main->header.filenames.size();
