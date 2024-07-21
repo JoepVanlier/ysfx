@@ -99,11 +99,26 @@ float YsfxParameter::getValue() const
 void YsfxParameter::setValue(float newValue)
 {
     m_value = newValue;
+    m_hostUpdated = true;
+}
+
+void YsfxParameter::setValueNoNotify(float newValue)
+{
+    m_value = newValue;
 }
 
 float YsfxParameter::getDefaultValue() const
 {
     return 0.0f;
+}
+
+bool YsfxParameter::wasUpdatedByHost() {
+    if (m_hostUpdated) {
+        m_hostUpdated = false;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 juce::String YsfxParameter::getText(float normalisedValue, int) const

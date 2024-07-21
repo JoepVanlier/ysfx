@@ -39,13 +39,16 @@ public:
     const juce::NormalisableRange<float> &getNormalisableRange() const override { return m_range; }
     float getValue() const override;
     void setValue(float newValue) override;
+    void setValueNoNotify(float newValue);
     float getDefaultValue() const override;
     juce::String getText(float normalisedValue, int) const override;
     float getValueForText(const juce::String &text) const override;
+    bool wasUpdatedByHost();  // Fetches whether this was updated by host and resets it
 
 private:
     ysfx_u m_fx;
     int m_sliderIndex = 0;
     float m_value = 0.0f;
+    std::atomic<bool> m_hostUpdated{false};
     const juce::NormalisableRange<float> m_range{0.0f, 1.0f};
 };

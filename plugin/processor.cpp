@@ -242,8 +242,9 @@ void YsfxProcessor::Impl::processBlockGenerically(const void *inputs[], void *ou
     uint64_t sliderParametersChanged = m_sliderParametersChanged.exchange(0);
     if (sliderParametersChanged) {
         for (int i = 0; i < ysfx_max_sliders; ++i) {
-            if (sliderParametersChanged & ((uint64_t)1 << i))
+            if (sliderParametersChanged & ((uint64_t)1 << i)) {
                 syncParameterToSlider(i);
+            }
         }
     }
 
@@ -506,7 +507,7 @@ void YsfxProcessor::Impl::processSliderChanges()
             if (param->existsAsSlider()) {
                 float normValue = param->convertFromYsfxValue(ysfx_slider_get_value(fx, (uint32_t)i));
                 if (param->getValue() != normValue) {
-                    param->setValue(normValue);
+                    param->setValueNoNotify(normValue);  // This should not trigger @slider
                     changed |= uint64_t{1} << i;
                 }
             }
@@ -583,7 +584,8 @@ void YsfxProcessor::Impl::syncParameterToSlider(int index)
     YsfxParameter *param = m_self->getYsfxParameter(index);
     if (param->existsAsSlider()) {
         ysfx_real actualValue = param->convertToYsfxValue(param->getValue());
-        ysfx_slider_set_value(m_fx.get(), (uint32_t)index, actualValue);
+
+        ysfx_slider_set_value(m_fx.get(), (uint32_t)index, actualValue, param->wasUpdatedByHost());
     }
 }
 
