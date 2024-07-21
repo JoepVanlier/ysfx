@@ -129,6 +129,16 @@ void ysfx_string_unlock(ysfx_t *fx)
     fx->string_mutex.unlock();
 }
 
+void ysfx_image_lock(ysfx_t *fx)
+{
+    fx->image_mutex.lock();
+}
+
+void ysfx_image_unlock(ysfx_t *fx)
+{
+    fx->image_mutex.unlock();
+}
+
 const char *ysfx_string_access_unlocked(ysfx_t *fx, ysfx_real id, WDL_FastString **fs, bool for_write)
 {
     return fx->string_ctx->GetStringForIndex(id, fs, for_write);

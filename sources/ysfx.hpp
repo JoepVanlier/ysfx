@@ -57,6 +57,7 @@ struct ysfx_s {
     eel_string_context_state_u string_ctx;
     ysfx::mutex string_mutex;
     ysfx::mutex atomic_mutex;
+    ysfx::mutex image_mutex;
     NSEEL_VMCTX_u vm;
 
     // some default values, these are not standard, just arbitrary

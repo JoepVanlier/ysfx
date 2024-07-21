@@ -577,6 +577,7 @@ static EEL_F * NSEEL_CGEN_CALL ysfx_api_gfx_blurto(void *opaque, EEL_F *x, EEL_F
 
 static EEL_F * NSEEL_CGEN_CALL ysfx_api_gfx_getimgdim(void *opaque, EEL_F *img, EEL_F *w, EEL_F *h)
 {
+  EEL_IMG_MUTEXLOCK_SCOPE
   eel_lice_state *ctx=EEL_LICE_GET_CONTEXT(opaque);
   if (ctx) ctx->gfx_getimgdim(*img,w,h);
   return img;
@@ -584,6 +585,7 @@ static EEL_F * NSEEL_CGEN_CALL ysfx_api_gfx_getimgdim(void *opaque, EEL_F *img, 
 
 static EEL_F NSEEL_CGEN_CALL ysfx_api_gfx_loadimg(void *opaque, EEL_F *img, EEL_F *fr)
 {
+  EEL_IMG_MUTEXLOCK_SCOPE
   eel_lice_state *ctx=EEL_LICE_GET_CONTEXT(opaque);
   if (ctx) return ctx->gfx_loadimg(opaque,(int)*img,*fr);
   return 0.0;
@@ -591,6 +593,7 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_gfx_loadimg(void *opaque, EEL_F *img, EEL_
 
 static EEL_F NSEEL_CGEN_CALL ysfx_api_gfx_setimgdim(void *opaque, EEL_F *img, EEL_F *w, EEL_F *h)
 {
+  EEL_IMG_MUTEXLOCK_SCOPE
   eel_lice_state *ctx=EEL_LICE_GET_CONTEXT(opaque);
   if (ctx) return ctx->gfx_setimgdim((int)*img,w,h);
   return 0.0;
