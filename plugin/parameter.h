@@ -45,10 +45,14 @@ public:
     float getValueForText(const juce::String &text) const override;
     bool wasUpdatedByHost();  // Fetches whether this was updated by host and resets it
 
+    juce::String getName(int maximumStringLength) const override;
+    juce::CriticalSection m_nameSection;
+
 private:
     ysfx_u m_fx;
     int m_sliderIndex = 0;
     float m_value = 0.0f;
     std::atomic<bool> m_hostUpdated{false};
+    juce::String m_displayName;
     const juce::NormalisableRange<float> m_range{0.0f, 1.0f};
 };

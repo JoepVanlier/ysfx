@@ -677,6 +677,8 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
     bool notify = false;
     syncSlidersToParameters(notify);
 
+    m_self->updateHostDisplay();
+
     // notify parameters later, on the message thread
     m_sliderParamsToNotify.store(~(uint64_t)0);
     m_sliderParamsTouching.store((uint64_t)0);

@@ -21,7 +21,7 @@ YsfxParameter::YsfxParameter(ysfx_t *fx, int sliderIndex)
     : RangedAudioParameter(
         "slider" + juce::String(sliderIndex + 1),
         "Slider " + juce::String(sliderIndex + 1)),
-      m_sliderIndex(sliderIndex)
+      m_sliderIndex(sliderIndex), m_displayName("Slider " + juce::String(sliderIndex + 1))
 {
     setEffect(fx);
 }
@@ -32,8 +32,13 @@ void YsfxParameter::setEffect(ysfx_t *fx)
         return;
 
     m_fx.reset(fx);
-    if (fx)
+    if (fx) {
         ysfx_add_ref(fx);
+        {
+            juce::ScopedLock nameLock(m_nameSection);
+            m_displayName = juce::String(ysfx_slider_get_name(fx, m_sliderIndex));
+        }
+    }
 }
 
 bool YsfxParameter::existsAsSlider() const
@@ -110,6 +115,12 @@ void YsfxParameter::setValueNoNotify(float newValue)
 float YsfxParameter::getDefaultValue() const
 {
     return 0.0f;
+}
+
+juce::String YsfxParameter::getName(int maximumStringLength) const
+{
+    juce::ScopedLock nameLock(m_nameSection);
+    return m_displayName.substring(0, maximumStringLength);
 }
 
 bool YsfxParameter::wasUpdatedByHost() {
