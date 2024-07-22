@@ -57,6 +57,34 @@ Example:
 - `My JSFX/Effects/guitar/amp-model`
 - `My JSFX/Data/amp_models/Marshall JCM800 - Marshall Stock 70.wav`
 
+## Differences to JSFX
+
+There are still quite a few differences between `ysfx` and `jsfx` and some things may not work as well.
+Please report bugs and missing features, but also be mindful of the limited time I can spend on fixing them.
+
+I will keep a list of differences I have noticed so far here:
+
+- Do not load images in `@init`, it is terrible for performance in `ysfx`.
+While it will work, it will reload those images on every `@init`.
+Better is to either use the file syntax at the top of the script, e.g.
+
+```
+  filename:0,img/background.png
+  filename:1,img/poti_low_gain.png
+```
+
+and use those values there.
+Or load them in `@gfx` on the first pass.
+So something like:
+
+```
+@gfx
+(!imgs_loaded) ? (
+    // load images here
+    imgs_loaded = 1;
+);
+```
+
 ## Download development builds
 
 You can find the most recent builds [here](https://github.com/JoepVanlier/ysfx/releases).
