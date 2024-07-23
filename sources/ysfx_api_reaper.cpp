@@ -16,6 +16,7 @@
 //
 
 #include "ysfx.hpp"
+#include "utility/sync_bitset.hpp"
 #include "ysfx_api_reaper.hpp"
 #include "ysfx_api_eel.hpp"
 #include "ysfx_eel_utils.hpp"
@@ -78,20 +79,24 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_automate(void *opaque, INT_PTR npar
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
+    size_t group;
     uint64_t mask;
-    if (slider < ysfx_max_sliders)
-        mask = (uint64_t)1 << slider;
-    else
+    if (slider < ysfx_max_sliders) {
+        group = ysfx_fetch_slider_group_index(slider);
+        mask = ysfx_slider_mask(slider, group);
+    } else {
         mask = ysfx_eel_round<uint64_t>(std::fabs(*mask_or_slider_));
+        group = 0;
+    }
 
-    fx->slider.automate_mask |= mask;
-    fx->slider.change_mask |= mask;
+    fx->slider.automate_mask[group] |= mask;
+    fx->slider.change_mask[group] |= mask;
 
     if (nparms > 1) {
         if (ysfx_eel_round<int32_t>(parms[1][0])) {
-            fx->slider.touch_mask &= ~mask;
+            fx->slider.touch_mask[group] &= ~mask;
         } else {
-            fx->slider.touch_mask |= mask;
+            fx->slider.touch_mask[group] |= mask;
         }
     }
 
@@ -105,13 +110,17 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_sliderchange(void *opaque, EEL_F *mask_or_
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
+    size_t group;
     uint64_t mask;
-    if (slider < ysfx_max_sliders)
-        mask = (uint64_t)1 << slider;
-    else
+    if (slider < ysfx_max_sliders) {
+        group = ysfx_fetch_slider_group_index(slider);
+        mask = ysfx_slider_mask(slider, group);
+    } else {
+        group = 0;
         mask = ysfx_eel_round<uint64_t>(std::fabs(*mask_or_slider_));
+    }
 
-    fx->slider.change_mask |= mask;
+    fx->slider.change_mask[group] |= mask;
     return 0;
 }
 
@@ -122,24 +131,28 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_show(void *opaque, EEL_F *mask_or_s
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
+    size_t group;
     uint64_t mask;
-    if (slider < ysfx_max_sliders)
-        mask = (uint64_t)1 << slider;
-    else
+    if (slider < ysfx_max_sliders) {
+        group = ysfx_fetch_slider_group_index(slider);
+        mask = ysfx_slider_mask(slider, group);
+    } else {
+        group = 0;
         mask = ysfx_eel_round<uint64_t>(std::fabs(*mask_or_slider_));
+    }
 
     if (*value_ >= (EEL_F)+0.5) {
         // show
-        fx->slider.visible_mask |= mask;
+        fx->slider.visible_mask[group] |= mask;
     }
     else if (*value_ >= (EEL_F)-0.5) {
         // hide
         mask = ~mask;
-        fx->slider.visible_mask &= mask;
+        fx->slider.visible_mask[group] &= mask;
     }
     else {
         // toggle
-        mask = fx->slider.visible_mask.fetch_xor(mask) ^ mask;
+        mask = fx->slider.visible_mask[group].fetch_xor(mask) ^ mask;
     }
 
     return (EEL_F)mask;

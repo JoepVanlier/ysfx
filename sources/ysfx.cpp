@@ -987,9 +987,11 @@ void ysfx_first_init(ysfx_t *fx)
     assert(fx->code.compiled);
     assert(fx->is_freshly_compiled);
 
-    fx->slider.automate_mask.store(0);
-    fx->slider.change_mask.store(0);
-    fx->slider.touch_mask.store(0);
+    for (uint32_t i = 0; i < ysfx_max_slider_groups; ++i) {
+        fx->slider.automate_mask[i].store(0);
+        fx->slider.change_mask[i].store(0);
+        fx->slider.touch_mask[i].store(0);
+    }
     ysfx_update_slider_visibility_mask(fx);
 }
 
@@ -1022,12 +1024,16 @@ bool ysfx_get_pdc_midi(ysfx_t *fx)
 
 void ysfx_update_slider_visibility_mask(ysfx_t *fx)
 {
-    uint64_t visible = 0;
-    for (uint32_t i = 0; i < ysfx_max_sliders; ++i) {
-        ysfx_slider_t &slider = fx->source.main->header.sliders[i];
-        visible |= (uint64_t)slider.initially_visible << i;
+    uint32_t slider_idx = 0;
+    for (uint32_t group = 0; group < ysfx_max_slider_groups; ++group) {
+        uint64_t visible = 0;
+        for (uint32_t i = 0; i < 64; ++i) {
+            ysfx_slider_t &slider = fx->source.main->header.sliders[slider_idx++];
+            visible |= (uint64_t)slider.initially_visible << i;
+        }
+    
+        fx->slider.visible_mask[group].store(visible);
     }
-    fx->slider.visible_mask.store(visible);
 }
 
 void ysfx_set_time_info(ysfx_t *fx, const ysfx_time_info_t *info)
@@ -1085,24 +1091,33 @@ bool ysfx_send_trigger(ysfx_t *fx, uint32_t index)
     return true;
 }
 
-uint64_t ysfx_fetch_slider_changes(ysfx_t *fx)
-{
-    return fx->slider.change_mask.exchange(0);
+// A little helper function to find which of the bitsets we have to use
+size_t ysfx_fetch_slider_group_index(uint32_t slider_number) {
+    return slider_number >> 6;
 }
 
-uint64_t ysfx_fetch_slider_automations(ysfx_t *fx)
-{
-    return fx->slider.automate_mask.exchange(0);
+uint64_t ysfx_slider_mask(uint32_t slider_number, size_t group_index) {
+    return (uint64_t)1 << (slider_number - (group_index << 6));
 }
 
-uint64_t ysfx_fetch_slider_touches(ysfx_t *fx)
+uint64_t ysfx_fetch_slider_changes(ysfx_t *fx, size_t slider_group_index)
 {
-    return fx->slider.touch_mask.load();
+    return fx->slider.change_mask[slider_group_index].exchange(0);
 }
 
-uint64_t ysfx_get_slider_visibility(ysfx_t *fx)
+uint64_t ysfx_fetch_slider_automations(ysfx_t *fx, size_t slider_group_index)
 {
-    return fx->slider.visible_mask.load();
+    return fx->slider.automate_mask[slider_group_index].exchange(0);
+}
+
+uint64_t ysfx_fetch_slider_touches(ysfx_t *fx, size_t slider_group_index)
+{
+    return fx->slider.touch_mask[slider_group_index].load();
+}
+
+uint64_t ysfx_get_slider_visibility(ysfx_t *fx, size_t slider_group_index)
+{
+    return fx->slider.visible_mask[slider_group_index].load();
 }
 
 template <class Real>

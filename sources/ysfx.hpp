@@ -145,10 +145,10 @@ struct ysfx_s {
 
     // Slider
     struct {
-        ysfx::sync_bitset64 automate_mask;
-        ysfx::sync_bitset64 change_mask;
-        ysfx::sync_bitset64 visible_mask;
-        ysfx::sync_bitset64 touch_mask;
+        ysfx::sync_bitset64 automate_mask[ysfx_max_slider_groups];
+        ysfx::sync_bitset64 change_mask[ysfx_max_slider_groups];
+        ysfx::sync_bitset64 visible_mask[ysfx_max_slider_groups];
+        ysfx::sync_bitset64 touch_mask[ysfx_max_slider_groups];
     } slider;
 
     // Triggers
