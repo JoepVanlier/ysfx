@@ -84,7 +84,9 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::Label> m_lblFilePath;
     std::unique_ptr<juce::Label> m_lblIO;
     std::unique_ptr<juce::Viewport> m_centerViewPort;
+    std::unique_ptr<juce::Viewport> m_topViewPort;
     std::unique_ptr<YsfxParametersPanel> m_parametersPanel;
+    std::unique_ptr<YsfxParametersPanel> m_miniParametersPanel;
     std::unique_ptr<YsfxGraphicsView> m_graphicsView;
     std::unique_ptr<YsfxIDEView> m_ideView;
     std::unique_ptr<CodeWindow> m_codeWindow;
@@ -205,6 +207,14 @@ void YsfxEditor::Impl::updateInfo()
     }
     m_parametersPanel->setParametersDisplayed(params);
 
+    juce::Array<YsfxParameter *> params2;
+    params2.ensureStorageAllocated(ysfx_max_sliders);
+    for (uint32_t i = 0; i < ysfx_max_sliders; ++i) {
+        if (ysfx_slider_exists(fx, i) && ysfx_slider_is_initially_visible(fx, i))
+            params2.add(m_proc->getYsfxParameter((int)i));
+    }
+    m_miniParametersPanel->setParametersDisplayed(params2);
+    
     m_graphicsView->setEffect(fx);
     m_ideView->setEffect(fx, info->timeStamp);
 
@@ -503,7 +513,11 @@ void YsfxEditor::Impl::createUI()
     m_centerViewPort.reset(new juce::Viewport);
     m_centerViewPort->setScrollBarsShown(true, false);
     m_self->addAndMakeVisible(*m_centerViewPort);
+    m_topViewPort.reset(new juce::Viewport);
+    m_topViewPort->setScrollBarsShown(true, false);
+    m_self->addAndMakeVisible(*m_topViewPort);
     m_parametersPanel.reset(new YsfxParametersPanel);
+    m_miniParametersPanel.reset(new YsfxParametersPanel);
     m_graphicsView.reset(new YsfxGraphicsView);
     m_ideView.reset(new YsfxIDEView);
     m_ideView->setVisible(true);
@@ -568,6 +582,9 @@ void YsfxEditor::Impl::relayoutUI()
     uint32_t gfxDim[2] = {};
     ysfx_get_gfx_dim(fx, gfxDim);
 
+    int parameterHeight = m_miniParametersPanel->getRecommendedHeight(0);
+    if (parameterHeight) parameterHeight += 10;
+
     if (m_mustResizeToGfx) {
         float scaling_factor = 1.0f;
         if (m_graphicsView) {
@@ -577,7 +594,7 @@ void YsfxEditor::Impl::relayoutUI()
         int w = juce::jmax(defaultEditorWidth, (int)(gfxDim[0] * scaling_factor) + 22);
         int h = juce::jmax(defaultEditorHeight, (int)(gfxDim[1] * scaling_factor) + 50 + 20);
 
-        m_self->setSize(w, h);
+        m_self->setSize(w, h + parameterHeight);
         m_mustResizeToGfx = false;
     }
 
@@ -611,14 +628,30 @@ void YsfxEditor::Impl::relayoutUI()
     temp.removeFromRight(spacing);
     m_lblFilePath->setBounds(temp);
 
-    m_centerViewPort->setBounds(centerArea);
-
     juce::Component *viewed;
     if (m_btnSwitchEditor->getToggleState()) {
+        const juce::Rectangle<int> paramArea = centerArea.withHeight(parameterHeight);
+        const juce::Rectangle<int> gfxArea = centerArea.withTrimmedTop(parameterHeight);
+
+        if (parameterHeight) {
+            viewed = m_miniParametersPanel.get();
+            viewed->setSize(paramArea.getWidth(), paramArea.getHeight());
+            m_topViewPort->setBounds(paramArea);
+            m_topViewPort->setViewedComponent(viewed, false);
+            m_topViewPort->setVisible(true);
+        } else {
+            m_topViewPort->setViewedComponent(nullptr, false);
+            m_topViewPort->setVisible(false);
+        }
+
+        m_centerViewPort->setBounds(gfxArea);
         viewed = m_graphicsView.get();
-        viewed->setSize(centerArea.getWidth(), centerArea.getHeight());
+        viewed->setSize(gfxArea.getWidth(), gfxArea.getHeight());
     }
     else {
+        m_centerViewPort->setBounds(centerArea);
+        m_topViewPort->setViewedComponent(nullptr, false);
+        m_topViewPort->setVisible(false);
         viewed = m_parametersPanel.get();
         viewed->setSize(centerArea.getWidth(), m_parametersPanel->getRecommendedHeight(m_centerViewPort->getHeight()));
     }

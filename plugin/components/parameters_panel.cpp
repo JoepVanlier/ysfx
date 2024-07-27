@@ -367,10 +367,6 @@ public:
         parameterName.setText(parameter.getSliderName(), juce::dontSendNotification);
         parameterName.setJustificationType(juce::Justification::centredRight);
         addAndMakeVisible(parameterName);
-
-        parameterLabel.setText("slider" + juce::String(1 + parameter.getSliderIndex()), juce::dontSendNotification);
-        addAndMakeVisible(parameterLabel);
-
         addAndMakeVisible(*(parameterComp = createParameterComp()));
 
         setSize(400, 40);
@@ -382,16 +378,15 @@ public:
 
     void resized() override
     {
-        auto area = getLocalBounds();
+        auto area = getLocalBounds().withTrimmedRight(10);
 
-        parameterName.setBounds(area.removeFromLeft(200));
-        parameterLabel.setBounds(area.removeFromRight(100));
+        parameterName.setBounds(area.removeFromLeft(200 - std::max(0, 400 - area.getWidth())));
         parameterComp->setBounds(area);
     }
 
 private:
     YsfxParameter &parameter;
-    juce::Label parameterName, parameterLabel;
+    juce::Label parameterName;
     std::unique_ptr<Component> parameterComp;
 
     std::unique_ptr<Component> createParameterComp() const
