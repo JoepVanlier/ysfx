@@ -180,6 +180,7 @@ void YsfxEditor::Impl::updateInfo()
     if (filePath != juce::File{}) {
         m_lblFilePath->setText(filePath.getFileNameWithoutExtension(), juce::dontSendNotification);
         m_lblFilePath->setTooltip(filePath.getFullPathName());
+        m_self->getTopLevelComponent()->setName(ysfx_get_name(fx));
     }
     else {
         m_lblFilePath->setText(TRANS("No file"), juce::dontSendNotification);
