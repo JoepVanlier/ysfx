@@ -652,7 +652,6 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
     ysfx_t *fx = info->effect.get();
     m_fx.reset(fx);
     ysfx_add_ref(fx);
-    std::atomic_store(&m_info, info);
 
     ysfx_set_sample_rate(fx, m_sample_rate);
     ysfx_set_block_size(fx, m_block_size);
@@ -673,6 +672,8 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
         m_sliderParamsToNotify[i].store(~(uint64_t)0);
         m_sliderParamsTouching[i].store((uint64_t)0);
     }
+
+    std::atomic_store(&m_info, info);
     m_background->wakeUp();
 }
 
