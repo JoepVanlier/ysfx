@@ -285,6 +285,7 @@ public:
                              slider.findColour(juce::Slider::textBoxOutlineColourId));
         valueLabel.setBorderSize({1, 1, 1, 1});
         valueLabel.setJustificationType(juce::Justification::centred);
+        valueLabel.setEditable(true);
         addAndMakeVisible(valueLabel);
 
         // Set the initial value.
@@ -293,6 +294,7 @@ public:
         slider.onValueChange = [this] { sliderValueChanged(); };
         slider.onDragStart = [this] { sliderStartedDragging(); };
         slider.onDragEnd = [this] { sliderStoppedDragging(); };
+        valueLabel.onTextChange = [this] { labelValueChanged(); };
     }
 
     void paint(juce::Graphics &) override
@@ -349,6 +351,23 @@ private:
     {
         isDragging = false;
         getParameter().endChangeGesture();
+    }
+
+    void labelValueChanged()
+    {
+        juce::String textValue{valueLabel.getText()};
+        const auto charptr = textValue.getCharPointer();
+        auto ptr = charptr;
+        auto newVal = juce::CharacterFunctions::readDoubleValue(ptr);
+        size_t chars_read = ptr - charptr;
+        
+        if (chars_read == textValue.getNumBytesAsUTF8()) {
+            if (getParameter().getValue() != newVal) {
+                getParameter().setValueNotifyingHost(getParameter().convertFromYsfxValue(newVal));
+            }
+        } else {
+            updateTextDisplay();
+        }
     }
 
     juce::Slider slider{juce::Slider::LinearHorizontal, juce::Slider::TextEntryBoxPosition::NoTextBox};
