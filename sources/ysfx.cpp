@@ -1133,11 +1133,7 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
     *fx->var.trigger = (EEL_F)fx->triggers;
     fx->triggers = 0;
 
-    if (!fx->code.compiled) {
-        for (uint32_t ch = 0; ch < num_outs; ++ch)
-            memset(outs[ch], 0, num_frames * sizeof(Real));
-    }
-    else {
+    if (fx->code.compiled) {
         // compute @init if needed
         if (fx->must_compute_init)
             ysfx_init(fx);
@@ -1178,10 +1174,6 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
                     outs[ch][i] = (Real)*spl[ch];
             }
         }
-
-        // clear any output channels above the maximum count
-        for (uint32_t ch = num_outs; ch < orig_num_outs; ++ch)
-            memset(outs[ch], 0, num_frames * sizeof(Real));
     }
 
     // prepare MIDI input for writing, output for reading
