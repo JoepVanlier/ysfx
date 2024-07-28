@@ -101,7 +101,7 @@ struct YsfxEditor::Impl {
 };
 
 static const int defaultEditorWidth = 700;
-static const int defaultEditorHeight = 600;
+static const int defaultEditorHeight = 50;
 
 YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     : juce::AudioProcessorEditor(proc),
@@ -129,12 +129,14 @@ void YsfxEditor::paint (juce::Graphics& g)
 {
     // Redraw only parts that aren't covered already.
     const juce::Rectangle<int> bounds = getLocalBounds();
-    g.setColour(juce::Colours::black);
     g.setOpacity(1.0f);
-    g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), 70));
-    g.fillRect(juce::Rectangle<int>(0, 0, 20, bounds.getHeight()));
-    g.fillRect(juce::Rectangle<int>(bounds.getWidth() - 20, 0, 20, bounds.getHeight()));
+    g.setColour(juce::Colour(0, 0, 0));
+    g.fillRect(juce::Rectangle<int>(0, 0, m_headerSize, bounds.getHeight() - m_headerSize));
+    g.fillRect(juce::Rectangle<int>(bounds.getWidth() - 20, m_headerSize, 20, bounds.getHeight() - m_headerSize));
     g.fillRect(juce::Rectangle<int>(0, bounds.getHeight() - 20, bounds.getWidth(), 20));
+
+    g.setColour(juce::Colour(32, 32, 32));
+    g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), m_headerSize));
 }
 
 YsfxEditor::~YsfxEditor()
@@ -583,7 +585,8 @@ void YsfxEditor::Impl::relayoutUI()
     ysfx_get_gfx_dim(fx, gfxDim);
 
     int parameterHeight = m_miniParametersPanel->getRecommendedHeight(0);
-    if (parameterHeight) parameterHeight += 10;
+    int sideTrim{0};
+    int bottomTrim{0};
 
     if (m_mustResizeToGfx) {
         float scaling_factor = 1.0f;
@@ -591,8 +594,8 @@ void YsfxEditor::Impl::relayoutUI()
             scaling_factor = m_graphicsView->getTotalScaling();
         }
 
-        int w = juce::jmax(defaultEditorWidth, (int)(gfxDim[0] * scaling_factor) + 22);
-        int h = juce::jmax(defaultEditorHeight, (int)(gfxDim[1] * scaling_factor) + 50 + 20);
+        int w = juce::jmax(defaultEditorWidth, (int)(gfxDim[0] * scaling_factor) + 2 * sideTrim);
+        int h = juce::jmax(defaultEditorHeight, (int)(gfxDim[1] * scaling_factor) + m_self->m_headerSize + 2 * bottomTrim);
 
         m_self->setSize(w, h + parameterHeight);
         m_mustResizeToGfx = false;
@@ -602,8 +605,8 @@ void YsfxEditor::Impl::relayoutUI()
     const juce::Rectangle<int> bounds = m_self->getLocalBounds();
 
     temp = bounds;
-    const juce::Rectangle<int> topRow = temp.removeFromTop(50);
-    const juce::Rectangle<int> centerArea = temp.withTrimmedLeft(10).withTrimmedRight(10).withTrimmedBottom(10);
+    const juce::Rectangle<int> topRow = temp.removeFromTop(m_self->m_headerSize);
+    const juce::Rectangle<int> centerArea = temp.withTrimmedLeft(sideTrim).withTrimmedRight(sideTrim).withTrimmedBottom(bottomTrim);
 
     int width = 70;
     int spacing = 8;

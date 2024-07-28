@@ -20,4 +20,37 @@
 
 class YsfxLookAndFeel : public juce::LookAndFeel_V4 {
 public:
+    YsfxLookAndFeel()
+    {
+        juce::Colour white = juce::Colours::white;
+        juce::Colour black = juce::Colours::black;
+        juce::Colour grayBg = juce::Colour(32, 32, 32);
+        juce::Colour grayElementBg = juce::Colour(16, 16, 16);
+
+        juce::Colour c1 = juce::Colour(255, 255, 255);
+        juce::Colour c2 = juce::Colour(222, 222, 222);
+
+        setColour(juce::DocumentWindow::backgroundColourId, grayBg);
+        setColour(juce::ComboBox::backgroundColourId, grayElementBg);
+        setColour(juce::ComboBox::buttonColourId, grayElementBg);
+
+        setColour(juce::TextButton::buttonColourId, grayElementBg);
+        setColour(juce::TextEditor::backgroundColourId, grayElementBg);
+
+        setColour(juce::ListBox::backgroundColourId, grayElementBg);
+        setColour(juce::ListBox::backgroundColourId, grayElementBg);
+
+        setColour(juce::ScrollBar::thumbColourId, c2);
+        setColour(juce::ScrollBar::trackColourId, c1);
+        setColour(juce::Slider::thumbColourId, c2);
+        setColour(juce::Slider::trackColourId, c1);
+        setColour(juce::Slider::backgroundColourId, grayElementBg);
+
+        setColour(juce::PopupMenu::backgroundColourId, grayElementBg);
+
+        setColour(juce::AlertWindow::backgroundColourId, juce::Colour(23, 23, 14));
+        
+        auto &scheme = getCurrentColourScheme();
+        scheme.setUIColour(ColourScheme::widgetBackground, juce::Colour(16, 16, 16));
+    }
 };
