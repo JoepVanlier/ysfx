@@ -1138,6 +1138,11 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
         if (fx->must_compute_init)
             ysfx_init(fx);
 
+        double denorm_value = 0.0000000000000001;
+        if ((fx->var.ext_nodenorm) && (*(fx->var.ext_nodenorm) > 0.5)) {
+            denorm_value = 0.0;
+        }
+
         const uint32_t orig_num_outs = num_outs;
         const uint32_t num_code_ins = (uint32_t)fx->source.main->header.in_pins.size();
         const uint32_t num_code_outs = (uint32_t)fx->source.main->header.out_pins.size();
@@ -1166,9 +1171,9 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
             EEL_F **spl = fx->var.spl;
             for (uint32_t i = 0; i < num_frames; ++i) {
                 for (uint32_t ch = 0; ch < num_ins; ++ch)
-                    *spl[ch] = (EEL_F)ins[ch][i];
+                    *spl[ch] = (EEL_F)ins[ch][i] + denorm_value;
                 for (uint32_t ch = num_ins; ch < num_code_ins; ++ch)
-                    *spl[ch] = 0;
+                    *spl[ch] = denorm_value;
                 NSEEL_code_execute(fx->code.sample.get());
                 for (uint32_t ch = 0; ch < num_outs; ++ch)
                     outs[ch][i] = (Real)*spl[ch];
