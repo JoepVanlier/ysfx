@@ -180,7 +180,7 @@ void YsfxEditor::Impl::updateInfo()
     if (filePath != juce::File{}) {
         m_lblFilePath->setText(filePath.getFileNameWithoutExtension(), juce::dontSendNotification);
         m_lblFilePath->setTooltip(filePath.getFullPathName());
-        m_self->getTopLevelComponent()->setName(ysfx_get_name(fx));
+        m_self->getTopLevelComponent()->setName(juce::String(ysfx_get_name(fx)) + " (ysfx)");
     }
     else {
         m_lblFilePath->setText(TRANS("No file"), juce::dontSendNotification);
@@ -359,8 +359,8 @@ void YsfxEditor::Impl::popupRecentFiles()
         return;
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
-        .withParentComponent(m_self)
         .withTargetComponent(*m_btnRecentFiles);
+    
     m_recentFilesPopup->showMenuAsync(popupOptions, [this, recent](int index) {
         if (index == 1000)
             clearRecentFiles();
@@ -385,7 +385,6 @@ void YsfxEditor::Impl::popupPresets()
     }
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
-        .withParentComponent(m_self)
         .withTargetComponent(*m_btnLoadPreset);
     m_presetsPopup->showMenuAsync(popupOptions, [this, info](int index) {
         if (index > 0)
