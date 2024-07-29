@@ -18,39 +18,120 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 
+
+void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t, 3>> colormap);
+std::map<std::string, std::array<uint8_t, 3>> getDefaultColors();
+
+
 class YsfxLookAndFeel : public juce::LookAndFeel_V4 {
 public:
     YsfxLookAndFeel()
     {
-        juce::Colour white = juce::Colours::white;
-        juce::Colour black = juce::Colours::black;
-        juce::Colour grayBg = juce::Colour(32, 32, 32);
-        juce::Colour grayElementBg = juce::Colour(16, 16, 16);
+        setColors(*this, {});
+    }
 
-        juce::Colour c1 = juce::Colour(255, 255, 255);
-        juce::Colour c2 = juce::Colour(222, 222, 222);
+    void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, const juce::Slider::SliderStyle style, juce::Slider& slider) override
+    {
+        if (slider.isBar())
+        {
+            g.setColour (slider.findColour (juce::Slider::trackColourId));
+            g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (static_cast<float> (x), (float) y + 0.5f, sliderPos - (float) x, (float) height - 1.0f)
+                                            : juce::Rectangle<float> ((float) x + 0.5f, sliderPos, (float) width - 1.0f, (float) y + ((float) height - sliderPos)));
 
-        setColour(juce::DocumentWindow::backgroundColourId, grayBg);
-        setColour(juce::ComboBox::backgroundColourId, grayElementBg);
-        setColour(juce::ComboBox::buttonColourId, grayElementBg);
+            drawLinearSliderOutline (g, x, y, width, height, style, slider);
+        }
+        else
+        {
+            auto isTwoVal   = (style == juce::Slider::SliderStyle::TwoValueVertical   || style == juce::Slider::SliderStyle::TwoValueHorizontal);
+            auto isThreeVal = (style == juce::Slider::SliderStyle::ThreeValueVertical || style == juce::Slider::SliderStyle::ThreeValueHorizontal);
 
-        setColour(juce::TextButton::buttonColourId, grayElementBg);
-        setColour(juce::TextEditor::backgroundColourId, grayElementBg);
+            auto trackWidth = juce::jmin (6.0f, slider.isHorizontal() ? (float) height * 0.25f : (float) width * 0.25f) + 2;
 
-        setColour(juce::ListBox::backgroundColourId, grayElementBg);
-        setColour(juce::ListBox::backgroundColourId, grayElementBg);
+            juce::Point<float> startPoint (slider.isHorizontal() ? (float) x : (float) x + (float) width * 0.5f,
+                                    slider.isHorizontal() ? (float) y + (float) height * 0.5f : (float) (height + y));
 
-        setColour(juce::ScrollBar::thumbColourId, c2);
-        setColour(juce::ScrollBar::trackColourId, c1);
-        setColour(juce::Slider::thumbColourId, c2);
-        setColour(juce::Slider::trackColourId, c1);
-        setColour(juce::Slider::backgroundColourId, grayElementBg);
+            juce::Point<float> endPoint (slider.isHorizontal() ? (float) (width + x) : startPoint.x,
+                                slider.isHorizontal() ? startPoint.y : (float) y);
 
-        setColour(juce::PopupMenu::backgroundColourId, grayElementBg);
+            juce::Path backgroundTrack;
+            backgroundTrack.startNewSubPath (startPoint);
+            backgroundTrack.lineTo (endPoint);
+            g.setColour (slider.findColour (juce::Slider::backgroundColourId));
+            g.setGradientFill(juce::ColourGradient(slider.findColour(juce::Slider::backgroundColourId), (float) x, (float) y - 10, juce::Colour(255, 255, 255), (float) x, (float) y + 650, false));
 
-        setColour(juce::AlertWindow::backgroundColourId, juce::Colour(23, 23, 14));
-        
-        auto &scheme = getCurrentColourScheme();
-        scheme.setUIColour(ColourScheme::widgetBackground, juce::Colour(16, 16, 16));
+            g.strokePath (backgroundTrack, { trackWidth + 4, juce::PathStrokeType::curved, juce::PathStrokeType::rounded });
+
+            juce::Path valueTrack;
+            juce::Point<float> minPoint, maxPoint, thumbPoint;
+
+            if (isTwoVal || isThreeVal)
+            {
+                minPoint = { slider.isHorizontal() ? minSliderPos : (float) width * 0.5f,
+                            slider.isHorizontal() ? (float) height * 0.5f : minSliderPos };
+
+                if (isThreeVal)
+                    thumbPoint = { slider.isHorizontal() ? sliderPos : (float) width * 0.5f,
+                                slider.isHorizontal() ? (float) height * 0.5f : sliderPos };
+
+                maxPoint = { slider.isHorizontal() ? maxSliderPos : (float) width * 0.5f,
+                            slider.isHorizontal() ? (float) height * 0.5f : maxSliderPos };
+            }
+            else
+            {
+                auto kx = slider.isHorizontal() ? sliderPos : ((float) x + (float) width * 0.5f);
+                auto ky = slider.isHorizontal() ? ((float) y + (float) height * 0.5f) : sliderPos;
+
+                minPoint = startPoint;
+                maxPoint = { kx, ky };
+            }
+
+            auto thumbWidth = getSliderThumbRadius (slider);
+
+            valueTrack.startNewSubPath (minPoint);
+            valueTrack.lineTo (isThreeVal ? thumbPoint : maxPoint);
+            g.setColour (slider.findColour (juce::Label::textColourId));
+            g.strokePath (valueTrack, { trackWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded });
+
+            g.setColour (slider.findColour (juce::Slider::trackColourId));
+            g.strokePath (valueTrack, { trackWidth-2, juce::PathStrokeType::curved, juce::PathStrokeType::rounded });
+
+            if (! isTwoVal)
+            {
+                g.setColour (slider.findColour (juce::Label::textColourId));
+                g.fillEllipse (juce::Rectangle<float> (static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre (isThreeVal ? thumbPoint : maxPoint));
+
+                g.setColour (slider.findColour (juce::Slider::thumbColourId));
+                g.fillEllipse (juce::Rectangle<float> (static_cast<float> (thumbWidth - 2), static_cast<float> (thumbWidth - 2)).withCentre (isThreeVal ? thumbPoint : maxPoint));
+            }
+
+            if (isTwoVal || isThreeVal)
+            {
+                auto sr = juce::jmin (trackWidth, (slider.isHorizontal() ? (float) height : (float) width) * 0.4f);
+                auto pointerColour = slider.findColour (juce::Slider::thumbColourId);
+
+                if (slider.isHorizontal())
+                {
+                    drawPointer (g, minSliderPos - sr,
+                                juce::jmax (0.0f, (float) y + (float) height * 0.5f - trackWidth * 2.0f),
+                                trackWidth * 2.0f, pointerColour, 2);
+
+                    drawPointer (g, maxSliderPos - trackWidth,
+                                juce::jmin ((float) (y + height) - trackWidth * 2.0f, (float) y + (float) height * 0.5f),
+                                trackWidth * 2.0f, pointerColour, 4);
+                }
+                else
+                {
+                    drawPointer (g, juce::jmax (0.0f, (float) x + (float) width * 0.5f - trackWidth * 2.0f),
+                                minSliderPos - trackWidth,
+                                trackWidth * 2.0f, pointerColour, 1);
+
+                    drawPointer (g, juce::jmin ((float) (x + width) - trackWidth * 2.0f, (float) x + (float) width * 0.5f), maxSliderPos - sr,
+                                trackWidth * 2.0f, pointerColour, 3);
+                }
+            }
+
+            if (slider.isBar())
+                drawLinearSliderOutline (g, x, y, width, height, style, slider);
+        }
     }
 };

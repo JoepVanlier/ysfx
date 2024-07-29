@@ -29,6 +29,7 @@
 #include "utility/functional_timer.h"
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
+#include "json.hpp"
 
 struct YsfxEditor::Impl {
     YsfxEditor *m_self = nullptr;
@@ -123,6 +124,42 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->relayoutUILater();
     m_impl->initializeProperties();
     m_impl->updateInfo();
+
+    readTheme();
+}
+
+void YsfxEditor::readTheme()
+{
+    if (!m_impl) return;
+
+    juce::File dir = m_impl->getAppDataDirectory();
+    if (dir == juce::File{})
+        return;
+        
+    juce::File file = dir.getChildFile("theme.json");
+    dir.createDirectory();
+
+    if (!file.existsAsFile()) {
+        try {
+            juce::FileOutputStream stream(file);
+            nlohmann::json theme{getDefaultColors()};
+            stream.writeString(juce::String{theme.dump(4)});
+            setColors(getLookAndFeel(), {});
+        } catch (nlohmann::json::exception e) {
+            // Log: std::cout << "Failed to write theme: " << e.what() << std::endl;
+        }
+    } else {
+        juce::FileInputStream stream(file);
+        juce::String text = stream.readEntireStreamAsString();
+
+        try {
+            auto jsonFile = nlohmann::json::parse(text.toStdString());
+            std::map<std::string, std::array<uint8_t, 3>> readTheme = jsonFile.get<std::map<std::string, std::array<uint8_t, 3>>>();
+            setColors(getLookAndFeel(), readTheme);
+        } catch (nlohmann::json::exception e) {
+            // Log: std::cout << "Failed to read theme: " << e.what() << std::endl;
+        }
+    }
 }
 
 void YsfxEditor::paint (juce::Graphics& g)

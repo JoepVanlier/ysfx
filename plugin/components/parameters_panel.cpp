@@ -308,7 +308,7 @@ public:
         valueLabel.setBounds(area.removeFromRight(80));
 
         area.removeFromLeft(6);
-        slider.setBounds(area);
+        slider.setBounds(area.withTrimmedRight(15));
     }
 
 private:

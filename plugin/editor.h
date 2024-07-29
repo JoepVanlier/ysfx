@@ -30,6 +30,8 @@ protected:
     void paint (juce::Graphics& g) override;
 
 private:
+    void readTheme();
+
     int m_headerSize{45};
     struct Impl;
     std::unique_ptr<Impl> m_impl;
