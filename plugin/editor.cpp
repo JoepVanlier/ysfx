@@ -491,7 +491,7 @@ juce::File YsfxEditor::Impl::getAppDataDirectory()
     if (dir == juce::File{})
         return juce::File{};
 
-    return dir.getChildFile("ysfx");
+    return dir.getChildFile("ysfx_saike_mod");
 }
 
 juce::File YsfxEditor::Impl::getDefaultEffectsDirectory()
