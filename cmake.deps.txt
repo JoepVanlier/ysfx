@@ -76,6 +76,11 @@ target_include_directories(dr_libs INTERFACE "thirdparty/dr_libs")
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "thirdparty/stb")
 
+# json
+# ------------------------------------------------------------------------------
+add_library(json INTERFACE)
+target_include_directories(json INTERFACE "thirdparty/json")
+
 # fts
 # ------------------------------------------------------------------------------
 if(WIN32)
