@@ -68,8 +68,14 @@ struct ysfx_s {
     bool is_freshly_compiled = false;
     bool must_compute_init = false;
     bool must_compute_slider = false;
+    bool has_serialize = false;
 
     std::unordered_map<ysfx_real *, uint32_t> slider_of_var;
+    
+    struct fixed_variables {
+        EEL_F* vars[ysfx_max_default_vars];
+        uint16_t count{0};
+    } built_ins;
 
     // source
     struct {

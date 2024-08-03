@@ -83,10 +83,20 @@ void ysfx_api_initializer::init_once()
     static ysfx_api_initializer init;
 }
 
+// Only non-built ins should be reset on @init, so we need to log the ones that are built in
+// so we can ignore them when the plugin runs and we hit @init.
+EEL_F *registerVariable(ysfx_u *fx, NSEEL_VMCTX ctx, const char* name) {
+    EEL_F* var = NSEEL_VM_regvar(ctx, name);
+    (*fx)->built_ins.vars[(*fx)->built_ins.count] = var;
+    (*fx)->built_ins.count += 1;
+    return var;
+};
+
 //------------------------------------------------------------------------------
 ysfx_t *ysfx_new(ysfx_config_t *config)
 {
     ysfx_u fx{new ysfx_t};
+    fx->built_ins.count = 0;
 
     ysfx_config_add_ref(config);
     fx->config.reset(config);
@@ -124,17 +134,17 @@ ysfx_t *ysfx_new(ysfx_config_t *config)
 
     for (uint32_t i = 0; i < ysfx_max_channels; ++i) {
         std::string name = "spl" + std::to_string(i);
-        EEL_F *var = NSEEL_VM_regvar(vm, name.c_str());
+        EEL_F *var = registerVariable(&fx, vm, name.c_str());
         *(fx->var.spl[i] = var) = 0;
     }
     for (uint32_t i = 0; i < ysfx_max_sliders; ++i) {
         std::string name = "slider" + std::to_string(i + 1);
-        EEL_F *var = NSEEL_VM_regvar(vm, name.c_str());
+        EEL_F *var = registerVariable(&fx, vm, name.c_str());
         *(fx->var.slider[i] = var) = 0;
         fx->slider_of_var[var] = i;
     }
 
-    #define AUTOVAR(name, value) *(fx->var.name = NSEEL_VM_regvar(vm, #name)) = (value)
+    #define AUTOVAR(name, value) *(fx->var.name = registerVariable(&fx, vm, #name)) = (value)
     AUTOVAR(srate, fx->sample_rate);
     AUTOVAR(num_ch, fx->valid_input_channels);
     AUTOVAR(samplesblock, fx->block_size);
@@ -465,6 +475,7 @@ bool ysfx_compile(ysfx_t *fx, uint32_t compileopts)
     if (serialize && !compile_section(serialize, "@serialize", fx->code.serialize))
         return false;
 
+    fx->has_serialize = serialize ? true : false;
     fx->code.compiled = true;
     fx->is_freshly_compiled = true;
     fx->must_compute_init = true;
@@ -474,6 +485,54 @@ bool ysfx_compile(ysfx_t *fx, uint32_t compileopts)
 
     fail_guard.disarm();
     return true;
+}
+
+void ysfx_reinitialize_vars(ysfx_t *fx)
+{
+    auto callback = [](const char *name, EEL_F *var, void *userdata) -> int {
+        ysfx_s::fixed_variables* built_ins = (ysfx_s::fixed_variables*) userdata;
+
+        bool found = false;
+        for (int i=0; i < built_ins->count; i++) {
+            // If this is a plugin built-in, we shouldn't reset it.
+            if (var == built_ins->vars[i]) {
+                found = true;
+            }
+        }
+
+        if (
+            !(true
+                && strcmp(name, "gfx_r")
+                && strcmp(name, "gfx_g")
+                && strcmp(name, "gfx_b")
+                && strcmp(name, "gfx_a")
+                && strcmp(name, "gfx_a2")
+                && strcmp(name, "gfx_w")
+                && strcmp(name, "gfx_h")
+                && strcmp(name, "gfx_x")
+                && strcmp(name, "gfx_y")
+                && strcmp(name, "gfx_mode")
+                && strcmp(name, "gfx_dest")
+                && strcmp(name, "gfx_clear")
+                && strcmp(name, "gfx_texth")
+                && strcmp(name, "mouse_x")
+                && strcmp(name, "mouse_y")
+                && strcmp(name, "mouse_y")
+                && strcmp(name, "mouse_cap")
+                && strcmp(name, "mouse_wheel")
+                && strcmp(name, "mouse_hwheel")
+                && strcmp(name, "gfx_ext_retina")
+            )
+        ) {
+            found = true;
+        }
+
+        if (!found) {
+            *var = 0;
+        }
+        return 1;
+    };
+    NSEEL_VM_enumallvars(fx->vm.get(), +callback, &fx->built_ins);
 }
 
 bool ysfx_is_compiled(ysfx_t *fx)
@@ -961,6 +1020,11 @@ void ysfx_init(ysfx_t *fx)
         ysfx_first_init(fx);
 
         fx->is_freshly_compiled = false;
+    } else {
+        // This matches the reaper behavior
+        if (!fx->has_serialize) {
+            ysfx_reinitialize_vars(fx);
+        }
     }
 
     ysfx_clear_files(fx);

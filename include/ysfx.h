@@ -57,6 +57,7 @@ enum {
     ysfx_max_midi_buses = 16,
     ysfx_max_triggers = 10,
     ysfx_max_slider_groups = 4,  // needs to be ysfx_max_sliders / 64
+    ysfx_max_default_vars = 1024,  // needs to be bigger than max_sliders + all the built in variables
 };
 
 typedef enum ysfx_log_level_e {
