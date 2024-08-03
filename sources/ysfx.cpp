@@ -953,13 +953,13 @@ void ysfx_init(ysfx_t *fx)
     *fx->var.samplesblock = (EEL_F)fx->block_size;
     *fx->var.srate = fx->sample_rate;
 
-    *fx->var.pdc_delay = 0;
-    *fx->var.pdc_bot_ch = 0;
-    *fx->var.pdc_top_ch = 0;
-    *fx->var.pdc_midi = 0;
-
     if (fx->is_freshly_compiled) {
+        *fx->var.pdc_delay = 0;
+        *fx->var.pdc_bot_ch = 0;
+        *fx->var.pdc_top_ch = 0;
+        *fx->var.pdc_midi = 0;
         ysfx_first_init(fx);
+
         fx->is_freshly_compiled = false;
     }
 
