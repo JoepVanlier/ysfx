@@ -108,8 +108,13 @@ cmake --build .
 
 ## JSFX resources
 
-Great free and open-source effects:
+There are many wonderful JSFX out there!
 
-- Saike: https://github.com/JoepVanlier/JSFX
+- Saike (my own): https://github.com/JoepVanlier/JSFX
 - Geraint Luff: https://github.com/geraintluff/jsfx
 - Justin Johnson: https://github.com/Justin-Johnson/ReJJ
+- Mawi JSFX: https://github.com/mawi-design/JSFX
+- Jozmac: https://github.com/jozmac/reapack-jm
+- Tukan Studios: https://github.com/TukanStudios/TUKAN_STUDIOS_PLUGINS
+
+For a list with many more, please see: https://www.keithhaydon.com/Reaper/JSFX2.pdf
