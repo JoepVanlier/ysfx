@@ -26,5 +26,6 @@ struct YsfxInfo : public std::enable_shared_from_this<YsfxInfo> {
     juce::Time timeStamp;
     juce::StringArray errors;
     juce::StringArray warnings;
+    juce::String m_lastChosenPreset;
     using Ptr = std::shared_ptr<YsfxInfo>;
 };

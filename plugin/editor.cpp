@@ -216,7 +216,11 @@ void YsfxEditor::Impl::updateInfo()
     juce::File filePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
 
     if (filePath != juce::File{}) {
-        m_lblFilePath->setText(filePath.getFileNameWithoutExtension(), juce::dontSendNotification);
+        if (info->m_lastChosenPreset.isNotEmpty()) {
+            m_lblFilePath->setText(filePath.getFileNameWithoutExtension() + "\n" + info->m_lastChosenPreset, juce::dontSendNotification);
+        } else {
+            m_lblFilePath->setText(filePath.getFileNameWithoutExtension(), juce::dontSendNotification);
+        }
         m_lblFilePath->setTooltip(filePath.getFullPathName());
         m_self->getTopLevelComponent()->setName(juce::String(ysfx_get_name(fx)) + " (ysfx)");
     }
@@ -418,15 +422,25 @@ void YsfxEditor::Impl::popupPresets()
     if (!bank)
         m_presetsPopup->addItem(0, TRANS("No presets"), false);
     else {
-        for (uint32_t i = 0; i < bank->preset_count; ++i)
-            m_presetsPopup->addItem((int)(i + 1), bank->presets[i].name);
+        for (uint32_t i = 0; i < bank->preset_count; ++i) {
+            bool wasLastChosen = info->m_lastChosenPreset.compare(bank->presets[i].name) == 0;
+            m_presetsPopup->addItem((int)(i + 1), bank->presets[i].name, true, wasLastChosen);
+        }
     }
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
         .withTargetComponent(*m_btnLoadPreset);
     m_presetsPopup->showMenuAsync(popupOptions, [this, info](int index) {
-        if (index > 0)
+        if (index > 0) {
             m_proc->loadJsfxPreset(info, (uint32_t)(index - 1), true);
+            info->m_lastChosenPreset = info->bank->presets[index - 1].name;
+            
+            ysfx_t *fx = info->effect.get();
+            if (fx) {
+                juce::File filePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
+                m_lblFilePath->setText(filePath.getFileNameWithoutExtension() + "\n" + info->m_lastChosenPreset, juce::dontSendNotification);
+            }
+        }
     });
 }
 
@@ -543,7 +557,7 @@ void YsfxEditor::Impl::createUI()
     m_self->addAndMakeVisible(*m_btnSwitchEditor);
     m_lblFilePath.reset(new juce::Label);
     m_lblFilePath->setMinimumHorizontalScale(1.0f);
-    m_lblFilePath->setJustificationType(juce::Justification::horizontallyCentred);
+    m_lblFilePath->setJustificationType(juce::Justification::centred);
     m_self->addAndMakeVisible(*m_lblFilePath);
     m_lblIO.reset(new juce::Label);
     m_lblIO->setMinimumHorizontalScale(1.0f);
@@ -667,6 +681,8 @@ void YsfxEditor::Impl::relayoutUI()
 
     m_lblIO->setBounds(temp.removeFromRight(80));
     temp.removeFromRight(spacing);
+
+    temp.expand(0, 10);
     m_lblFilePath->setBounds(temp);
 
     juce::Component *viewed;
