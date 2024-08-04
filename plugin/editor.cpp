@@ -662,14 +662,8 @@ void YsfxEditor::Impl::relayoutUI()
 
     int width = 70;
     int spacing = 8;
-    temp = topRow.reduced(10, 10);
-    m_btnLoadFile->setBounds(temp.removeFromLeft(width));
-    temp.removeFromLeft(spacing);
-    m_btnRecentFiles->setBounds(temp.removeFromLeft(width));
-    temp.removeFromLeft(spacing);
-    m_btnReload->setBounds(temp.removeFromLeft(width));
-    temp.removeFromLeft(spacing);
 
+    temp = topRow.reduced(10, 10);
     m_btnSwitchEditor->setBounds(temp.removeFromRight(80));
     temp.removeFromRight(spacing);
     m_btnLoadPreset->setBounds(temp.removeFromRight(width));
@@ -679,8 +673,39 @@ void YsfxEditor::Impl::relayoutUI()
     m_btnGfxScaling->setBounds(temp.removeFromRight(40));
     temp.removeFromRight(spacing);
 
-    m_lblIO->setBounds(temp.removeFromRight(80));
-    temp.removeFromRight(spacing);
+    int defaultLeftButtonWidth = 20 + 10 + 3 * (width + spacing);
+    auto labelText = m_lblFilePath->getText();
+    auto lines = juce::StringArray::fromTokens(labelText, "\n", "");
+
+    int max_text_width = 0;
+    for (auto line : lines) {
+        int current_text_width = static_cast<int>(m_lblFilePath->getFont().getStringWidthFloat(line));
+        if (current_text_width > max_text_width) max_text_width = current_text_width;
+    }
+
+    int roomNeeded = max_text_width + defaultLeftButtonWidth;
+    int ioWidth = std::min(80, temp.getWidth() - roomNeeded);
+    if (ioWidth > 0) {
+        m_lblIO->setBounds(temp.removeFromRight(ioWidth));
+        temp.removeFromRight(spacing);
+        m_lblIO->setVisible(true);
+    } else {
+        m_lblIO->setVisible(false);
+    }
+
+    m_btnLoadFile->setBounds(temp.removeFromLeft(width));
+    temp.removeFromLeft(spacing);
+    m_btnRecentFiles->setBounds(temp.removeFromLeft(width));
+    temp.removeFromLeft(spacing);
+
+    int buttonWidth = width + spacing + std::min(0, ioWidth);
+    if (buttonWidth > 0) {
+        m_btnReload->setBounds(temp.removeFromLeft(buttonWidth));
+        temp.removeFromLeft(spacing);
+        m_btnReload->setVisible(true);
+    } else {
+        m_btnReload->setVisible(false);
+    }
 
     temp.expand(0, 10);
     m_lblFilePath->setBounds(temp);
