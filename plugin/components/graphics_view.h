@@ -45,8 +45,8 @@ protected:
     void filesDropped(const juce::StringArray &files, int x, int y) override;
 
 private:
-    float m_pixelFactor{1.0f};
-    float m_outputScalingFactor{1.0f};
+    std::atomic<float> m_pixelFactor{1.0f};
+    std::atomic<float> m_outputScalingFactor{1.0f};
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

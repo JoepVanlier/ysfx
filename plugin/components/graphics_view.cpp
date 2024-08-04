@@ -258,19 +258,19 @@ void YsfxGraphicsView::setEffect(ysfx_t *fx)
 
 void YsfxGraphicsView::setScaling(float new_scaling)
 {
-    m_outputScalingFactor = new_scaling;
+    m_outputScalingFactor.store(new_scaling);
 }
 
 float YsfxGraphicsView::getScaling()
 {
-    return m_outputScalingFactor;
+    return m_outputScalingFactor.load();
 }
 
 float YsfxGraphicsView::getTotalScaling()
 {
     // We rescale this only when we have active UI rescaling on under the assumption that that mode
     // is used mostly for JSFX that do not have the inherent ability to scale with the UI.
-    return m_outputScalingFactor / (m_outputScalingFactor > 1.1f ? m_pixelFactor : 1.0f);
+    return m_outputScalingFactor.load() / (m_outputScalingFactor.load() > 1.1f ? m_pixelFactor.load() : 1.0f);
 }
 
 void YsfxGraphicsView::paint(juce::Graphics &g)
@@ -310,7 +310,7 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     }
 
     g.setOpacity(1.0f);
-    g.drawImageTransformed(image, juce::AffineTransform::translation(0.0f, 0.0f).scaled(m_outputScalingFactor / m_pixelFactor), false);
+    g.drawImageTransformed(image, juce::AffineTransform::translation(0.0f, 0.0f).scaled(m_outputScalingFactor.load() / m_pixelFactor.load()), false);
 }
 
 void YsfxGraphicsView::resized()
@@ -401,8 +401,8 @@ void YsfxGraphicsView::mouseWheelMove(const juce::MouseEvent &event, const juce:
     m_impl->updateYsfxMousePosition(event);
 
     Impl::GfxInputState *gfxInputState = m_impl->m_gfxInputState.get();
-    gfxInputState->m_ysfxWheel += wheel.deltaY / m_pixelFactor;
-    gfxInputState->m_ysfxHWheel += wheel.deltaX / m_pixelFactor;
+    gfxInputState->m_ysfxWheel += wheel.deltaY / m_pixelFactor.load();
+    gfxInputState->m_ysfxHWheel += wheel.deltaX / m_pixelFactor.load();
 }
 
 //------------------------------------------------------------------------------
@@ -540,8 +540,8 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
 {
     GfxTarget *target = m_gfxTarget.get();
 
-    float output_scaling = m_self->m_outputScalingFactor;
-    float pixel_factor = m_self->m_pixelFactor / output_scaling;
+    float output_scaling = m_self->m_outputScalingFactor.load();
+    float pixel_factor = m_self->m_pixelFactor.load() / output_scaling;
 
     // newWidth is set when the JSFX initializes
     float scaling_factor = 1.0f / (output_scaling > 1.1f ? pixel_factor : 1.0f);
