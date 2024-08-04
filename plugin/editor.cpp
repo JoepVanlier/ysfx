@@ -154,7 +154,7 @@ void YsfxEditor::readTheme()
 
         try {
             auto jsonFile = nlohmann::json::parse(text.toStdString());
-            std::map<std::string, std::array<uint8_t, 3>> readTheme = jsonFile.get<std::map<std::string, std::array<uint8_t, 3>>>();
+            auto readTheme = jsonFile[0].get<std::map<std::string, std::array<uint8_t, 3>>>();
             setColors(getLookAndFeel(), readTheme);
         } catch (nlohmann::json::exception e) {
             // Log: std::cout << "Failed to read theme: " << e.what() << std::endl;
@@ -173,6 +173,7 @@ void YsfxEditor::paint (juce::Graphics& g)
     g.fillRect(juce::Rectangle<int>(0, bounds.getHeight() - 20, bounds.getWidth(), 20));
 
     g.setColour(juce::Colour(32, 32, 32));
+    g.setColour(this->findColour(juce::DocumentWindow::backgroundColourId));
     g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), m_headerSize));
 }
 
