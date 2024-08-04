@@ -16,6 +16,7 @@
 //
 
 #include "lookandfeel.h"
+#include <juce_gui_extra/juce_gui_extra.h>
 
 
 std::map<std::string, std::array<uint8_t, 3>> getDefaultColors()
@@ -79,7 +80,6 @@ void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t,
 
     lnf.setColour(juce::TextButton::buttonColourId, elementBackgroundColour);
     lnf.setColour(juce::TextButton::buttonDown, sliderFillColour);
-    lnf.setColour(juce::TextButton::buttonColourId, offFillColour);
     lnf.setColour(juce::TextButton::buttonOnColourId, selectionFillColour);
     lnf.setColour(juce::TextEditor::backgroundColourId, offFillColour);
 
@@ -94,4 +94,15 @@ void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t,
 
     lnf.setColour(juce::PopupMenu::backgroundColourId, offFillColour);
     lnf.setColour(juce::AlertWindow::backgroundColourId, offFillColour);
+
+    lnf.setColour(juce::CodeEditorComponent::backgroundColourId, elementBackgroundColour);
+    lnf.setColour(juce::CodeEditorComponent::defaultTextColourId, fontColour);
+    lnf.setColour(juce::CodeEditorComponent::highlightColourId, selectionFillColour);
+    lnf.setColour(juce::CodeEditorComponent::lineNumberBackgroundId, offFillColour);
+    lnf.setColour(juce::CodeEditorComponent::lineNumberTextId, fontColour);
+
+    lnf.setColour(juce::LookAndFeel_V4::ColourScheme::widgetBackground, elementBackgroundColour);
+
+    auto& lnf4 = dynamic_cast<juce::LookAndFeel_V4&>(lnf);
+    lnf4.getCurrentColourScheme().setUIColour(juce::LookAndFeel_V4::ColourScheme::widgetBackground, elementBackgroundColour);
 }

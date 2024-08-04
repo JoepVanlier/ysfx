@@ -15,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include "lookandfeel.h"
 #include "ide_view.h"
 #include "utility/functional_timer.h"
 #include <juce_gui_extra/juce_gui_extra.h>
