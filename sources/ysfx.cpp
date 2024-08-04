@@ -1616,8 +1616,8 @@ void ysfx_gfx_update_mouse(ysfx_t *fx, uint32_t mods, int32_t xpos, int32_t ypos
 
     *fx->var.mouse_x = (EEL_F)xpos;
     *fx->var.mouse_y = (EEL_F)ypos;
-    *fx->var.mouse_wheel += 120 * wheel;
-    *fx->var.mouse_hwheel += 120 * hwheel;
+    *fx->var.mouse_wheel += 512 * wheel;
+    *fx->var.mouse_hwheel += 512 * hwheel;
 
     uint32_t mouse_cap = 0;
     if (mods & ysfx_mod_shift)

@@ -401,8 +401,8 @@ void YsfxGraphicsView::mouseWheelMove(const juce::MouseEvent &event, const juce:
     m_impl->updateYsfxMousePosition(event);
 
     Impl::GfxInputState *gfxInputState = m_impl->m_gfxInputState.get();
-    gfxInputState->m_ysfxWheel += wheel.deltaY;
-    gfxInputState->m_ysfxHWheel += wheel.deltaX;
+    gfxInputState->m_ysfxWheel += wheel.deltaY / m_pixelFactor;
+    gfxInputState->m_ysfxHWheel += wheel.deltaX / m_pixelFactor;
 }
 
 //------------------------------------------------------------------------------
