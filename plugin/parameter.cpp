@@ -81,6 +81,7 @@ ysfx_real YsfxParameter::convertToYsfxValue(float normValue) const
     //    to make sure imprecision does not land us on the wrong index
     if (isEnumSlider())
         actualValue = juce::roundToInt(actualValue);
+
     return actualValue;
 }
 
@@ -143,6 +144,13 @@ juce::String YsfxParameter::getText(float normalisedValue, int) const
         int index = juce::roundToInt(actualValue);
         if (index >= 0 && index < enumSize)
             return getSliderEnumName(index);
+    } else {
+        // NOTE: Unfortunately, things have to map to 0-1 so you lose some precision 
+        // coming back (and can't rely on integer floats being exact anymore).
+        ysfx_real rounded = juce::roundToInt(actualValue);
+        if (std::abs(rounded - actualValue) < 0.00001) {
+            actualValue = rounded > -0.1 ? abs(rounded) : rounded;
+        }
     }
 
     return juce::String(actualValue);

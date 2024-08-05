@@ -569,8 +569,17 @@ void YsfxProcessor::Impl::syncParameterToSlider(int index)
         return;
 
     YsfxParameter *param = m_self->getYsfxParameter(index);
+
     if (param->existsAsSlider()) {
         ysfx_real actualValue = param->convertToYsfxValue(param->getValue());
+        ysfx_slider_range_t range = param->getSliderRange();
+
+        // NOTE: Unfortunately, things have to map to 0-1 so you lose some precision 
+        // coming back (and can't rely on integer floats being exact anymore).
+        ysfx_real rounded = juce::roundToInt(actualValue);
+        if (std::abs(rounded - actualValue) < 0.00001) {
+            actualValue = rounded > -0.1 ? abs(rounded) : rounded;
+        }
 
         ysfx_slider_set_value(m_fx.get(), (uint32_t)index, actualValue, param->wasUpdatedByHost());
     }
