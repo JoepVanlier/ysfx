@@ -712,12 +712,14 @@ void YsfxEditor::Impl::relayoutUI()
 
     juce::Component *viewed;
     if (m_btnSwitchEditor->getToggleState()) {
-        const juce::Rectangle<int> paramArea = centerArea.withHeight(parameterHeight);
+        int maxParamArea = m_self->getHeight();
+        if (fx && ysfx_has_section(fx, ysfx_section_gfx)) maxParamArea /= 2;
+        const juce::Rectangle<int> paramArea = centerArea.withHeight(std::min(parameterHeight, maxParamArea));
         const juce::Rectangle<int> gfxArea = centerArea.withTrimmedTop(parameterHeight);
 
         if (parameterHeight) {
             viewed = m_miniParametersPanel.get();
-            viewed->setSize(paramArea.getWidth(), paramArea.getHeight());
+            viewed->setSize(paramArea.getWidth(), m_miniParametersPanel->getRecommendedHeight(0));
             m_topViewPort->setBounds(paramArea);
             m_topViewPort->setViewedComponent(viewed, false);
             m_topViewPort->setVisible(true);

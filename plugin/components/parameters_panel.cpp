@@ -303,7 +303,7 @@ public:
 
     void resized() override
     {
-        auto area = getLocalBounds().reduced(0, 10);
+        auto area = getLocalBounds().reduced(10, 10);
 
         valueLabel.setBounds(area.removeFromRight(80));
 
