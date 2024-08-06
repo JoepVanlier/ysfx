@@ -23,6 +23,8 @@ class YsfxParameter;
 using ysfx_t = struct ysfx_s;
 using ysfx_state_t = struct ysfx_state_s;
 
+enum RetryState {ok, mustRetry, retrying};
+
 class YsfxProcessor : public juce::AudioProcessor {
 public:
     YsfxProcessor();
@@ -64,6 +66,10 @@ public:
 
     //==========================================================================
     bool isBusesLayoutSupported(const BusesLayout &layout) const override;
+
+    // Did the last plugin fail to load and should we retry?
+    RetryState retryLoad();
+    juce::String lastLoadPath();
 
 private:
     struct Impl;

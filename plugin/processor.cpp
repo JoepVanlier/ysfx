@@ -54,6 +54,10 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     void installNewFx(YsfxInfo::Ptr info);
     void loadNewPreset(const ysfx_preset_t &preset);
 
+    // This function should only ever be used in an emergency (plugin missing)
+    void openFileDialog(juce::File filePath, ysfx_state_t *initialState);
+    std::unique_ptr<juce::FileChooser> m_fileChooser;
+
     //==========================================================================
     struct LoadRequest : public std::enable_shared_from_this<LoadRequest> {
         juce::String filePath;
@@ -120,6 +124,11 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     //==========================================================================
     void audioProcessorParameterChanged(AudioProcessor *processor, int parameterIndex, float newValue) override;
     void audioProcessorChanged(AudioProcessor *processor, const ChangeDetails &details) override;
+
+    std::atomic<RetryState> m_failedLoad{RetryState::ok};
+    juce::CriticalSection m_loadLock;
+    juce::String m_lastLoadPath{""};
+    ysfx_state_u m_failedLoadState{nullptr};  // Holds the state of a failed load
 };
 
 //==============================================================================
@@ -165,11 +174,26 @@ YsfxProcessor::YsfxProcessor()
     addListener(m_impl.get());
 }
 
+juce::String YsfxProcessor::lastLoadPath()
+{
+    const juce::ScopedLock sl(m_impl->m_loadLock);
+    return m_impl->m_lastLoadPath;
+}
+
+RetryState YsfxProcessor::retryLoad()
+{
+    RetryState state = m_impl->m_failedLoad.load();
+
+    if (state == RetryState::mustRetry) {
+        m_impl->m_failedLoad.store(RetryState::retrying);
+    }
+
+    return state;
+}
+
 YsfxProcessor::~YsfxProcessor()
 {
     removeListener(m_impl.get());
-
-    ///
     m_impl->m_background->shutdown();
 }
 
@@ -186,7 +210,15 @@ void YsfxProcessor::loadJsfxFile(const juce::String &filePath, ysfx_state_t *ini
 {
     Impl::LoadRequest::Ptr loadRequest{new Impl::LoadRequest};
     loadRequest->filePath = filePath;
-    loadRequest->initialState.reset(ysfx_state_dup(initialState));
+
+    if (m_impl->m_failedLoad.load() == RetryState::retrying) {
+        {
+            const juce::ScopedLock sl(m_impl->m_loadLock);
+            loadRequest->initialState.reset(ysfx_state_dup(m_impl->m_failedLoadState.get()));
+        }
+    } else {
+        loadRequest->initialState.reset(ysfx_state_dup(initialState));
+    };
     std::atomic_store(&m_impl->m_loadRequest, loadRequest);
     m_impl->m_background->wakeUp();
     if (!async) {
@@ -790,6 +822,22 @@ void YsfxProcessor::Impl::Background::processLoadRequest(LoadRequest &req)
 {
     YsfxInfo::Ptr info = createNewFx(req.filePath.toUTF8(), req.initialState.get());
     m_impl->installNewFx(info);
+
+    {
+        const juce::ScopedLock sl(m_impl->m_loadLock);
+
+        m_impl->m_lastLoadPath = req.filePath;
+        if (!ysfx_is_compiled(m_impl->m_fx.get())) {
+            if (req.initialState) {
+                m_impl->m_failedLoadState.reset(ysfx_state_dup(req.initialState.get()));
+                m_impl->m_failedLoad.store(RetryState::mustRetry);  // aww
+            }
+        } else {
+            // Successful compile this time. We can let it go.
+            m_impl->m_failedLoadState.reset(nullptr);
+            m_impl->m_failedLoad.store(RetryState::ok);
+        }
+    }
 
     std::lock_guard<std::mutex> lock(req.completionMutex);
     req.completion = true;

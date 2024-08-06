@@ -205,6 +205,11 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     if (m_info != info) {
         m_info = info;
         updateInfo();
+        m_btnLoadFile->setButtonText(TRANS("Load"));
+    }
+    if ((m_proc->retryLoad() == RetryState::mustRetry) && !m_fileChooserActive) {
+        chooseFileAndLoad();
+        m_btnLoadFile->setButtonText(TRANS("Locate"));
     }
 }
 
@@ -301,15 +306,21 @@ void YsfxEditor::Impl::chooseFileAndLoad()
         }
     }
 
-    m_fileChooser.reset(new juce::FileChooser(TRANS("Open jsfx..."), initialPath));
+    bool normalLoad = (m_proc->retryLoad() == RetryState::ok);
+    if (normalLoad) {
+        m_fileChooser.reset(new juce::FileChooser(TRANS("Open jsfx..."), initialPath));
+    } else {
+        juce::File fullpath{m_proc->lastLoadPath()};
+        m_fileChooser.reset(new juce::FileChooser(TRANS("JSFX missing! Please locate jsfx named ") + fullpath.getFileNameWithoutExtension(), fullpath.getParentDirectory(), fullpath.getFileName()));
+    }
     m_fileChooserActive = true;
 
     m_fileChooser->launchAsync(
         juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
-        [this](const juce::FileChooser &chooser) {
+        [this, normalLoad](const juce::FileChooser &chooser) {
             juce::File result = chooser.getResult();
             if (result != juce::File()) {
-                saveScaling();
+                if (normalLoad) saveScaling();
                 loadFile(result);
             }
             m_fileChooserActive = false;
