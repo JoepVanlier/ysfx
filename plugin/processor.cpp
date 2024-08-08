@@ -54,10 +54,6 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     void installNewFx(YsfxInfo::Ptr info);
     void loadNewPreset(const ysfx_preset_t &preset);
 
-    // This function should only ever be used in an emergency (plugin missing)
-    void openFileDialog(juce::File filePath, ysfx_state_t *initialState);
-    std::unique_ptr<juce::FileChooser> m_fileChooser;
-
     //==========================================================================
     struct LoadRequest : public std::enable_shared_from_this<LoadRequest> {
         juce::String filePath;
