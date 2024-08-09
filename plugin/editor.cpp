@@ -62,7 +62,7 @@ struct YsfxEditor::Impl {
     void setScale(float newScaling);
     void loadScaling();
     void saveScaling();
-    void resetScaling(juce::File &jsfxFilePath);
+    void resetScaling(const juce::File &jsfxFilePath);
     juce::String getJsfxName();
 
     //==========================================================================
@@ -228,6 +228,7 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
         updateInfo();
         m_btnLoadFile->setButtonText(TRANS("Load"));
         updateLabel = true;
+        m_btnRecentFiles->setVisible(true);
     }
 
     if (updateLabel) m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
@@ -235,6 +236,7 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     if ((m_proc->retryLoad() == RetryState::mustRetry) && !m_fileChooserActive) {
         chooseFileAndLoad();
         m_btnLoadFile->setButtonText(TRANS("Locate"));
+        m_btnRecentFiles->setVisible(false);
     }
 }
 
@@ -305,12 +307,31 @@ void YsfxEditor::Impl::updateInfo()
     relayoutUILater();
 }
 
+void _quickAlertBox(bool confirmationRequired, std::function<void()> callbackOnSuccess)
+{
+    if (confirmationRequired) {
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions()
+                .withTitle("Are you certain?")
+                .withMessage("Are you certain you want to (re)load the plugin?\n\nNote that you will lose your current preset.")
+                .withButton("Yes")
+                .withButton("No")
+                .withIconType(juce::MessageBoxIconType::NoIcon),
+            [callbackOnSuccess](int result){
+                if (result == 1) callbackOnSuccess();
+            }
+        );
+    } else {
+        callbackOnSuccess();
+    }
+}
+
 void YsfxEditor::Impl::chooseFileAndLoad()
 {
     if (m_fileChooserActive)
         return;
 
-    YsfxInfo *info = m_info.get();
+    YsfxInfo::Ptr info = m_info;
     ysfx_t *fx = info->effect.get();
 
     juce::File initialPath;
@@ -327,24 +348,32 @@ void YsfxEditor::Impl::chooseFileAndLoad()
     }
 
     bool normalLoad = (m_proc->retryLoad() == RetryState::ok);
+
     if (normalLoad) {
         m_fileChooser.reset(new juce::FileChooser(TRANS("Open jsfx..."), initialPath));
     } else {
         juce::File fullpath{m_proc->lastLoadPath()};
         m_fileChooser.reset(new juce::FileChooser(TRANS("JSFX missing! Please locate jsfx named ") + fullpath.getFileNameWithoutExtension(), fullpath.getParentDirectory(), fullpath.getFileName()));
     }
+    
+    bool mustAskConfirmation = normalLoad && ysfx_is_compiled(fx);
     m_fileChooserActive = true;
-
     m_fileChooser->launchAsync(
         juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
-        [this, normalLoad](const juce::FileChooser &chooser) {
+        [this, normalLoad, mustAskConfirmation](const juce::FileChooser &chooser) {
             juce::File result = chooser.getResult();
             if (result != juce::File()) {
-                if (normalLoad) saveScaling();
-                loadFile(result);
+                _quickAlertBox(
+                    mustAskConfirmation,
+                    [this, normalLoad, result]() {
+                        if (normalLoad) saveScaling();
+                        loadFile(result);
+                    }
+                );
             }
             m_fileChooserActive = false;
-        });
+        }
+    );
 }
 
 void YsfxEditor::Impl::saveScaling()
@@ -363,7 +392,7 @@ void YsfxEditor::Impl::saveScaling()
     }
 }
 
-void YsfxEditor::Impl::resetScaling(juce::File &jsfxFilePath)
+void YsfxEditor::Impl::resetScaling(const juce::File &jsfxFilePath)
 {
     if (m_pluginProperties) {
         juce::String filename_without_ext = jsfxFilePath.getFileNameWithoutExtension();
@@ -438,8 +467,14 @@ void YsfxEditor::Impl::popupRecentFiles()
         if (index == 1000)
             clearRecentFiles();
         else if (index != 0) {
-            saveScaling();
-            loadFile(recent.getFile(index - 100));
+            juce::File selectedFile = recent.getFile(index - 100);
+            _quickAlertBox(
+                ysfx_is_compiled(m_info->effect.get()),
+                [this, selectedFile]() {
+                    saveScaling();
+                    loadFile(selectedFile);
+                }
+            );
         }
     });
 }
@@ -624,11 +659,14 @@ void YsfxEditor::Impl::connectUI()
     m_btnReload->onClick = [this] {
         YsfxInfo::Ptr info = m_info;
         ysfx_t *fx = info->effect.get();
-        if (!fx) return;
-
         juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-        resetScaling(file);
-        loadFile(file);
+        _quickAlertBox(
+            ysfx_is_compiled(fx),
+            [this, file]() {
+                resetScaling(file);
+                loadFile(file);
+            }
+        );
     };
     m_btnGfxScaling->onClick = [this] {
         if (m_graphicsView) {
