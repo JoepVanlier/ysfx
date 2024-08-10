@@ -35,6 +35,7 @@ struct YsfxEditor::Impl {
     YsfxEditor *m_self = nullptr;
     YsfxProcessor *m_proc = nullptr;
     YsfxInfo::Ptr m_info;
+    YsfxCurrentPresetInfo::Ptr m_currentPresetInfo;
     std::unique_ptr<juce::Timer> m_infoTimer;
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
@@ -99,6 +100,7 @@ struct YsfxEditor::Impl {
     void relayoutUI();
     void relayoutUILater();
     void initializeProperties();
+    juce::String getLabel() const;
 };
 
 static const int defaultEditorWidth = 700;
@@ -111,6 +113,7 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->m_self = this;
     m_impl->m_proc = &proc;
     m_impl->m_info = proc.getCurrentInfo();
+    m_impl->m_currentPresetInfo = proc.getCurrentPresetInfo();
 
     static YsfxLookAndFeel lnf;
     setLookAndFeel(&lnf);
@@ -192,21 +195,43 @@ void YsfxEditor::resized()
 juce::String YsfxEditor::Impl::getJsfxName()
 {
     YsfxInfo::Ptr info = m_info;
-    ysfx_t *fx = info->effect.get();
-    if (!fx) return juce::String("");
+    return info->m_name;
+}
 
-    juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-    return file.getFileNameWithoutExtension();
+juce::String YsfxEditor::Impl::getLabel() const
+{
+    if (!m_info) return juce::String("");
+
+    juce::String label{m_info->m_name};
+
+    if (m_currentPresetInfo) {
+        if (m_currentPresetInfo->m_lastChosenPreset.isNotEmpty()) {
+            label += "\n" + m_currentPresetInfo->m_lastChosenPreset;
+        };
+    };
+
+    return label;
 }
 
 void YsfxEditor::Impl::grabInfoAndUpdate()
 {
     YsfxInfo::Ptr info = m_proc->getCurrentInfo();
+    YsfxCurrentPresetInfo::Ptr presetInfo = m_proc->getCurrentPresetInfo();
+
+    bool updateLabel = false;
+    if (m_currentPresetInfo != presetInfo) {
+        m_currentPresetInfo = presetInfo;
+        updateLabel = true;
+    }
     if (m_info != info) {
         m_info = info;
         updateInfo();
         m_btnLoadFile->setButtonText(TRANS("Load"));
+        updateLabel = true;
     }
+
+    if (updateLabel) m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
+    
     if ((m_proc->retryLoad() == RetryState::mustRetry) && !m_fileChooserActive) {
         chooseFileAndLoad();
         m_btnLoadFile->setButtonText(TRANS("Locate"));
@@ -221,11 +246,6 @@ void YsfxEditor::Impl::updateInfo()
     juce::File filePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
 
     if (filePath != juce::File{}) {
-        if (info->m_lastChosenPreset.isNotEmpty()) {
-            m_lblFilePath->setText(filePath.getFileNameWithoutExtension() + "\n" + info->m_lastChosenPreset, juce::dontSendNotification);
-        } else {
-            m_lblFilePath->setText(filePath.getFileNameWithoutExtension(), juce::dontSendNotification);
-        }
         m_lblFilePath->setTooltip(filePath.getFullPathName());
         m_self->getTopLevelComponent()->setName(juce::String(ysfx_get_name(fx)) + " (ysfx)");
     }
@@ -430,11 +450,12 @@ void YsfxEditor::Impl::popupPresets()
 
     YsfxInfo::Ptr info = m_info;
     ysfx_bank_t *bank = info->bank.get();
+    YsfxCurrentPresetInfo::Ptr presetInfo = m_currentPresetInfo;
     if (!bank)
         m_presetsPopup->addItem(0, TRANS("No presets"), false);
     else {
         for (uint32_t i = 0; i < bank->preset_count; ++i) {
-            bool wasLastChosen = info->m_lastChosenPreset.compare(bank->presets[i].name) == 0;
+            bool wasLastChosen = presetInfo->m_lastChosenPreset.compare(bank->presets[i].name) == 0;
             m_presetsPopup->addItem((int)(i + 1), bank->presets[i].name, true, wasLastChosen);
         }
     }
@@ -444,13 +465,6 @@ void YsfxEditor::Impl::popupPresets()
     m_presetsPopup->showMenuAsync(popupOptions, [this, info](int index) {
         if (index > 0) {
             m_proc->loadJsfxPreset(info, (uint32_t)(index - 1), true);
-            info->m_lastChosenPreset = info->bank->presets[index - 1].name;
-            
-            ysfx_t *fx = info->effect.get();
-            if (fx) {
-                juce::File filePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-                m_lblFilePath->setText(filePath.getFileNameWithoutExtension() + "\n" + info->m_lastChosenPreset, juce::dontSendNotification);
-            }
         }
     });
 }

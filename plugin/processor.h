@@ -34,6 +34,7 @@ public:
     void loadJsfxFile(const juce::String &filePath, ysfx_state_t *initialState, bool async);
     void loadJsfxPreset(YsfxInfo::Ptr info, uint32_t index, bool async);
     YsfxInfo::Ptr getCurrentInfo();
+    YsfxCurrentPresetInfo::Ptr getCurrentPresetInfo();
 
     //==========================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;

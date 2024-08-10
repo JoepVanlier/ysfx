@@ -35,6 +35,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     int m_sliderParamOffset = 0;
     ysfx::sync_bitset64 m_sliderParametersChanged[ysfx_max_slider_groups];
     YsfxInfo::Ptr m_info{new YsfxInfo};
+    YsfxCurrentPresetInfo::Ptr m_currentPresetInfo{new YsfxCurrentPresetInfo};
 
     double m_sample_rate{44100.0};
     uint32_t m_block_size{256};
@@ -121,6 +122,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     void audioProcessorParameterChanged(AudioProcessor *processor, int parameterIndex, float newValue) override;
     void audioProcessorChanged(AudioProcessor *processor, const ChangeDetails &details) override;
 
+    //==========================================================================
     std::atomic<RetryState> m_failedLoad{RetryState::ok};
     juce::CriticalSection m_loadLock;
     juce::String m_lastLoadPath{""};
@@ -239,6 +241,11 @@ void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, uint32_t index, bool asyn
 YsfxInfo::Ptr YsfxProcessor::getCurrentInfo()
 {
     return std::atomic_load(&m_impl->m_info);
+}
+
+YsfxCurrentPresetInfo::Ptr YsfxProcessor::getCurrentPresetInfo()
+{
+    return std::atomic_load(&m_impl->m_currentPresetInfo);
 }
 
 //==============================================================================
@@ -674,6 +681,7 @@ YsfxInfo::Ptr YsfxProcessor::Impl::createNewFx(juce::CharPointer_UTF8 filePath, 
     ///
     const char *bankpath = ysfx_get_bank_path(fx);
     info->bank.reset(ysfx_load_bank(bankpath));
+    info->m_name = juce::File{filePath}.getFileNameWithoutExtension();
 
     if (initialState)
         ysfx_load_state(fx, initialState);
@@ -710,6 +718,9 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
         m_sliderParamsTouching[i].store((uint64_t)0);
     }
 
+    YsfxCurrentPresetInfo::Ptr presetInfo{new YsfxCurrentPresetInfo()};
+    std::atomic_store(&m_currentPresetInfo, presetInfo);
+
     std::atomic_store(&m_info, info);
     m_background->wakeUp();
 }
@@ -725,11 +736,16 @@ void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
     bool notify = false;
     syncSlidersToParameters(notify);
 
+    YsfxCurrentPresetInfo::Ptr presetInfo{new YsfxCurrentPresetInfo()};
+    presetInfo->m_lastChosenPreset = preset.name;
+
     // notify parameters later, on the message thread
     for (int i=0; i < ysfx_max_slider_groups; i++) {
         m_sliderParamsToNotify[i].store(~(uint64_t)0);
         m_sliderParamsTouching[i].store((uint64_t)0);
     }
+
+    std::atomic_store(&m_currentPresetInfo, presetInfo);
     m_background->wakeUp();
 }
 
