@@ -406,8 +406,8 @@ bool ysfx_compile(ysfx_t *fx, uint32_t compileopts)
         uint32_t maxmem = fx->source.main->header.options.maxmem;
         if (maxmem == 0)
             maxmem = 8 * 1024 * 1024;
-        if (maxmem > 32 * 1024 * 1024)
-            maxmem = 32 * 1024 * 1024;
+        if (maxmem > 128 * 1024 * 1024)
+            maxmem = 128 * 1024 * 1024;
 
         NSEEL_VM_setramsize(vm, (int)maxmem);
     }

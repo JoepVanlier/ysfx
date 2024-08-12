@@ -227,7 +227,7 @@ extern int NSEEL_RAM_memused_errors;
 #define NSEEL_RAM_BLOCKS_DEFAULTMAX 128
 
 // 512 entry block table maximum (2k/4k per VM)
-#define NSEEL_RAM_BLOCKS_LOG2 9
+#define NSEEL_RAM_BLOCKS_LOG2 11
 
  // 65536 items per block (512KB)
 #define NSEEL_RAM_ITEMSPERBLOCK_LOG2 16

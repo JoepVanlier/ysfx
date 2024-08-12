@@ -18,6 +18,7 @@
 #include "ysfx.h"
 #include "ysfx_test_utils.hpp"
 #include "ysfx_api_eel.hpp"
+#include "ysfx.hpp"
 #include <catch.hpp>
 
 #include <iostream>
@@ -108,5 +109,41 @@ TEST_CASE("integration", "[integration]")
 
         ysfx_string_get(fx.get(), 7, txt);
         REQUIRE((txt == "F"));
+    };
+
+    SECTION("huge_mem")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "options:maxmem=134217728"
+            "out_pin:output" "\n"
+            "@init" "\n"
+            "x1 = x[83886] = 2;" "\n"
+            "x2 = x[8388608] = 3;" "\n"
+            "x3 = x[18388608] = 4;" "\n"
+            "x4 = x[33554431] = 5;" "\n"
+            "x5 = x[33554432] = 6;" "\n"
+            "x6 = x[134217728] = 7;" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_read_var(fx.get(), "x1") == 2);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 83886) == 2);
+        REQUIRE(ysfx_read_var(fx.get(), "x2") == 3);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 8388608) == 3);
+        REQUIRE(ysfx_read_var(fx.get(), "x3") == 4);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 18388608) == 4);
+        REQUIRE(ysfx_read_var(fx.get(), "x4") == 5);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 33554431) == 5);
+        REQUIRE(ysfx_read_var(fx.get(), "x5") == 6);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 33554432) == 6);
     };
 }
