@@ -20,11 +20,16 @@
 
 
 void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t, 3>> colormap);
+void setParams(juce::LookAndFeel& lnf, std::map<std::string, float> params);
 std::map<std::string, std::array<uint8_t, 3>> getDefaultColors();
+std::map<std::string, float> getDefaultParams();
 
 
 class YsfxLookAndFeel : public juce::LookAndFeel_V4 {
 public:
+    int m_gap{3};
+    int m_pad{3};
+
     YsfxLookAndFeel()
     {
         setColors(*this, {});

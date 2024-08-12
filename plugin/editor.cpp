@@ -131,6 +131,22 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     readTheme();
 }
 
+void writeThemeFile(juce::File file, std::map<std::string, std::array<uint8_t, 3>> colors, std::map<std::string, float> params)
+{
+    juce::FileOutputStream stream(file);
+    stream.setPosition(0);
+    stream.truncate();
+    nlohmann::json json_colors{colors};
+    nlohmann::json json_params{params};
+
+    nlohmann::json json_file;
+    json_file["version"] = 1;
+    json_file["colors"] = json_colors;
+    json_file["params"] = json_params;
+
+    stream.writeString(juce::String{json_file.dump(4)});
+}
+
 void YsfxEditor::readTheme()
 {
     if (!m_impl) return;
@@ -144,10 +160,9 @@ void YsfxEditor::readTheme()
 
     if (!file.existsAsFile()) {
         try {
-            juce::FileOutputStream stream(file);
-            nlohmann::json theme{getDefaultColors()};
-            stream.writeString(juce::String{theme.dump(4)});
+            writeThemeFile(file, getDefaultColors(), getDefaultParams());
             setColors(getLookAndFeel(), {});
+            setParams(getLookAndFeel(), {});
         } catch (nlohmann::json::exception e) {
             // Log: std::cout << "Failed to write theme: " << e.what() << std::endl;
         }
@@ -157,8 +172,21 @@ void YsfxEditor::readTheme()
 
         try {
             auto jsonFile = nlohmann::json::parse(text.toStdString());
-            auto readTheme = jsonFile[0].get<std::map<std::string, std::array<uint8_t, 3>>>();
+            // Fallback for version 1 files (upconvert the file)
+            if (!jsonFile.contains("version")) {
+                auto readTheme = jsonFile[0].get<std::map<std::string, std::array<uint8_t, 3>>>();
+                writeThemeFile(file, readTheme, getDefaultParams());
+
+                // Reread it!
+                stream.setPosition(0);
+                text = stream.readEntireStreamAsString();
+                jsonFile = nlohmann::json::parse(text.toStdString());
+            }
+            
+            auto readTheme = jsonFile.at("colors")[0].get<std::map<std::string, std::array<uint8_t, 3>>>();
+            auto readParams = jsonFile.at("params")[0].get<std::map<std::string, float>>();
             setColors(getLookAndFeel(), readTheme);
+            setParams(getLookAndFeel(), readParams);
         } catch (nlohmann::json::exception e) {
             // Log: std::cout << "Failed to read theme: " << e.what() << std::endl;
         }

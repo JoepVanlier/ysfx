@@ -33,6 +33,37 @@ std::map<std::string, std::array<uint8_t, 3>> getDefaultColors()
     };
 }
 
+std::map<std::string, float> getDefaultParams()
+{
+    return std::map<std::string, float>{
+        {"vertical_pad", 5},
+        {"left_pad", 3},
+    };
+}
+
+void setParams(juce::LookAndFeel& lnf, std::map<std::string, float> params)
+{
+    std::map<std::string, float> currentParams = getDefaultParams();
+    for (auto it = params.begin(); it != params.end(); ++it) {
+        currentParams[it->first] = it->second;
+    }
+
+    auto get = [currentParams](std::string key) {
+        auto it = currentParams.find(key); 
+        jassert(it != currentParams.end());  // This color doesn't have a default!
+
+        if (it != currentParams.end()) {
+            return it->second;
+        } else {
+            return 1.0f;
+        }
+    };
+
+    YsfxLookAndFeel& ysfx_lnf = dynamic_cast<YsfxLookAndFeel&>(lnf);
+    ysfx_lnf.m_gap = static_cast<int>(get("vertical_pad"));
+    ysfx_lnf.m_pad = static_cast<int>(get("left_pad"));
+}
+
 void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t, 3>> colormap)
 {
     std::map<std::string, std::array<uint8_t, 3>> currentColorMap = getDefaultColors();

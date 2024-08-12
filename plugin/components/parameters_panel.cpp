@@ -15,8 +15,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include "lookandfeel.h"
 #include "parameters_panel.h"
 #include "../parameter.h"
+
+#define LOOKANDFEEL dynamic_cast<YsfxLookAndFeel&>(this->getLookAndFeel())
 
 class YsfxParameterListener : private YsfxParameter::Listener,
                           private juce::Timer {
@@ -91,8 +94,8 @@ public:
     void resized() override
     {
         auto area = getLocalBounds();
-        area.removeFromLeft(8);
-        button.setBounds(area.reduced(0, 10));
+        area.removeFromLeft(LOOKANDFEEL.m_pad + 2);
+        button.setBounds(area.reduced(LOOKANDFEEL.m_pad, LOOKANDFEEL.m_gap));
     }
 
 private:
@@ -153,8 +156,8 @@ public:
 
     void resized() override
     {
-        auto area = getLocalBounds().reduced(0, 8);
-        area.removeFromLeft(8);
+        auto area = getLocalBounds().reduced(LOOKANDFEEL.m_pad, LOOKANDFEEL.m_gap);
+        area.removeFromLeft(LOOKANDFEEL.m_pad + 2);
 
         for (auto &button : buttons)
             button.setBounds(area.removeFromLeft(80));
@@ -216,8 +219,8 @@ public:
     void resized() override
     {
         auto area = getLocalBounds();
-        area.removeFromLeft(8);
-        box.setBounds(area.reduced(0, 10));
+        area.removeFromLeft(LOOKANDFEEL.m_pad + 2);
+        box.setBounds(area.reduced(LOOKANDFEEL.m_pad, LOOKANDFEEL.m_gap));
     }
 
 private:
@@ -303,11 +306,11 @@ public:
 
     void resized() override
     {
-        auto area = getLocalBounds().reduced(10, 10);
+        auto area = getLocalBounds().reduced(LOOKANDFEEL.m_pad, LOOKANDFEEL.m_gap);
 
         valueLabel.setBounds(area.removeFromRight(80));
 
-        area.removeFromLeft(6);
+        //area.removeFromLeft(LOOKANDFEEL.m_pad);
         slider.setBounds(area.withTrimmedRight(15));
     }
 
@@ -388,7 +391,7 @@ public:
         addAndMakeVisible(parameterName);
         addAndMakeVisible(*(parameterComp = createParameterComp()));
 
-        setSize(400, 40);
+        setSize(400, 20 + 2 * LOOKANDFEEL.m_gap);
     }
 
     void paint(juce::Graphics &) override
