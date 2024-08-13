@@ -73,7 +73,9 @@ ysfx_load_bank
 ysfx_bank_free
 ysfx_enum_vars
 ysfx_find_var
+ysfx_read_var
 ysfx_read_vmem
+ysfx_read_vmem_single
 ysfx_gfx_setup
 ysfx_gfx_wants_retina
 ysfx_gfx_add_key

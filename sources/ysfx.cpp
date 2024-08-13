@@ -1476,11 +1476,23 @@ ysfx_real *ysfx_find_var(ysfx_t *fx, const char *name)
     return fd.var;
 }
 
+ysfx_real ysfx_read_var(ysfx_t *fx, const char *name)
+{
+    return static_cast<ysfx_real>(*NSEEL_VM_getvar(fx->vm.get(), name));
+}
+
 void ysfx_read_vmem(ysfx_t *fx, uint32_t addr, ysfx_real *dest, uint32_t count)
 {
     ysfx_eel_ram_reader reader(fx->vm.get(), addr);
     for (uint32_t i = 0; i < count; ++i)
         dest[i] = reader.read_next();
+}
+
+ysfx_real ysfx_read_vmem_single(ysfx_t *fx, uint32_t addr)
+{
+    uint32_t avail;
+    EEL_F* flt_addr = NSEEL_VM_getramptr_noalloc(fx->vm.get(), addr, (int32_t *)&avail);
+    return flt_addr ? *flt_addr : 0;
 }
 
 bool ysfx_find_data_file(ysfx_t *fx, EEL_F *file, std::string &result)

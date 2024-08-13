@@ -353,8 +353,12 @@ typedef int (ysfx_enum_vars_callback_t)(const char *name, ysfx_real *var, void *
 YSFX_API void ysfx_enum_vars(ysfx_t *fx, ysfx_enum_vars_callback_t *callback, void *userdata);
 // find a single variable in the VM
 YSFX_API ysfx_real *ysfx_find_var(ysfx_t *fx, const char *name);
+// read a single value from a variable in the VM
+YSFX_API ysfx_real ysfx_read_var(ysfx_t *fx, const char *name);
 // read a chunk of virtual memory from the VM
 YSFX_API void ysfx_read_vmem(ysfx_t *fx, uint32_t addr, ysfx_real *dest, uint32_t count);
+// read single value from VM RAM
+YSFX_API ysfx_real ysfx_read_vmem_single(ysfx_t *fx, uint32_t addr);
 
 //------------------------------------------------------------------------------
 // YSFX graphics
