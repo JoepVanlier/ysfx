@@ -359,6 +359,8 @@ YSFX_API ysfx_real ysfx_read_var(ysfx_t *fx, const char *name);
 YSFX_API void ysfx_read_vmem(ysfx_t *fx, uint32_t addr, ysfx_real *dest, uint32_t count);
 // read single value from VM RAM
 YSFX_API ysfx_real ysfx_read_vmem_single(ysfx_t *fx, uint32_t addr);
+// read how many memory slots are in use
+YSFX_API int ysfx_calculate_used_mem(ysfx_t *fx);
 
 //------------------------------------------------------------------------------
 // YSFX graphics

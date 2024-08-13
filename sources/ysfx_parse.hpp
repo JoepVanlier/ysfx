@@ -73,6 +73,7 @@ struct ysfx_slider_t {
 struct ysfx_options_t {
     std::string gmem;
     uint32_t maxmem = 0;
+    int32_t prealloc = 0;
     bool want_all_kb = false;
     bool no_meter = false;
 };

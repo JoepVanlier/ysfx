@@ -148,6 +148,10 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
                     int32_t maxmem = (int32_t)ysfx::dot_atof(value.c_str());
                     header.options.maxmem = (maxmem < 0) ? 0 : (uint32_t)maxmem;
                 }
+                else if (name == "prealloc") {
+                    int32_t prealloc = (value.compare("*") == 0) ? -1 : (int32_t) ysfx::dot_atof(value.c_str());
+                    header.options.prealloc = prealloc;
+                }
                 else if (name == "want_all_kb")
                     header.options.want_all_kb = true;
                 else if (name == "no_meter")

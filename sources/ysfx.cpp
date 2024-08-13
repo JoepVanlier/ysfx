@@ -410,6 +410,9 @@ bool ysfx_compile(ysfx_t *fx, uint32_t compileopts)
             maxmem = 128 * 1024 * 1024;
 
         NSEEL_VM_setramsize(vm, (int)maxmem);
+        if (fx->source.main->header.options.prealloc != 0) {
+            NSEEL_VM_preallocram(vm, (int) fx->source.main->header.options.prealloc);
+        };
     }
 
     //--------------------------------------------------------------------------
@@ -1493,6 +1496,21 @@ ysfx_real ysfx_read_vmem_single(ysfx_t *fx, uint32_t addr)
     uint32_t avail;
     EEL_F* flt_addr = NSEEL_VM_getramptr_noalloc(fx->vm.get(), addr, (int32_t *)&avail);
     return flt_addr ? *flt_addr : 0;
+}
+
+int ysfx_calculate_used_mem(ysfx_t *fx)
+{
+    int validCount{0};
+    uint32_t addr{0};
+    int usedMemory{0};
+
+    for (int i = 0; i < UINT32_MAX / NSEEL_RAM_ITEMSPERBLOCK; i++) {
+        EEL_F *flt_addr = NSEEL_VM_getramptr_noalloc(fx->vm.get(), addr, &validCount);
+        addr += NSEEL_RAM_ITEMSPERBLOCK;
+        usedMemory += validCount;
+    }
+    
+    return usedMemory;
 }
 
 bool ysfx_find_data_file(ysfx_t *fx, EEL_F *file, std::string &result)

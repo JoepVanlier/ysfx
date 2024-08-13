@@ -146,4 +146,90 @@ TEST_CASE("integration", "[integration]")
         REQUIRE(ysfx_read_var(fx.get(), "x5") == 6);
         REQUIRE(ysfx_read_vmem_single(fx.get(), 33554432) == 6);
     };
+
+    SECTION("pre_alloc none")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "options:maxmem=134217728" "\n"
+            "out_pin:output" "\n"
+            "@init" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+        REQUIRE(ysfx_calculate_used_mem(fx.get()) == 0);
+    }
+
+    SECTION("pre_alloc full")
+    {
+        const char *text =
+        "desc:test" "\n"
+        "options:maxmem=134217728" "\n"
+        "options:prealloc=134217728" "\n"
+        "out_pin:output" "\n"
+        "@init" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_calculate_used_mem(fx.get()) == 134217728);
+    };
+
+    SECTION("pre_alloc partial")
+    {
+        const char *text =
+        "desc:test" "\n"
+        "options:maxmem=134217728" "\n"
+        "options:prealloc=16000000" "\n"
+        "out_pin:output" "\n"
+        "@init" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_calculate_used_mem(fx.get()) == 16056320);  // Note that this always rounds to the next full block
+    };
+
+    SECTION("pre_alloc full star")
+    {
+        const char *text =
+        "desc:test" "\n"
+        "options:maxmem=13421772" "\n"
+        "options:prealloc=*" "\n"
+        "out_pin:output" "\n"
+        "@init" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_calculate_used_mem(fx.get()) == 13434880);  // Note that this always rounds to the next full block
+    };
 }
