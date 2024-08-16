@@ -1,3 +1,7 @@
 [submodule "thirdparty/dr_libs"]
 	path = thirdparty/dr_libs
 	url = https://github.com/mackron/dr_libs
+[submodule "thirdparty/clap-juce-extensions"]
+	path = thirdparty/clap-juce-extensions
+	url = https://github.com/free-audio/clap-juce-extensions.git
+	branch = main

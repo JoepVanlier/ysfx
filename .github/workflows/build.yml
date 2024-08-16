@@ -150,6 +150,11 @@ jobs:
           name: ${{matrix.display-name}} VST3
           path: "${{runner.workspace}}/build/*_artefacts/${{env.build_type}}/VST3/*.vst3"
       - uses: actions/upload-artifact@v2
+        if: ${{matrix.artifacts == 'yes'}}
+        with:
+          name: ${{matrix.display-name}} CLAP
+          path: "${{runner.workspace}}/build/*_artefacts/${{env.build_type}}/CLAP/*.clap"
+      - uses: actions/upload-artifact@v2
         if: ${{matrix.os-type == 'macOS' && matrix.artifacts == 'yes'}}
         with:
           name: ${{matrix.display-name}} AU

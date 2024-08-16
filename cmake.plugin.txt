@@ -108,3 +108,13 @@ endif()
 if(YSFX_PLUGIN_FORCE_DEBUG)
     target_compile_definitions(ysfx_plugin PRIVATE "JUCE_FORCE_DEBUG=1")
 endif()
+
+add_subdirectory(thirdparty/clap-juce-extensions EXCLUDE_FROM_ALL)
+
+clap_juce_extensions_plugin(
+    TARGET ysfx_plugin
+    CLAP_ID "org.saike.${target}"
+    CLAP_FEATURES instrument audio-effect
+    CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 64
+    CLAP_USE_JUCE_PARAMETER_RANGES DISCRETE
+)
