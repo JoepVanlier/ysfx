@@ -32,6 +32,15 @@ using ysfx_toplevel_u = std::unique_ptr<ysfx_toplevel_t>;
 using ysfx_slider_u = std::unique_ptr<ysfx_slider_t>;
 using ysfx_header_u = std::unique_ptr<ysfx_header_t>;
 
+#ifndef _WIN32
+  #ifndef strnicmp 
+    #define strnicmp(x,y,z) strncasecmp(x,y,z)
+  #endif
+  #ifndef stricmp 
+    #define stricmp(x,y) strcasecmp(x,y)
+  #endif
+#endif
+
 struct ysfx_section_t {
     uint32_t line_offset = 0;
     std::string text;

@@ -225,10 +225,10 @@ bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)
 
     const char *cur = line;
 
-    for (const char *p = "slider"; *p; ++p) {
-        if (*cur++ != *p)
-            PARSE_FAIL;
+    if (strnicmp("slider", cur, 6)) {
+        PARSE_FAIL;
     }
+    cur += 6;
 
     // parse ID (1-index)
     unsigned long id = strtoul(cur, (char **)&cur, 10);

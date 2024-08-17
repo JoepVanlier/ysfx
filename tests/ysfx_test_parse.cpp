@@ -388,6 +388,8 @@ TEST_CASE("slider parsing", "[parse]")
                 "slider8:0*2<-150-151,12=13,1+3>math?",
                 "slider9:+/-0a0<-150<<-149<,12...13,1 3><v<<al..u e>",
                 "slider10:a1?+!%&<-150%&=/?+!,12!%/&?+=,1=/?+!%&>?+!%&=/",
+                "SLIDER11:shouty=0<-150,12,1>shouty",
+                "SlIdEr12:infantile=0<-150,12,1>hehe",
             })
         {
             ysfx_slider_t slider;
