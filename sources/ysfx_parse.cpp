@@ -288,7 +288,7 @@ bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)
                 ++cur;
                 slider.inc = (ysfx_real)ysfx::dot_strtod(cur, (char **)&cur);
 
-                while (*cur && *cur != '{' && *cur != ',' && *cur != '>') ++cur;
+                while (*cur && *cur != '{' && *cur != ',' && *cur != '>' && *cur != ':') ++cur;
                 if (!*cur) PARSE_FAIL;
 
                 // enumeration values
@@ -304,6 +304,45 @@ bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)
                         [](char c) -> bool { return c == ','; });
                     for (std::string &name : slider.enum_names)
                         name = ysfx::trim(name.c_str(), &ysfx::ascii_isspace);
+                }
+
+                // shaping
+                if (*cur == ':') {
+                    ++cur;
+                    if (strnicmp("log", cur, 3) == 0) {
+                        slider.shape = 1;
+                        cur += 3;
+                    } else if (strnicmp("sqr", cur, 3) == 0) {
+                        slider.shape = 2;
+                        slider.shape_modifier = 2;
+                        cur += 3;
+                    }
+
+                    // Do we have a modifier on this shape?
+                    if (*cur == '=') {
+                        ++cur;
+
+                        slider.shape_modifier = (ysfx_real)ysfx::dot_strtod(cur, (char **)&cur);
+
+                        // Do some checking on the modifiers for validity
+                        if (std::abs(slider.shape_modifier < 0.0001)) {
+                            if (slider.shape == 2) {
+                                // A power law slider with power zero is invalid.
+                                slider.shape = 0;
+                            };
+                        } else {
+                            if (std::abs(slider.max - slider.min) < 0.0000001) {
+                                slider.shape = 0;
+                            }
+
+                            if (std::abs(slider.shape_modifier - slider.min) < 0.0000001) {
+                                slider.shape = 0;
+                            }
+                        }
+
+                        while (*cur && *cur != '>') ++cur;
+                        if (!*cur) PARSE_FAIL;
+                    }
                 }
             }
 

@@ -271,7 +271,7 @@ static void ensure_basic_slider(const ysfx_slider_t &slider, int32_t id, const s
         REQUIRE(slider.desc == desc);
 }
 
-static void ensure_regular_slider(const ysfx_slider_t &slider, int32_t id, const std::string &var, const std::string &desc, ysfx_real def, ysfx_real min, ysfx_real max, ysfx_real inc)
+static void ensure_regular_slider(const ysfx_slider_t &slider, int32_t id, const std::string &var, const std::string &desc, ysfx_real def, ysfx_real min, ysfx_real max, ysfx_real inc, uint8_t shape=0, ysfx_real shape_modifier=0.0f)
 {
     ensure_basic_slider(slider, id, var, desc);
     REQUIRE(slider.def == Approx(def));
@@ -281,6 +281,8 @@ static void ensure_regular_slider(const ysfx_slider_t &slider, int32_t id, const
     REQUIRE(!slider.is_enum);
     REQUIRE(slider.enum_names.empty());
     REQUIRE(slider.path.empty());
+    REQUIRE(slider.shape == shape);
+    REQUIRE(slider.shape_modifier == Approx(shape_modifier));
 }
 
 static void ensure_enum_slider(const ysfx_slider_t &slider, int32_t id, const std::string &var, const std::string &desc, ysfx_real def, const std::vector<std::string> &enums)
@@ -349,6 +351,71 @@ TEST_CASE("slider parsing", "[parse]")
         ysfx_slider_t slider;
         REQUIRE(ysfx_parse_slider(line, slider));
         ensure_regular_slider(slider, 42, {}, "Cui cui", 123.1, 45.2, 67.3, 89.4);
+    }
+
+    SECTION("log shape")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01:log>log me";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "log me", 20, 20, 22050.0, 0.01, 1, 0);
+    }
+
+    SECTION("log shape middle")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01:log=5000>log me";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "log me", 20, 20, 22050.0, 0.01, 1, 5000);
+    }
+
+    SECTION("log shape capitalization")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01:LOg>captains log";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "captains log", 20, 20, 22050.0, 0.01, 1, 0);
+    }
+
+    SECTION("bad log shape (minimum too close to center point)")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01:LOg=20>captains log";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "captains log", 20, 20, 22050.0, 0.01, 0, 20);
+    }
+
+    SECTION("bad log shape (minimum too close to maximum)")
+    {
+        const char *line = "slider43:20<20.0,20.0,0.01:LOg=10>captains log";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "captains log", 20, 20, 20.0, 0.01, 0, 10);
+    }
+
+    SECTION("sqr shape")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01:sqr>square";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "square", 20, 20, 22050.0, 0.01, 2, 2);
+    }
+
+    SECTION("sqr shape 3")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01:sqr=3>square";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "square", 20, 20, 22050.0, 0.01, 2, 3);
+    }
+
+    SECTION("invalid sqr shape (reverts to linear)")
+    {
+        // Modifier of zero leads to bad behavior and is therefore ignored entirely.
+        const char *line = "slider43:20<20.0,22050,0.01:sqr=0>square";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "square", 20, 20, 22050.0, 0.01, 0, 0);
     }
 
     SECTION("path syntax")

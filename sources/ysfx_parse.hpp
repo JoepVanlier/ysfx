@@ -76,6 +76,8 @@ struct ysfx_slider_t {
     bool is_enum = false;
     ysfx::string_list enum_names;
     std::string desc;
+    uint8_t shape = 0;
+    ysfx_real shape_modifier = 0;
     bool initially_visible = false;
 };
 
