@@ -71,6 +71,7 @@ include(Catch)
 # ------------------------------------------------------------------------------
 
 add_executable(ysfx_tests
+    "tests/ysfx_test_slider_transforms.cpp"
     "tests/ysfx_test_parse.cpp"
     "tests/ysfx_test_serialization.cpp"
     "tests/ysfx_test_slider.cpp"

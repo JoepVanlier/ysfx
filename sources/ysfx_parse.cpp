@@ -331,13 +331,12 @@ bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)
                                 slider.shape = 0;
                             };
                         } else {
-                            if (std::abs(slider.max - slider.min) < 0.0000001) {
-                                slider.shape = 0;
-                            }
-
                             if (std::abs(slider.shape_modifier - slider.min) < 0.0000001) {
                                 slider.shape = 0;
                             }
+                        }
+                        if (std::abs(slider.max - slider.min) < 1e-12) {
+                            slider.shape = 0;
                         }
 
                         while (*cur && *cur != '>') ++cur;

@@ -173,12 +173,23 @@ typedef struct ysfx_slider_range_s {
     ysfx_real inc;
 } ysfx_slider_range_t;
 
+typedef struct ysfx_slider_curve_s {
+    ysfx_real def;
+    ysfx_real min;
+    ysfx_real max;
+    ysfx_real inc;
+    uint8_t shape;
+    ysfx_real modifier;
+} ysfx_slider_curve_t;
+
 // determine if slider exists; call from 0 to max-1 to scan available ones
 YSFX_API bool ysfx_slider_exists(ysfx_t *fx, uint32_t index);
 // get the name of a slider
 YSFX_API const char *ysfx_slider_get_name(ysfx_t *fx, uint32_t index);
-// get the range of a slider
+// get the range of a slider (deprecated: use ysfx_slider_get_curve instead)
 YSFX_API bool ysfx_slider_get_range(ysfx_t *fx, uint32_t index, ysfx_slider_range_t *range);
+// get the curve of a slider
+YSFX_API bool ysfx_slider_get_curve(ysfx_t *fx, uint32_t index, ysfx_slider_curve_t *curve);
 // get whether the slider is an enumeration
 YSFX_API bool ysfx_slider_is_enum(ysfx_t *fx, uint32_t index);
 // get the number of labels for the enumeration slider
@@ -198,6 +209,43 @@ YSFX_API bool ysfx_slider_is_initially_visible(ysfx_t *fx, uint32_t index);
 YSFX_API ysfx_real ysfx_slider_get_value(ysfx_t *fx, uint32_t index);
 // set the value of the slider, and call @slider later if the value changed and we choose to notify the effect
 YSFX_API void ysfx_slider_set_value(ysfx_t *fx, uint32_t index, ysfx_real value, bool notify);
+
+// Note, there are two variants of these "normalized" slider values and they deal with
+// zero differently. In REAPER JSFX that span zero in their range, define the zero at
+// 0.5f when it comes to polling the value with the API. However, when automating such
+// a parameter, the temporal axis is skewed such that the effect of this is cancelled
+// again. The former is referred to as "raw" here, while the latter is regular.
+
+// get linear slider value from normalized value
+YSFX_API ysfx_real ysfx_slider_scale_from_normalized_linear_raw(ysfx_real value, const ysfx_slider_curve_t *curve);
+// get log slider value from normalized value
+YSFX_API ysfx_real ysfx_slider_scale_from_normalized_sqr_raw(ysfx_real value, const ysfx_slider_curve_t *curve);
+
+// get linear slider value from normalized value
+YSFX_API ysfx_real ysfx_slider_scale_from_normalized_linear(ysfx_real value, const ysfx_slider_curve_t *curve);
+// get log slider value from normalized value
+YSFX_API ysfx_real ysfx_slider_scale_from_normalized_log(ysfx_real value, const ysfx_slider_curve_t *curve);
+// get sqr slider value from normalized value
+YSFX_API ysfx_real ysfx_slider_scale_from_normalized_sqr(ysfx_real value, const ysfx_slider_curve_t *curve);
+
+// get normalized slider value from ysfx log value
+YSFX_API ysfx_real ysfx_slider_scale_to_normalized_linear_raw(ysfx_real value, const ysfx_slider_curve_t *curve);
+// get normalized slider value from ysfx log value
+YSFX_API ysfx_real ysfx_slider_scale_to_normalized_sqr_raw(ysfx_real value, const ysfx_slider_curve_t *curve);
+
+// get normalized slider value from ysfx log value
+YSFX_API ysfx_real ysfx_slider_scale_to_normalized_linear(ysfx_real value, const ysfx_slider_curve_t *curve);
+// get normalized slider value from ysfx log value
+YSFX_API ysfx_real ysfx_slider_scale_to_normalized_log(ysfx_real value, const ysfx_slider_curve_t *curve);
+// get normalized slider value from ysfx sqr value
+YSFX_API ysfx_real ysfx_slider_scale_to_normalized_sqr(ysfx_real value, const ysfx_slider_curve_t *curve);
+
+// convert normalized slider value to ysfx value taking into account curve shape
+YSFX_API ysfx_real ysfx_normalized_to_ysfx_value(ysfx_real value, const ysfx_slider_curve_t *curve);
+
+// convert normalized slider value to ysfx value taking into account curve shape
+YSFX_API ysfx_real ysfx_ysfx_value_to_normalized(ysfx_real value, const ysfx_slider_curve_t *curve);
+
 
 typedef enum ysfx_compile_option_e {
     // skip compiling the @serialize section

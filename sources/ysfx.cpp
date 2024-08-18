@@ -32,6 +32,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <cassert>
+#include <cmath>
 
 static_assert(std::is_same<EEL_F, ysfx_real>::value,
               "ysfx_real is incorrectly defined");
@@ -824,6 +825,191 @@ bool ysfx_slider_get_range(ysfx_t *fx, uint32_t index, ysfx_slider_range_t *rang
     range->inc = slider.inc;
     return true;
 }
+
+bool ysfx_slider_get_curve(ysfx_t *fx, uint32_t index, ysfx_slider_curve_t *curve)
+{
+    ysfx_source_unit_t *main = fx->source.main.get();
+    if (index >= ysfx_max_sliders || !main)
+        return false;
+
+    ysfx_slider_t &slider = main->header.sliders[index];
+    curve->def = slider.def;
+    curve->min = slider.min;
+    curve->max = slider.max;
+    curve->inc = slider.inc;
+    curve->shape = slider.shape;
+    curve->modifier = slider.shape_modifier;
+    return true;
+}
+
+// Scaling function for log-based sliders
+ysfx_real ysfx_slider_scale_from_normalized_log(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    if (curve->modifier == 0) {
+        if ((curve->min <= 0.0001) || (curve->max <= 0.0001)) {
+            // Revert to linear if doing stuff is gonna be problematic
+            return ysfx_slider_scale_from_normalized_linear(value, curve);
+        } else {
+            return std::exp((std::log(curve->max) - std::log(curve->min)) * value + std::log(curve->min));
+        }
+    } else {
+        if (std::abs(curve->max - curve->min) < 0.0000001) {
+            // Revert to linear if doing stuff is gonna be problematic
+            return ysfx_slider_scale_from_normalized_linear(value, curve);
+        }
+
+        if (std::abs(curve->modifier - curve->min) < 0.0000001) {
+            // Revert to linear if doing stuff is gonna be problematic
+            return ysfx_slider_scale_from_normalized_linear(value, curve);
+        }
+
+        // This could all be precomputed.
+        ysfx_real m = (curve->modifier - curve->min) / (curve->max - curve->min);
+        ysfx_real mm1 = (m - 1) / m;
+        mm1 *= mm1;
+        ysfx_real prefactor = (curve->max - curve->min) / (mm1 - 1);
+        
+        return prefactor * (std::pow(std::abs(mm1), value) - 1) + curve->min;
+    }
+}
+
+// Scaling function for log-based sliders
+ysfx_real ysfx_slider_scale_to_normalized_log(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    if (curve->modifier == 0) {
+        if ((curve->min <= 0.0001) || (curve->max <= 0.0001)) {
+            // Revert to linear if doing stuff is gonna be problematic
+            return ysfx_slider_scale_to_normalized_linear(value, curve);
+        } else {
+            return (std::log(value) - std::log(curve->min)) / (std::log(curve->max) - std::log(curve->min));
+        }
+    } else {
+        if (std::abs(curve->max - curve->min) < 0.0000001) {
+            // Revert to linear if doing stuff is gonna be problematic
+            return ysfx_slider_scale_to_normalized_linear(value, curve);
+        }
+
+        if (std::abs(curve->modifier - curve->min) < 0.0000001) {
+            // Revert to linear if doing stuff is gonna be problematic
+            return ysfx_slider_scale_to_normalized_linear(value, curve);
+        }
+
+        // This could all be precomputed
+        ysfx_real m = (curve->modifier - curve->min) / (curve->max - curve->min);
+        ysfx_real mm1 = (m - 1) / m;
+        mm1 *= mm1;
+        ysfx_real inv_prefactor = (mm1 - 1) / (curve->max - curve->min);
+
+        return std::log(std::abs((value - curve->min) * inv_prefactor + 1)) / std::log(std::abs(mm1));
+    }
+}
+
+ysfx_real _sgn(ysfx_real value)
+{
+    return value >= 0 ? 1 : -1;
+}
+
+ysfx_real ysfx_slider_scale_from_normalized_sqr_raw(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    if ((curve->min < 0) && (curve->max > 0)) {
+        return std::pow(std::abs(2 * value - 1), curve->modifier) * (value > 0.5 ? curve->max : curve->min);
+    } else {
+        ysfx_real offset = std::pow(std::abs(curve->min / curve->max), (1.0 / curve->modifier));
+        return std::pow(std::abs(value * (1 - offset) + offset), curve->modifier) * curve->max;
+    }
+}
+
+ysfx_real ysfx_slider_scale_from_normalized_sqr(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    ysfx_real imaxi = _sgn(curve->max) * std::pow(std::abs(curve->max), 1.0 / curve->modifier);
+    ysfx_real imini = _sgn(curve->min) * std::pow(std::abs(curve->min), 1.0 / curve->modifier);
+    ysfx_real interp = value * (imaxi - imini) + imini;
+    return _sgn(interp) * std::pow(std::abs(interp), curve->modifier);
+}
+
+ysfx_real ysfx_slider_scale_to_normalized_sqr_raw(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    if ((curve->min < 0) && (curve->max > 0)) {
+        ysfx_real sgn = (value >= 0) ? 1 : -1;
+        return 0.5 * (sgn * std::pow(std::abs(value / ((value >= 0.0) ? curve->max : curve->min)), 1.0 / curve->modifier) + 1);
+    } else {
+        ysfx_real inv_mod = 1.0 / curve->modifier;
+        ysfx_real offset = std::pow(std::abs(curve->min / curve->max), inv_mod);
+        ysfx_real result = (std::pow(std::abs(value / curve->max), inv_mod) - offset) / (1.0 - offset);
+        return result;
+    }
+}
+
+ysfx_real ysfx_slider_scale_to_normalized_sqr(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    ysfx_real inv_mod = 1.0 / curve->modifier;
+    ysfx_real imaxi = _sgn(curve->max) * std::pow(std::abs(curve->max), inv_mod);
+    ysfx_real imini = _sgn(curve->min) * std::pow(std::abs(curve->min), inv_mod);
+    ysfx_real interp = _sgn(value) * std::pow(std::abs(value), inv_mod);
+    return (interp - imini) / (imaxi - imini);
+}
+
+ysfx_real ysfx_slider_scale_to_normalized_linear_raw(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    if ((std::signbit(curve->min) != std::signbit(curve->max)) && (curve->min != 0) && (curve->max != 0)) {
+        if (std::signbit(value) == std::signbit(curve->min)) {
+            return 0.5 * (1 - value / curve->min);
+        } else {
+            return 0.5 * (1 + value / curve->max);
+        }
+    } else {
+        ysfx_real diff = curve->max - curve->min;
+        if (std::abs(diff) < 1e-12) return curve->min;
+
+        return (value - curve->min) / diff;
+    }
+}
+
+ysfx_real ysfx_slider_scale_to_normalized_linear(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    ysfx_real diff = curve->max - curve->min;
+    if (std::abs(diff) < 1e-12) return curve->min;
+
+    return (value - curve->min) / diff;
+}
+
+ysfx_real ysfx_slider_scale_from_normalized_linear_raw(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    if ((std::signbit(curve->min) != std::signbit(curve->max)) && (curve->min != 0) && (curve->max != 0)) {
+        return (value > 0.5) ? curve->max * (value + value - 1) : curve->min * (1.0 - value - value);
+    } else {
+        return value * (curve->max - curve->min) + curve->min;
+    }
+}
+
+ysfx_real ysfx_slider_scale_from_normalized_linear(ysfx_real value, const ysfx_slider_curve_t *curve)
+{
+    return value * (curve->max - curve->min) + curve->min;
+}
+
+// convert normalized slider value to ysfx value
+ysfx_real ysfx_normalized_to_ysfx_value(ysfx_real normalizedValue, const ysfx_slider_curve_t *curve) {
+    switch(curve->shape) {
+        case 2:
+            return ysfx_slider_scale_from_normalized_sqr(normalizedValue, curve);
+        case 1:
+            return ysfx_slider_scale_from_normalized_log(normalizedValue, curve);
+        default:
+            return ysfx_slider_scale_from_normalized_linear(normalizedValue, curve);
+    }
+};
+
+// convert ysfx value to normalized slider value
+ysfx_real ysfx_ysfx_value_to_normalized(ysfx_real value, const ysfx_slider_curve_t *curve) {
+    switch(curve->shape) {
+        case 2:
+            return ysfx_slider_scale_to_normalized_sqr(value, curve);
+        case 1:
+            return ysfx_slider_scale_to_normalized_log(value, curve);
+        default:
+            return ysfx_slider_scale_to_normalized_linear(value, curve);
+    }
+};
 
 bool ysfx_slider_is_enum(ysfx_t *fx, uint32_t index)
 {
