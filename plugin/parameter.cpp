@@ -58,6 +58,13 @@ ysfx_slider_range_t YsfxParameter::getSliderRange() const
     return range;
 }
 
+ysfx_slider_curve_t YsfxParameter::getSliderCurve() const
+{
+    ysfx_slider_curve_t curve{};
+    ysfx_slider_get_curve(m_fx.get(), (uint32_t)m_sliderIndex, &curve);
+    return curve;
+}
+
 bool YsfxParameter::isEnumSlider() const
 {
     return ysfx_slider_is_enum(m_fx.get(), (uint32_t)m_sliderIndex);
@@ -75,8 +82,10 @@ juce::CharPointer_UTF8 YsfxParameter::getSliderEnumName(int index) const
 
 ysfx_real YsfxParameter::convertToYsfxValue(float normValue) const
 {
-    ysfx_slider_range_t range = getSliderRange();
-    ysfx_real actualValue = (ysfx_real)normValue * (range.max - range.min) + range.min;
+    ysfx_slider_curve_t curve = getSliderCurve();
+
+    ysfx_real actualValue{ysfx_normalized_to_ysfx_value(normValue, &curve)};
+
     // NOTE: if enumerated, round the value to nearest,
     //    to make sure imprecision does not land us on the wrong index
     if (isEnumSlider())
@@ -87,14 +96,17 @@ ysfx_real YsfxParameter::convertToYsfxValue(float normValue) const
 
 float YsfxParameter::convertFromYsfxValue(ysfx_real actualValue) const
 {
-    ysfx_slider_range_t range = getSliderRange();
-    if (range.min == range.max)
+    ysfx_slider_curve_t curve = getSliderCurve();
+    if (curve.min == curve.max)
         return 0.0f;
+    
     // NOTE: if enumerated, round value into an index
     if (isEnumSlider())
         actualValue = juce::roundToInt(actualValue);
-    float normValue = (float)((actualValue - range.min) / (range.max - range.min));
-    return normValue;
+
+    ysfx_real normalized = ysfx_ysfx_value_to_normalized(actualValue, &curve);
+
+    return static_cast<float>(normalized);
 }
 
 float YsfxParameter::getValue() const
@@ -135,8 +147,8 @@ bool YsfxParameter::wasUpdatedByHost() {
 
 juce::String YsfxParameter::getText(float normalisedValue, int) const
 {
-    ysfx_slider_range_t range = getSliderRange();
-    ysfx_real actualValue = (ysfx_real)normalisedValue * (range.max - range.min) + range.min;
+    ysfx_real actualValue = convertToYsfxValue(normalisedValue);
+
     if (isEnumSlider()) {
         int enumSize = getSliderEnumSize();
         // NOTE: if enumerated, round the value to nearest,
@@ -173,6 +185,5 @@ float YsfxParameter::getValueForText(const juce::String &text) const
     if (!foundEnum)
         actualValue = text.getFloatValue();
 
-    float normValue = (float)((actualValue  - range.min) / (range.max - range.min));
-    return normValue;
+    return convertFromYsfxValue(actualValue);
 }

@@ -29,6 +29,7 @@ public:
     bool existsAsSlider() const;
     juce::CharPointer_UTF8 getSliderName() const;
     ysfx_slider_range_t getSliderRange() const;
+    ysfx_slider_curve_t getSliderCurve() const;
     bool isEnumSlider() const;
     int getSliderEnumSize() const;
     juce::CharPointer_UTF8 getSliderEnumName(int index) const;
