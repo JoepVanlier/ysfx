@@ -26,6 +26,7 @@
 #include "components/parameters_panel.h"
 #include "components/graphics_view.h"
 #include "components/ide_view.h"
+#include "components/searchable_popup.h"
 #include "utility/functional_timer.h"
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -525,11 +526,15 @@ void YsfxEditor::Impl::popupPresets()
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
         .withTargetComponent(*m_btnLoadPreset);
-    m_presetsPopup->showMenuAsync(popupOptions, [this, info](int index) {
-        if (index > 0) {
-            m_proc->loadJsfxPreset(info, (uint32_t)(index - 1), true);
+    
+    juce::PopupMenu::Options quickSearchOptions = PopupMenuQuickSearchOptions{}.withTargetComponent(*m_btnLoadPreset);
+
+    showPopupMenuWithQuickSearch(*m_presetsPopup, quickSearchOptions, [this, info](int index) {
+            if (index > 0) {
+                m_proc->loadJsfxPreset(info, (uint32_t)(index - 1), true);
+            }
         }
-    });
+    );
 }
 
 void YsfxEditor::Impl::switchEditor(bool showGfx)

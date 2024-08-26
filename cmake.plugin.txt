@@ -71,6 +71,7 @@ target_sources(ysfx_plugin
         "plugin/components/graphics_view.h"
         "plugin/components/ide_view.cpp"
         "plugin/components/ide_view.h"
+        "plugin/components/searchable_popup.h"
         "plugin/utility/audio_processor_suspender.h"
         "plugin/utility/functional_timer.h"
         "plugin/utility/async_updater.cpp"
