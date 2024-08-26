@@ -369,6 +369,22 @@ TEST_CASE("slider parsing", "[parse]")
         ensure_regular_slider(slider, 42, {}, "log me", 20, 20, 22050.0, 0.01, 1, 5000);
     }
 
+    SECTION("log shape middle permissive")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01,-.,#+,@abcd:log=5000>log me";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "log me", 20, 20, 22050.0, 0.01, 1, 5000);
+    }
+
+    SECTION("log shape middle even more permissive")
+    {
+        const char *line = "slider43:20<20.0,22050,0.01,-.,#+,@abcd:log=5000.#=1414?-+<,>log me";
+        ysfx_slider_t slider;
+        REQUIRE(ysfx_parse_slider(line, slider));
+        ensure_regular_slider(slider, 42, {}, "log me", 20, 20, 22050.0, 0.01, 1, 5000);
+    }
+
     SECTION("log shape capitalization")
     {
         const char *line = "slider43:20<20.0,22050,0.01:LOg>captains log";

@@ -288,7 +288,7 @@ bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)
                 ++cur;
                 slider.inc = (ysfx_real)ysfx::dot_strtod(cur, (char **)&cur);
 
-                while (*cur && *cur != '{' && *cur != ',' && *cur != '>' && *cur != ':') ++cur;
+                while (*cur && *cur != '{' && *cur != '>' && *cur != ':') ++cur;
                 if (!*cur) PARSE_FAIL;
 
                 // enumeration values
