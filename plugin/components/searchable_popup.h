@@ -123,7 +123,6 @@
                     MenuItemComponent (PopupMenuQuickSearch* owner) : owner (owner) {}
                     void paint (juce::Graphics& g) override
                     {
-                        //if (highlighted && !e.popup_menu_item->isEnabled) g.setOpacity(0.5f);
                         getLookAndFeel().drawPopupMenuItem (
                             g, getLocalBounds(), false /* isSeparator */, e.popup_menu_item->isEnabled /* isActive */, highlighted /* isHighlighted */, e.popup_menu_item->isTicked, false /* hasSubMenu */, e.label, e.popup_menu_item->shortcutKeyDescription, e.popup_menu_item->image.get(), e.popup_menu_item->colour.isTransparent() ? nullptr : &e.popup_menu_item->colour);
                     }
@@ -157,11 +156,14 @@
                 };
                 std::vector<std::unique_ptr<MenuItemComponent>> best_items;
 
+            float m_scaleFactor{1.0f};
+
             public:
-                QuickSearchComponent (PopupMenuQuickSearch* owner, juce::String& initial_string) : owner (owner)
+                QuickSearchComponent (PopupMenuQuickSearch* owner, juce::String& initial_string, float scale_factor) : owner (owner), m_scaleFactor(scale_factor)
                 {
                     jassert(owner->target_component_weak_ref.get());
-                    auto target_screen_area = owner->options.getTargetScreenArea();
+                    auto target_screen_area = getTargetScreenArea();
+                    
                     setOpaque (true);
 
                     setWantsKeyboardFocus (false);
@@ -196,6 +198,7 @@
                     if (font.getHeight() > (item_height - 2) / 1.3f)
                         font.setHeight ((item_height - 2) / 1.3f);
 
+
                     text_colour = getLookAndFeel().findColour (juce::PopupMenu::textColourId);
 
                     search_label.setText (TRANS ("Search:"), juce::dontSendNotification);
@@ -221,10 +224,19 @@
                     editor.addKeyListener (this);
                     editor.setAccessible (false); // no need to hear voiceover spelling each letter..
 
-                    startTimer (100); // will grab the keyboard focus for the texteditor.
+                    // startTimer (100); // will grab the keyboard focus for the texteditor.
 
                     updateContent();
                 }
+                
+                juce::Rectangle<int> getTargetScreenArea() {
+                    auto target_screen_area = owner->options.getTargetScreenArea();
+                    target_screen_area.setX(target_screen_area.getX() / m_scaleFactor);
+                    target_screen_area.setY(target_screen_area.getY() / m_scaleFactor);
+                    return target_screen_area;
+                }
+
+                float getDesktopScaleFactor() const override { return m_scaleFactor * juce::Desktop::getInstance().getGlobalScaleFactor(); }
 
                 /* recursively parse the PopupMenu items */
                 void readPopupMenuItems (MenuTree& tree, const juce::PopupMenu& menu)
@@ -334,7 +346,7 @@
                 // decide the orientation and dimensions of the QuickSearchComponent
                 juce::Rectangle<int> getBestBounds (int total_h)
                 {
-                    auto tr = owner->options.getTargetScreenArea();
+                    auto tr = getTargetScreenArea();
 
                     auto screenArea =
                         juce::Desktop::getInstance().getDisplays().getDisplayForPoint (tr.getCentre())->userArea;
@@ -466,7 +478,6 @@
                             best_j, best_len,
                             "\t"); // mark these characters are 'done' , so that 'xxxx' does not match 'x'
                         old_best_j = best_j;
-                        // cerr << "i=" << i << " j=" << best_j << " len=" << best_len << " for " << str << "\n";
                         i += std::max (1, best_len);
                     }
                     return score;
@@ -489,16 +500,11 @@
                         if (! q.popup_menu_item->isEnabled)
                             scores[idx] -= 10000;
                         matches.push_back (idx);
-
-                        // cerr << scores[idx] << " : " << quick_search_items[idx].label << "\n";
                     }
                     std::stable_sort (matches.begin(), matches.end(), [&scores] (size_t a, size_t b) { return scores[a] > scores[b]; });
                     int threshold = (! matches.empty() && scores[matches.front()] > 0 ? 0 : no_match_score);
                     while (! matches.empty() && scores[matches.back()] <= threshold)
                         matches.pop_back();
-
-                    // cerr << "number of matches: " << matches.size() << " / " << quick_search_items.size()
-                    // << "\n";
 
                     if (matches != old_matches)
                     {
@@ -634,13 +640,15 @@
             {
                 if (quick_search == nullptr && target_component_weak_ref)
                 {
-                    quick_search = std::make_unique<QuickSearchComponent> (this, key_pressed_while_menu);
+                    float scale_factor = juce::Component::getApproximateScaleFactorForComponent(options.getTargetComponent());
+                    quick_search = std::make_unique<QuickSearchComponent> (this, key_pressed_while_menu, scale_factor);
 
                     juce::PopupMenu::dismissAllActiveMenus(); // user_callback won't run, since quick_search != 0
 
                     quick_search->setAlwaysOnTop (true);
                     quick_search->setVisible (true);
-                    quick_search->addToDesktop (0); // ComponentPeer::windowIsTemporary);
+                    quick_search->addToDesktop(juce::ComponentPeer::windowIsTemporary);
+
                     // quick_search->toFront(true /* shouldAlsoGainFocus */);
                     quick_search->enterModalState (true);
                 }
@@ -687,6 +695,8 @@
             bool keyPressed (const juce::KeyPress& key, juce::Component* /*originatingComponent*/) override
             {
                 if (is_finishing) return false;
+                if (menu.getNumItems() < 2) return false;
+                
                 auto c = key.getTextCharacter();
                 if (c > ' ' || c == '\t')
                 {

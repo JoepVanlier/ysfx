@@ -527,7 +527,8 @@ void YsfxEditor::Impl::popupPresets()
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
         .withTargetComponent(*m_btnLoadPreset);
     
-    juce::PopupMenu::Options quickSearchOptions = PopupMenuQuickSearchOptions{}.withTargetComponent(*m_btnLoadPreset);
+    juce::PopupMenu::Options quickSearchOptions = PopupMenuQuickSearchOptions{}
+        .withTargetComponent(*m_btnLoadPreset);
 
     showPopupMenuWithQuickSearch(*m_presetsPopup, quickSearchOptions, [this, info](int index) {
             if (index > 0) {
