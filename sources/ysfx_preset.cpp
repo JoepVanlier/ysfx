@@ -212,3 +212,23 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
     preset->name = ysfx::strdup_using_new(name);
     preset->state = ysfx_state_dup(&state);
 }
+
+// Adds preset to a bank and returns new bank with extra preset. Note that the preset takes responsibility for the memory 
+// ysfx_state_t* is pointing to. This function returns a *new* bank and you are responsible for cleaning up the old bank.
+ysfx_bank_t *ysfx_add_preset_to_bank(ysfx_bank_t *bank_in, const char* preset_name, ysfx_state_t *state)
+{
+    ysfx_bank_u bank{new ysfx_bank_t{}};
+    bank->name = ysfx::strdup_using_new(bank_in->name);
+    bank->preset_count = (uint32_t)bank_in->preset_count + 1;
+    bank->presets = new ysfx_preset_t[(uint32_t)bank->preset_count]{};
+    
+    for (uint32_t i=0; i < bank_in->preset_count; i++) {
+        bank->presets[i].name = ysfx::strdup_using_new(bank_in->presets[i].name);
+        bank->presets[i].state = ysfx_state_dup(bank_in->presets[i].state);
+    }
+
+    bank->presets[bank->preset_count - 1].name = ysfx::strdup_using_new(preset_name);
+    bank->presets[bank->preset_count - 1].state = state;
+
+    return bank.release();
+}

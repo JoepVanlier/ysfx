@@ -84,6 +84,7 @@ ysfx_state_dup
 ysfx_get_bank_path
 ysfx_load_bank
 ysfx_bank_free
+ysfx_add_preset_to_bank
 ysfx_enum_vars
 ysfx_find_var
 ysfx_read_var
