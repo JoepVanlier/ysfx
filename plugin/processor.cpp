@@ -238,6 +238,32 @@ void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, uint32_t index, bool asyn
     }
 }
 
+static juce::File getCustomBankLocation(ysfx_t *fx) {
+    juce::File customBankPath{ysfx_get_bank_path(fx)};
+    customBankPath = juce::File(customBankPath.getParentDirectory().getFullPathName()).getChildFile(customBankPath.getFileNameWithoutExtension() + "-ysfx.rpl");
+    return customBankPath;
+}
+
+void YsfxProcessor::saveCurrentPreset(const char* preset_name)
+{
+    ysfx_t *fx = m_impl->m_fx.get();
+    if (!fx) return;
+
+    auto sourceBank = m_impl->m_info->bank.get();
+    if (!sourceBank) sourceBank = ysfx_create_empty_bank(m_impl->m_info->m_name.toUTF8());
+
+    // Make a backup copy before we write in case there's trouble
+    juce::File bankLocation = getCustomBankLocation(fx);
+    juce::File bankCopy(bankLocation.getFullPathName() + "-bak");
+    bankLocation.copyFileTo(bankCopy);
+
+    ysfx_bank_u newBank{ysfx_add_preset_to_bank(sourceBank, preset_name, ysfx_save_state(fx))};
+    ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
+
+    m_impl->m_info->bank.reset(newBank.release());  // TODO: is this thread-safe?
+    loadJsfxPreset(m_impl->m_info, ysfx_preset_exists(m_impl->m_info->bank.get(), preset_name) - 1, true);
+}
+
 YsfxInfo::Ptr YsfxProcessor::getCurrentInfo()
 {
     return std::atomic_load(&m_impl->m_info);
@@ -677,9 +703,15 @@ YsfxInfo::Ptr YsfxProcessor::Impl::createNewFx(juce::CharPointer_UTF8 filePath, 
     ysfx_load_file(fx, filePath, loadopts);
     ysfx_compile(fx, compileopts);
 
-    ///
+    // Check if we have a customized bank
     const char *bankpath = ysfx_get_bank_path(fx);
-    info->bank.reset(ysfx_load_bank(bankpath));
+    juce::File customBankPath = getCustomBankLocation(fx);
+    if (customBankPath.existsAsFile()) {
+        info->bank.reset(ysfx_load_bank(customBankPath.getFullPathName().toStdString().c_str()));
+    } else {
+        info->bank.reset(ysfx_load_bank(bankpath));
+    }
+
     info->m_name = juce::File{filePath}.getFileNameWithoutExtension();
 
     if (initialState)

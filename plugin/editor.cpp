@@ -27,6 +27,7 @@
 #include "components/graphics_view.h"
 #include "components/ide_view.h"
 #include "components/searchable_popup.h"
+#include "components/modal_textinputbox.h"
 #include "utility/functional_timer.h"
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -515,12 +516,16 @@ void YsfxEditor::Impl::popupPresets()
     YsfxInfo::Ptr info = m_info;
     ysfx_bank_t *bank = info->bank.get();
     YsfxCurrentPresetInfo::Ptr presetInfo = m_currentPresetInfo;
-    if (!bank)
-        m_presetsPopup->addItem(0, TRANS("No presets"), false);
-    else {
+    if (!bank) {
+        m_presetsPopup->addItem(32767, TRANS("No presets"), false);
+        if (info->m_name.isNotEmpty()) {
+            m_presetsPopup->addItem(1, "Save preset", true, false);
+        }
+    } else {
+        m_presetsPopup->addItem(1, "Save preset", true, false);
         for (uint32_t i = 0; i < bank->preset_count; ++i) {
             bool wasLastChosen = presetInfo->m_lastChosenPreset.compare(bank->presets[i].name) == 0;
-            m_presetsPopup->addItem((int)(i + 1), bank->presets[i].name, true, wasLastChosen);
+            m_presetsPopup->addItem((int)(i + 2), bank->presets[i].name, true, wasLastChosen);
         }
     }
 
@@ -531,8 +536,18 @@ void YsfxEditor::Impl::popupPresets()
         .withTargetComponent(*m_btnLoadPreset);
 
     showPopupMenuWithQuickSearch(*m_presetsPopup, quickSearchOptions, [this, info](int index) {
-            if (index > 0) {
-                m_proc->loadJsfxPreset(info, (uint32_t)(index - 1), true);
+            if (index == 1) {
+                show_async_text_input(
+                    "Enter preset name",
+                    "",
+                    [this](juce::String presetName, bool wantSave){
+                        if (wantSave) {
+                            m_proc->saveCurrentPreset(presetName.toStdString().c_str());
+                        }
+                    }
+                );
+            } else if ((index > 1) && (index < 32767)) {
+                m_proc->loadJsfxPreset(info, (uint32_t)(index - 2), true);
             }
         }
     );

@@ -72,6 +72,7 @@ target_sources(ysfx_plugin
         "plugin/components/ide_view.cpp"
         "plugin/components/ide_view.h"
         "plugin/components/searchable_popup.h"
+        "plugin/components/modal_textinputbox.h"
         "plugin/utility/audio_processor_suspender.h"
         "plugin/utility/functional_timer.h"
         "plugin/utility/async_updater.cpp"
