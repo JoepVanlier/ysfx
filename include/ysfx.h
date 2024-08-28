@@ -394,8 +394,14 @@ YSFX_API const char *ysfx_get_bank_path(ysfx_t *fx);
 YSFX_API ysfx_bank_t *ysfx_load_bank(const char *path);
 // free a preset bank
 YSFX_API void ysfx_bank_free(ysfx_bank_t *bank);
+// create empty preset bank
+YSFX_API ysfx_bank_t *ysfx_create_empty_bank(const char* bank_name);
 // add a preset to the current bank and returns a *new* bank without freeing the old bank
 YSFX_API ysfx_bank_t *ysfx_add_preset_to_bank(ysfx_bank_t *bank_in, const char* preset_name, ysfx_state_t *state);
+// returns > 0 if preset exists in bank. Preset index is given by return value - 1
+YSFX_API uint32_t ysfx_preset_exists(ysfx_bank_t *bank_in, const char* preset_name);
+// deletes a preset from the bank and returns a *new* bank without freeing the old bank
+YSFX_API ysfx_bank_t *ysfx_delete_preset_from_bank(ysfx_bank_t *bank_in, const char* preset_name);
 
 // type of a function which can enumerate VM variables; returning 0 ends the search
 typedef int (ysfx_enum_vars_callback_t)(const char *name, ysfx_real *var, void *userdata);
