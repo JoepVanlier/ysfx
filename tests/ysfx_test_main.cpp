@@ -16,6 +16,7 @@
 //
 
 #include "ysfx_test_utils.hpp"
+#define CATCH_CONFIG_CONSOLE_WIDTH 200
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 #include <clocale>
