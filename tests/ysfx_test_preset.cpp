@@ -383,7 +383,9 @@ TEST_CASE("preset handling", "[preset]")
         preset = &bank->presets[4];
         REQUIRE(!strcmp(preset->name, "Moar \"Moar\"' 'Moar\""));
 
-        for (size_t i=0; i<4; i++)
+        // Note: the last preset doesn't recall, but it also doesn't in REAPER, since
+        // the string is not adequately escaped.
+        for (size_t i=0; i<bank->preset_count - 1; i++)
         {
             preset = &bank->presets[i];
             state = preset->state;
