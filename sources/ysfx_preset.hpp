@@ -15,4 +15,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include <string>
+
 #pragma once
+
+
+std::string ysfx_save_bank_to_rpl_text(ysfx_bank_t *bank);

@@ -24,6 +24,12 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <cmath>
+#include <algorithm>
+
+#include <iomanip>
+#include <sstream>
+#include <locale>
 
 #include "WDL/lineparse.h"
 
@@ -284,4 +290,123 @@ ysfx_bank_t *ysfx_delete_preset_from_bank(ysfx_bank_t *bank_in, const char* pres
     }
 
     return bank.release();
+}
+
+std::string escapeString(const char *in)
+{
+    int flags=0;
+    const char *p = in;
+    while (*p && (flags != 15))
+    {
+        char c = *p++;
+        if (c == '"') flags |= 1;
+        else if (c == '\'') flags |= 2;
+        else if (c == '`') flags |= 4;
+        else if (c == ' ') flags |= 8;
+    }
+
+    if (!(flags & 8)) return std::string(in);
+    std::string outString{""};
+    outString.reserve(64);
+
+    if (flags != 15)
+    {
+        const char src = (flags & 1) ? ((flags & 2) ? '`' : '\'') : '"';
+        outString.append(1, src).append(in).append(1, src);
+    }
+    else  // ick, change ` into '
+    {
+        outString.append(1, '`').append(in).append(1, '`');
+        std::replace(outString.begin() + 1, outString.end() - 1, '`', '\'');
+    }
+
+    return outString;
+}
+
+std::string double_string(double value) {
+    std::ostringstream oss;
+    oss.imbue(std::locale::classic()); // ensure the period is the decimal separator
+    oss << std::fixed << std::setprecision(6) << value;
+
+    std::string result{oss.str()};
+    result.erase(result.find_last_not_of('0') + 1, std::string::npos);
+    if (result.back() == '.') {
+        result.pop_back();
+    }
+    result.push_back(' ');
+    return result;
+}
+
+static std::string preset_blob(std::string name, ysfx_state_t *state)
+{
+    std::string blob{""};
+    blob.reserve(4096);
+
+    std::vector<ysfx_real> slider_values(ysfx_max_sliders, 0.0);
+    std::vector<int> slider_used(ysfx_max_sliders, 0);
+
+    bool more_than_64 = true;
+    for (uint32_t i = 0; i < state->slider_count; i++) {
+        uint32_t slider_index = state->sliders[i].index;
+        slider_used[slider_index] = 1;
+        slider_values[slider_index] = state->sliders[i].value;
+
+        if (slider_index >= 64) more_than_64 = true;
+    }
+
+    // Serialize the first 64 sliders
+    for (uint32_t i = 0; i < 64; i++) {
+        if (slider_used[i]) {
+            blob += double_string(slider_values[i]);
+        } else {
+            blob += "- ";
+        }
+    }
+
+    // Print escaped name again
+    blob += escapeString(name.c_str()) + " ";
+
+    // Serialize the remaining 192 sliders
+    if (more_than_64) {
+        for (uint32_t i = 0; i < 192; i++) {
+            if (slider_used[i + 64]) {
+                blob += double_string(slider_values[i + 64]);
+            } else {
+                blob += "- ";
+            }
+        }
+    }
+    blob = blob.substr(0, blob.length() - 1);  // Strip final space.
+
+    // Terminate slider section with a null terminator
+    blob += '\0';
+
+    // Serialize the binary blob
+    blob += std::string(reinterpret_cast<const char *>(state->data), state->data_size);
+
+    const uint8_t *uint8_blob = reinterpret_cast<const uint8_t*>(&blob[0]);
+    std::string base64_preset = ysfx::encode_base64(uint8_blob, blob.length());
+
+    std::string preset_with_linebreaks{""};
+    for (size_t i = 0; i < base64_preset.length(); i += 128) {
+        preset_with_linebreaks += std::string("    ") + base64_preset.substr(i, 128) + std::string("\n");
+    }
+
+    return preset_with_linebreaks;
+}
+
+std::string ysfx_save_bank_to_rpl_text(ysfx_bank_t *bank)
+{
+    std::string rpl_text{"<REAPER_PRESET_LIBRARY " + escapeString(bank->name) + "\n"};
+
+    for (uint32_t i = 0; i < bank->preset_count; i++) {
+        ysfx_preset_t preset = bank->presets[i];
+        std::string preset_name{preset.name};  // TODO: should be escaped!
+        std::string presetString{"  <PRESET `" + preset_name + "`\n" + preset_blob(preset_name, preset.state) + "  >\n"};
+        rpl_text += presetString;
+    }
+
+    rpl_text += ">\n";
+
+    return rpl_text;
 }
