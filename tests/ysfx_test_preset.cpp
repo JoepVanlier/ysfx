@@ -356,6 +356,14 @@ TEST_CASE("preset handling", "[preset]")
             "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g" "\n"
             "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIDYAACCnRAAAoEAAACBBAABwQQAAoEEAQKdE" "\n"
             "  >" "\n"
+            "  <PRESET `- -`"
+            "    MCAyIDMgNCAzLjE0MTUgMS4yMzQ1NjggLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g" "\n"
+            "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAiLSAtIiAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g" "\n"
+            "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSA1IC0gLSAtIC0gLSAtIC0g" "\n"
+            "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g" "\n"
+            "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g" "\n"
+            "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gNgAAIKdEAACgQAAAIEEAAHBBAACgQQBAp0Q=" "\n"
+            "  >" "\n"
             ">" "\n";
 
         scoped_new_dir dir_fx("${root}/Effects");
@@ -368,7 +376,7 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(!strcmp(bank->name, "JS: TestCaseNewRPL"));
 
         REQUIRE(bank->presets != nullptr);
-        REQUIRE(bank->preset_count == 5);
+        REQUIRE(bank->preset_count == 6);
 
         ysfx_preset_t *preset;
         ysfx_state_t *state;
@@ -383,10 +391,10 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(!strcmp(preset->name, "Moar \"Moar\" 'Moar\""));
         preset = &bank->presets[4];
         REQUIRE(!strcmp(preset->name, "Moar \"Moar\"' 'Moar\""));
+        preset = &bank->presets[5];
+        REQUIRE(!strcmp(preset->name, "- -"));
 
-        // Note: the last preset doesn't recall, but it also doesn't in REAPER, since
-        // the string is not adequately escaped.
-        for (size_t i=0; i<bank->preset_count - 1; i++)
+        for (size_t i=0; i<bank->preset_count; i++)
         {
             preset = &bank->presets[i];
             state = preset->state;

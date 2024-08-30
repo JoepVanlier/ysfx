@@ -150,6 +150,74 @@ static ysfx_bank_t *ysfx_load_bank_from_rpl_text(const std::string &text)
     return bank.release();
 }
 
+static int hasFunkyCharacters(const char *in)
+{
+    int flags = 0;
+    const char *p = in;
+    while (*p && (flags != 15))
+    {
+        char c = *p++;
+        if (c == '"') flags |= 1;
+        else if (c == '\'') flags |= 2;
+        else if (c == '`') flags |= 4;
+        else if (c == ' ') flags |= 8;
+    }
+
+    return flags;
+}
+
+std::string escapeString(const char *in)
+{
+    int flags = hasFunkyCharacters(in);
+
+    if (!(flags & 8)) return std::string(in);
+    std::string outString{""};
+    outString.reserve(64);
+
+    if (flags != 15)
+    {
+        const char src = (flags & 1) ? ((flags & 2) ? '`' : '\'') : '"';
+        outString.append(1, src).append(in).append(1, src);
+    }
+    else  // ick, change ` into '
+    {
+        outString.append(1, '`').append(in).append(1, '`');
+        std::replace(outString.begin() + 1, outString.end() - 1, '`', '\'');
+    }
+
+    return outString;
+}
+
+static std::string remove_name_from_preset_blob(const char *text, const char *name)
+{
+    // Unfortunately, there's some questionable escaping going on sometimes. This is not a problem
+    // when it comes to the preset header, but in the middle of the blob it can be problematic.
+    // Here we try to find the name in the blob and replace it, so that special characters don't
+    // make our life harder than it needs to be.
+    if (!(hasFunkyCharacters(name) & 7)) return std::string{""};
+
+    std::string name_replace{text};
+    std::size_t name_pos = name_replace.find(name);
+
+    if (name_pos == std::string::npos) return std::string{""};
+
+    // Make sure what we found is *unique*, otherwise bail out
+    std::size_t differentMatch = name_replace.find("name", name_pos + 1, 6);
+    if (differentMatch != std::string::npos) return std::string{""};
+
+    // Move left from the name we found until we hit a space (separator).
+    std::size_t start_pos = name_pos;
+    while((name_replace[start_pos] != ' ') && (start_pos > 0)) start_pos -= 1;
+    start_pos += 1;
+
+    // Move right until we hit a space.
+    std::size_t stop_pos = name_pos + strlen(name);
+    while((name_replace[stop_pos] != ' ') && (stop_pos < name_replace.length())) stop_pos += 1;
+    name_replace.replace(start_pos, stop_pos - start_pos, stop_pos - start_pos, '_');
+
+    return name_replace;
+}
+
 static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *name, const std::vector<uint8_t> &data)
 {
     ysfx_state_t state{};
@@ -176,6 +244,11 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
     // whatever follows null is the raw serialization
     state.data = const_cast<uint8_t *>(data.data() + pos);
     state.data_size = len - pos;
+
+    std::string name_replace = remove_name_from_preset_blob(text, name);
+    if (!name_replace.empty()) {
+        text = name_replace.c_str();
+    }
 
     // parse a line of 64 slider floats (or '-' if missing)
     LineParser parser;
@@ -290,37 +363,6 @@ ysfx_bank_t *ysfx_delete_preset_from_bank(ysfx_bank_t *bank_in, const char* pres
     }
 
     return bank.release();
-}
-
-std::string escapeString(const char *in)
-{
-    int flags=0;
-    const char *p = in;
-    while (*p && (flags != 15))
-    {
-        char c = *p++;
-        if (c == '"') flags |= 1;
-        else if (c == '\'') flags |= 2;
-        else if (c == '`') flags |= 4;
-        else if (c == ' ') flags |= 8;
-    }
-
-    if (!(flags & 8)) return std::string(in);
-    std::string outString{""};
-    outString.reserve(64);
-
-    if (flags != 15)
-    {
-        const char src = (flags & 1) ? ((flags & 2) ? '`' : '\'') : '"';
-        outString.append(1, src).append(in).append(1, src);
-    }
-    else  // ick, change ` into '
-    {
-        outString.append(1, '`').append(in).append(1, '`');
-        std::replace(outString.begin() + 1, outString.end() - 1, '`', '\'');
-    }
-
-    return outString;
 }
 
 std::string double_string(double value) {
