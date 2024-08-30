@@ -327,18 +327,18 @@ YSFX_API bool ysfx_receive_midi_from_bus(ysfx_t *fx, uint32_t bus, ysfx_midi_eve
 YSFX_API bool ysfx_send_trigger(ysfx_t *fx, uint32_t index);
 
 // determine which group a particular slider is part of
-YSFX_API size_t ysfx_fetch_slider_group_index(uint32_t slider_number);
+YSFX_API uint8_t ysfx_fetch_slider_group_index(uint32_t slider_number);
 // generate a slider bitmask for a slider with which you can extract the relevant bit
-YSFX_API uint64_t ysfx_slider_mask(uint32_t slider_number, size_t group_index);
+YSFX_API uint64_t ysfx_slider_mask(uint32_t slider_number, uint8_t group_index);
 
 // get a bit mask of sliders whose values must be redisplayed, and clear it to zero
-YSFX_API uint64_t ysfx_fetch_slider_changes(ysfx_t *fx, size_t slider_group_index);
+YSFX_API uint64_t ysfx_fetch_slider_changes(ysfx_t *fx, uint8_t slider_group_index);
 // get a bit mask of sliders whose values must be automated, and clear it to zero
-YSFX_API uint64_t ysfx_fetch_slider_automations(ysfx_t *fx, size_t slider_group_index);
+YSFX_API uint64_t ysfx_fetch_slider_automations(ysfx_t *fx, uint8_t slider_group_index);
 // get a bit mask of sliders whose values are currently being touched
-YSFX_API uint64_t ysfx_fetch_slider_touches(ysfx_t *fx, size_t slider_group_index);
+YSFX_API uint64_t ysfx_fetch_slider_touches(ysfx_t *fx, uint8_t slider_group_index);
 // get a bit mask of sliders currently visible
-YSFX_API uint64_t ysfx_get_slider_visibility(ysfx_t *fx, size_t slider_group_index);
+YSFX_API uint64_t ysfx_get_slider_visibility(ysfx_t *fx, uint8_t slider_group_index);
 
 // process a cycle in 32-bit float
 YSFX_API void ysfx_process_float(ysfx_t *fx, const float *const *ins, float *const *outs, uint32_t num_ins, uint32_t num_outs, uint32_t num_frames);

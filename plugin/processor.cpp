@@ -274,12 +274,12 @@ void YsfxProcessor::Impl::processBlockGenerically(const void *inputs[], void *ou
 {
     ysfx_t *fx = m_fx.get();
 
-    for (int group = 0; group < ysfx_max_slider_groups; group++) {
+    for (uint8_t group = 0; group < ysfx_max_slider_groups; group++) {
         uint64_t sliderParametersChanged = m_sliderParametersChanged[group].exchange(0);
     
         if (sliderParametersChanged) {
             for (int slider = 0; slider < ysfx_max_sliders; ++slider) {
-                if (sliderParametersChanged & ysfx_slider_mask(slider, group)) {
+                if (sliderParametersChanged & ysfx_slider_mask((uint32_t) slider, group)) {
                     syncParameterToSlider(slider);
                 }
             }
@@ -534,7 +534,7 @@ void YsfxProcessor::Impl::processSliderChanges()
     }
 
     bool notify = false;
-    for (int i = 0; i < ysfx_max_slider_groups; ++i) {
+    for (uint8_t i = 0; i < ysfx_max_slider_groups; ++i) {
         uint64_t automated = ysfx_fetch_slider_automations(fx, i);
         m_sliderParamsTouching[i].exchange(ysfx_fetch_slider_touches(fx, i));
         m_sliderParamsToNotify[i].fetch_or(automated);
@@ -640,8 +640,8 @@ void YsfxProcessor::Impl::syncSliderToParameter(int index, bool notify)
         else {
             param->setValue(normValue);
 
-            size_t group = ysfx_fetch_slider_group_index(index);
-            m_sliderParamsToNotify[group].fetch_or(ysfx_slider_mask(index, group));
+            uint8_t group = ysfx_fetch_slider_group_index((uint32_t) index);
+            m_sliderParamsToNotify[group].fetch_or(ysfx_slider_mask((uint32_t) index, group));
         }
     }
 }
@@ -753,7 +753,7 @@ void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
 void YsfxProcessor::Impl::SliderNotificationUpdater::handleAsyncUpdate()
 {
     int group_offset = 0;
-    for (int group = 0; group < ysfx_max_slider_groups; group++) {
+    for (uint8_t group = 0; group < ysfx_max_slider_groups; group++) {
         uint64_t sliderMask = m_sliderMask[group].exchange(0);
         uint64_t currentTouchMask = m_touchMask[group].load();
 
@@ -807,7 +807,7 @@ void YsfxProcessor::Impl::Background::wakeUp()
 void YsfxProcessor::Impl::Background::run()
 {
     while (m_sema.wait(), m_running.load(std::memory_order_relaxed)) {
-        for (int group = 0; group < ysfx_max_slider_groups; group++) {
+        for (uint8_t group = 0; group < ysfx_max_slider_groups; group++) {
             if (uint64_t sliderMask = m_impl->m_sliderParamsToNotify[group].exchange(0)) {
                 uint64_t touchMask = m_impl->m_sliderParamsTouching[group].load();
                 processSliderNotifications(sliderMask, touchMask, group);
@@ -881,8 +881,8 @@ void YsfxProcessor::Impl::audioProcessorParameterChanged(AudioProcessor *process
 
     int sliderIndex = parameterIndex - m_sliderParamOffset;
     if (sliderIndex >= 0 && sliderIndex < ysfx_max_sliders) {
-        size_t group = ysfx_fetch_slider_group_index(sliderIndex);
-        m_sliderParametersChanged[group].fetch_or(ysfx_slider_mask(sliderIndex, group));
+        uint8_t group = ysfx_fetch_slider_group_index(sliderIndex);
+        m_sliderParametersChanged[group].fetch_or(ysfx_slider_mask((uint32_t) sliderIndex, group));
     }
 }
 

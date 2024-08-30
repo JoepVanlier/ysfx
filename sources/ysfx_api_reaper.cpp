@@ -79,7 +79,7 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_automate(void *opaque, INT_PTR npar
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
-    size_t group;
+    uint8_t group;
     uint64_t mask;
     if (slider < ysfx_max_sliders) {
         group = ysfx_fetch_slider_group_index(slider);
@@ -110,7 +110,7 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_sliderchange(void *opaque, EEL_F *mask_or_
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
-    size_t group;
+    uint8_t group;
     uint64_t mask;
     if (slider < ysfx_max_sliders) {
         group = ysfx_fetch_slider_group_index(slider);
@@ -131,7 +131,7 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_show(void *opaque, EEL_F *mask_or_s
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
-    size_t group;
+    uint8_t group;
     uint64_t mask;
     if (slider < ysfx_max_sliders) {
         group = ysfx_fetch_slider_group_index(slider);

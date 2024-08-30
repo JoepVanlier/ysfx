@@ -1345,30 +1345,30 @@ bool ysfx_send_trigger(ysfx_t *fx, uint32_t index)
 }
 
 // A little helper function to find which of the bitsets we have to use
-size_t ysfx_fetch_slider_group_index(uint32_t slider_number) {
+uint8_t ysfx_fetch_slider_group_index(uint32_t slider_number) {
     return slider_number >> 6;
 }
 
-uint64_t ysfx_slider_mask(uint32_t slider_number, size_t group_index) {
+uint64_t ysfx_slider_mask(uint32_t slider_number, uint8_t group_index) {
     return (uint64_t)1 << (slider_number - (group_index << 6));
 }
 
-uint64_t ysfx_fetch_slider_changes(ysfx_t *fx, size_t slider_group_index)
+uint64_t ysfx_fetch_slider_changes(ysfx_t *fx, uint8_t slider_group_index)
 {
     return fx->slider.change_mask[slider_group_index].exchange(0);
 }
 
-uint64_t ysfx_fetch_slider_automations(ysfx_t *fx, size_t slider_group_index)
+uint64_t ysfx_fetch_slider_automations(ysfx_t *fx, uint8_t slider_group_index)
 {
     return fx->slider.automate_mask[slider_group_index].exchange(0);
 }
 
-uint64_t ysfx_fetch_slider_touches(ysfx_t *fx, size_t slider_group_index)
+uint64_t ysfx_fetch_slider_touches(ysfx_t *fx, uint8_t slider_group_index)
 {
     return fx->slider.touch_mask[slider_group_index].load();
 }
 
-uint64_t ysfx_get_slider_visibility(ysfx_t *fx, size_t slider_group_index)
+uint64_t ysfx_get_slider_visibility(ysfx_t *fx, uint8_t slider_group_index)
 {
     return fx->slider.visible_mask[slider_group_index].load();
 }
