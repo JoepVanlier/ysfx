@@ -452,3 +452,28 @@ std::string ysfx_save_bank_to_rpl_text(ysfx_bank_t *bank)
 
     return rpl_text;
 }
+
+bool ysfx_save_bank(const char *path, ysfx_bank_t *bank)
+{
+#if defined(_WIN32)
+    std::wstring wpath = ysfx::widen(path);
+    ysfx::FILE_u stream{_wfopen(wpath.c_str(), L"wb")};
+#else
+    ysfx::FILE_u stream{fopen(path, "wb")};
+#endif
+
+    if (!stream) {
+        return false;
+    }
+
+    std::string txt = ysfx_save_bank_to_rpl_text(bank);
+    fwrite(txt.data(), 1, txt.length(), stream.get());
+    
+    if (ferror(stream.get())) {
+        return false;
+    }
+
+    stream.reset();
+
+    return true;
+}

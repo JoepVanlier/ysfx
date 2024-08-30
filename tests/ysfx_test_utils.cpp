@@ -33,7 +33,7 @@ std::string tests_root_path = "ysfx-test-tmp." + std::to_string(getpid());
 std::string tests_root_path = "ysfx-test-tmp." + std::to_string(GetCurrentProcessId());
 #endif
 
-static std::string resolve_path(const std::string &input)
+std::string resolve_path(const std::string &input)
 {
     if (input.size() >= 7 && !memcmp(input.data(), "${root}", 7))
         return tests_root_path + '/' + input.substr(7);

@@ -392,6 +392,8 @@ typedef struct ysfx_bank_s {
 YSFX_API const char *ysfx_get_bank_path(ysfx_t *fx);
 // read a preset bank from RPL file
 YSFX_API ysfx_bank_t *ysfx_load_bank(const char *path);
+// write a preset bank to RPL file
+YSFX_API bool ysfx_save_bank(const char *path, ysfx_bank_t *bank);
 // free a preset bank
 YSFX_API void ysfx_bank_free(ysfx_bank_t *bank);
 // create empty preset bank

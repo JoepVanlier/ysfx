@@ -36,3 +36,4 @@ struct scoped_new_txt {
 
 //------------------------------------------------------------------------------
 bool is_on_case_sensitive_filesystem(const char *path);
+std::string resolve_path(const std::string &input);

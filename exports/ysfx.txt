@@ -83,6 +83,7 @@ ysfx_state_free
 ysfx_state_dup
 ysfx_get_bank_path
 ysfx_load_bank
+ysfx_save_bank
 ysfx_bank_free
 ysfx_create_empty_bank
 ysfx_add_preset_to_bank

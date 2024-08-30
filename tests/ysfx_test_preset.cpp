@@ -506,5 +506,25 @@ TEST_CASE("preset handling", "[preset]")
         std::string stored_bank = ysfx_save_bank_to_rpl_text(bank.get());
 
         REQUIRE(stored_bank == rpl_text);
+        bool save_success = ysfx_save_bank(resolve_path("${root}/Effects/saved.rpl").c_str(), bank.get());
+
+        REQUIRE(save_success == true);
+
+        ysfx_bank_u bank2{ysfx_load_bank(resolve_path("${root}/Effects/saved.rpl").c_str())};
+
+        REQUIRE(strcmp(bank->name, bank2->name) == 0);
+        for (uint32_t i=0; i < bank->preset_count; i++) {
+            REQUIRE(strcmp(bank->presets[i].name, bank2->presets[i].name) == 0);
+            REQUIRE(bank->presets[i].state->slider_count == bank2->presets[i].state->slider_count);
+            for (uint32_t s=0; s < bank->presets[i].state->slider_count; s++) {
+                REQUIRE(bank->presets[i].state->sliders->index == bank2->presets[i].state->sliders->index);
+                REQUIRE(bank->presets[i].state->sliders->value == bank2->presets[i].state->sliders->value);
+            }
+
+            REQUIRE(bank->presets[i].state->data_size == bank2->presets[i].state->data_size);
+            for (uint32_t s=0; s < bank->presets[i].state->data_size; s++) {
+                REQUIRE(bank->presets[i].state->data[s] == bank2->presets[i].state->data[s]);
+            }
+        }
     }
 }
