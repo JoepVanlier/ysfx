@@ -607,7 +607,6 @@ void YsfxProcessor::Impl::syncParameterToSlider(int index)
 
     if (param->existsAsSlider()) {
         ysfx_real actualValue = param->convertToYsfxValue(param->getValue());
-        ysfx_slider_range_t range = param->getSliderRange();
 
         // NOTE: Unfortunately, things have to map to 0-1 so you lose some precision 
         // coming back (and can't rely on integer floats being exact anymore).

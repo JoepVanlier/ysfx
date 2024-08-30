@@ -325,7 +325,7 @@ bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)
                         slider.shape_modifier = (ysfx_real)ysfx::dot_strtod(cur, (char **)&cur);
 
                         // Do some checking on the modifiers for validity
-                        if (std::abs(slider.shape_modifier < 0.0001)) {
+                        if (std::abs(slider.shape_modifier) < 0.0001) {
                             if (slider.shape == 2) {
                                 // A power law slider with power zero is invalid.
                                 slider.shape = 0;

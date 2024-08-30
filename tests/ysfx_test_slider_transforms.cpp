@@ -197,11 +197,11 @@ TEST_CASE("slider transforms", "[basic]")
         ysfx_real tiny = 0.0000000000000000000000001;
         curve = createCurve(-4, 10 * tiny);
         std::vector<ysfx_real> lin4_raw{-4.0, -3.6, -3.2, -2.8, -2.4, -2.0, -1.6, -1.2, -0.8, -0.4, 0.0, tiny, 2 * tiny, 3 * tiny, 4 * tiny, 5 * tiny, 6 * tiny, 7 * tiny, 8 * tiny, 9 * tiny};
-        validate_vector([curve, tiny](float value) -> ysfx_real { return ysfx_slider_scale_from_normalized_linear_raw(value, &curve); }, lin4_raw);
-        validate_inverse([curve, tiny](float value) -> ysfx_real { return ysfx_slider_scale_to_normalized_linear_raw(value, &curve); }, lin4_raw);
+        validate_vector([curve](float value) -> ysfx_real { return ysfx_slider_scale_from_normalized_linear_raw(value, &curve); }, lin4_raw);
+        validate_inverse([curve](float value) -> ysfx_real { return ysfx_slider_scale_to_normalized_linear_raw(value, &curve); }, lin4_raw);
         std::vector<ysfx_real> lin4{-4.0000, -3.8000, -3.6000, -3.4000, -3.2000, -3.0000, -2.8000, -2.6000, -2.4000, -2.2000, -2.0000, -1.8000, -1.6000, -1.4000, -1.2000, -1.0000, -0.8000, -0.6000, -0.4000, -0.2000, 0.0000};
-        validate_vector([curve, tiny](float value) -> ysfx_real { return ysfx_slider_scale_from_normalized_linear(value, &curve); }, lin4);
-        validate_inverse([curve, tiny](float value) -> ysfx_real { return ysfx_slider_scale_to_normalized_linear(value, &curve); }, lin4);
+        validate_vector([curve](float value) -> ysfx_real { return ysfx_slider_scale_from_normalized_linear(value, &curve); }, lin4);
+        validate_inverse([curve](float value) -> ysfx_real { return ysfx_slider_scale_to_normalized_linear(value, &curve); }, lin4);
 
         curve = createCurve(-3, 1);
         std::vector<ysfx_real> lin5_raw{-3.0, -2.7, -2.4, -2.1, -1.8, -1.5, -1.2, -0.9, -0.6, -0.3, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};

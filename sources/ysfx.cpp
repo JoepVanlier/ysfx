@@ -1690,8 +1690,8 @@ int ysfx_calculate_used_mem(ysfx_t *fx)
     uint32_t addr{0};
     int usedMemory{0};
 
-    for (int i = 0; i < UINT32_MAX / NSEEL_RAM_ITEMSPERBLOCK; i++) {
-        EEL_F *flt_addr = NSEEL_VM_getramptr_noalloc(fx->vm.get(), addr, &validCount);
+    for (uint32_t i = 0; i < UINT32_MAX / NSEEL_RAM_ITEMSPERBLOCK; i++) {
+        NSEEL_VM_getramptr_noalloc(fx->vm.get(), addr, &validCount);
         addr += NSEEL_RAM_ITEMSPERBLOCK;
         usedMemory += validCount;
     }
