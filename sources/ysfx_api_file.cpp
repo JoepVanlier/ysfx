@@ -134,7 +134,7 @@ int32_t ysfx_text_file_t::avail()
     if (!m_stream || ferror(m_stream.get()))
         return -1;
 
-    return (feof(m_stream.get()) == 0) ? 0 : 1;
+    return (feof(m_stream.get()) == 0) ? 1 : 0;
 }
 
 void ysfx_text_file_t::rewind()
