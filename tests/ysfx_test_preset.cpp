@@ -25,9 +25,10 @@
 #include <catch.hpp>
 #include <cstring>
 
-void validatePreset(ysfx_preset_t *preset, const char* name, float slider1, float slider2, float slider3, float memory1, float memory2, float memory3)
+void validatePreset(ysfx_preset_t *preset, const char* name, const char* blob_name, float slider1, float slider2, float slider3, float memory1, float memory2, float memory3)
 {
     REQUIRE(!strcmp(preset->name, name));
+    REQUIRE(!strcmp(preset->blob_name, blob_name));
     ysfx_state_t *state = preset->state;
     REQUIRE(state->slider_count == 3);
     REQUIRE(state->sliders[0].index == 0);
@@ -88,10 +89,10 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(bank->presets != nullptr);
         REQUIRE(bank->preset_count == 4);
 
-        validatePreset(&bank->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
-        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
-        validatePreset(&bank->presets[3], ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+        validatePreset(&bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "\'3.a preset with \"quotes\" in the name\'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
     }
 
     SECTION("Store preset in bank")
@@ -126,7 +127,7 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(bank->presets != nullptr);
         REQUIRE(bank->preset_count == 1);
 
-        validatePreset(&bank->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         ysfx_state_t *state = bank->presets[0].state;
 
         // Note that the new bank will own the state we are adding, so we need explicit duplication
@@ -141,9 +142,9 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(new_bank->presets != nullptr);
         REQUIRE(new_bank->preset_count == 2);
 
-        validatePreset(&bank->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&new_bank->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&new_bank->presets[1], "added preset", 5.0f, 0.0f, 1337.0f, 0.0f, 1337.0f, 0.0f);
+        validatePreset(&bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&new_bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&new_bank->presets[1], "added preset", "\"added preset\"", 5.0f, 0.0f, 1337.0f, 0.0f, 1337.0f, 0.0f);
 
         // Validate that the banks don't point to the same memory (it should have made its own copy)
         REQUIRE(new_bank->presets[0].name != bank->presets[0].name);
@@ -155,9 +156,9 @@ TEST_CASE("preset handling", "[preset]")
         ysfx::pack_f32le(60083773.0f, &state3->data[2 * sizeof(float)]);
         ysfx_bank_u new_bank2{ysfx_add_preset_to_bank(new_bank.get(), "preset ' with \"quotes\" in the name", state3)};
 
-        validatePreset(&new_bank2->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&new_bank2->presets[1], "added preset", 5.0f, 0.0f, 1337.0f, 0.0f, 1337.0f, 0.0f);
-        validatePreset(&new_bank2->presets[2], "preset ' with \"quotes\" in the name", 15.0f, -2.0f, 0.0f, 0.0f, 0.0f, 60083773.0f);
+        validatePreset(&new_bank2->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&new_bank2->presets[1], "added preset", "\"added preset\"", 5.0f, 0.0f, 1337.0f, 0.0f, 1337.0f, 0.0f);
+        validatePreset(&new_bank2->presets[2], "preset ' with \"quotes\" in the name", "`preset ' with \"quotes\" in the name`", 15.0f, -2.0f, 0.0f, 0.0f, 0.0f, 60083773.0f);
 
         REQUIRE(ysfx_preset_exists(nullptr, "test") == 0);
         REQUIRE(ysfx_preset_exists(new_bank2.get(), "added preset") == 2);
@@ -172,14 +173,14 @@ TEST_CASE("preset handling", "[preset]")
 
         // Verify that we didn't change the old bank
         REQUIRE(new_bank2->preset_count == 3);
-        validatePreset(&new_bank2->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&new_bank2->presets[1], "added preset", 5.0f, 0.0f, 1337.0f, 0.0f, 1337.0f, 0.0f);
-        validatePreset(&new_bank2->presets[2], "preset ' with \"quotes\" in the name", 15.0f, -2.0f, 0.0f, 0.0f, 0.0f, 60083773.0f);
+        validatePreset(&new_bank2->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&new_bank2->presets[1], "added preset", "\"added preset\"", 5.0f, 0.0f, 1337.0f, 0.0f, 1337.0f, 0.0f);
+        validatePreset(&new_bank2->presets[2], "preset ' with \"quotes\" in the name", "`preset ' with \"quotes\" in the name`", 15.0f, -2.0f, 0.0f, 0.0f, 0.0f, 60083773.0f);
 
         REQUIRE(new_bank3->preset_count == 3);
-        validatePreset(&new_bank3->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&new_bank3->presets[1], "added preset", 3.141592657f, 42.0f, 0.0f, -1.5f, 0.0f, 0.0f);
-        validatePreset(&new_bank3->presets[2], "preset ' with \"quotes\" in the name", 15.0f, -2.0f, 0.0f, 0.0f, 0.0f, 60083773.0f);
+        validatePreset(&new_bank3->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&new_bank3->presets[1], "added preset", "\"added preset\"", 3.141592657f, 42.0f, 0.0f, -1.5f, 0.0f, 0.0f);
+        validatePreset(&new_bank3->presets[2], "preset ' with \"quotes\" in the name", "`preset ' with \"quotes\" in the name`", 15.0f, -2.0f, 0.0f, 0.0f, 0.0f, 60083773.0f);
         REQUIRE(new_bank3->presets[1].state == state4);
     }
 
@@ -227,23 +228,23 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(bank->presets != nullptr);
         REQUIRE(bank->preset_count == 4);
 
-        validatePreset(&bank->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
-        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
-        validatePreset(&bank->presets[3], ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+        validatePreset(&bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
 
         ysfx_bank_u new_bank{ysfx_delete_preset_from_bank(bank.get(), "2.a preset with spaces in the name")};
 
         REQUIRE(bank->preset_count == 4);
-        validatePreset(&bank->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
-        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
-        validatePreset(&bank->presets[3], ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+        validatePreset(&bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
         
         REQUIRE(new_bank->preset_count == 3);
-        validatePreset(&new_bank->presets[0], "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        validatePreset(&new_bank->presets[1], "3.a preset with \"quotes\" in the name", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
-        validatePreset(&new_bank->presets[2], ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+        validatePreset(&new_bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&new_bank->presets[1], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&new_bank->presets[2], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
     }
     
     SECTION("Create empty bank")
@@ -383,14 +384,20 @@ TEST_CASE("preset handling", "[preset]")
 
         preset = &bank->presets[0];
         REQUIRE(!strcmp(preset->name, "Moar"));
+        REQUIRE(!strcmp(preset->blob_name, "Moar"));
         preset = &bank->presets[1];
         REQUIRE(!strcmp(preset->name, "Moar Moar"));
+        REQUIRE(!strcmp(preset->blob_name, "\"Moar Moar\""));
         preset = &bank->presets[2];
         REQUIRE(!strcmp(preset->name, "Moar \"Moar\" Moar\""));
+        REQUIRE(!strcmp(preset->blob_name, "'Moar \"Moar\" Moar\"'"));
         preset = &bank->presets[3];
         REQUIRE(!strcmp(preset->name, "Moar \"Moar\" 'Moar\""));
+        REQUIRE(!strcmp(preset->blob_name, "`Moar \"Moar\" 'Moar\"`"));
         preset = &bank->presets[4];
         REQUIRE(!strcmp(preset->name, "Moar \"Moar\"' 'Moar\""));
+        // This one breaks escape string expectation, but we preserve the reaper name
+        REQUIRE(!strcmp(preset->blob_name, "'Moar \"Moar\"' 'Moar\"`"));
         preset = &bank->presets[5];
         REQUIRE(!strcmp(preset->name, "- -"));
 
@@ -515,6 +522,7 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(strcmp(bank->name, bank2->name) == 0);
         for (uint32_t i=0; i < bank->preset_count; i++) {
             REQUIRE(strcmp(bank->presets[i].name, bank2->presets[i].name) == 0);
+            REQUIRE(strcmp(bank->presets[i].blob_name, bank2->presets[i].blob_name) == 0);
             REQUIRE(bank->presets[i].state->slider_count == bank2->presets[i].state->slider_count);
             for (uint32_t s=0; s < bank->presets[i].state->slider_count; s++) {
                 REQUIRE(bank->presets[i].state->sliders->index == bank2->presets[i].state->sliders->index);

@@ -375,6 +375,8 @@ YSFX_API ysfx_state_t *ysfx_state_dup(ysfx_state_t *state);
 typedef struct ysfx_preset_s {
     // name of the preset
     char *name;
+    // name used in the reaper blob
+    char *blob_name;
     // state of the preset
     ysfx_state_t *state;
 } ysfx_preset_t;

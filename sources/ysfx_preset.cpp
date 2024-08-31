@@ -87,6 +87,9 @@ static void ysfx_preset_clear(ysfx_preset_t *preset)
     delete[] preset->name;
     preset->name = nullptr;
 
+    delete[] preset->blob_name;
+    preset->blob_name = nullptr;
+
     ysfx_state_free(preset->state);
     preset->state = nullptr;
 }
@@ -170,7 +173,7 @@ std::string escapeString(const char *in)
 {
     int flags = hasFunkyCharacters(in);
 
-    if (!(flags & 8)) return std::string(in);
+    if (flags == 0) return std::string(in);
     std::string outString{""};
     outString.reserve(64);
 
@@ -188,7 +191,7 @@ std::string escapeString(const char *in)
     return outString;
 }
 
-static std::string remove_name_from_preset_blob(const char *text, const char *name)
+static std::string remove_name_from_preset_blob(const char *text, const char *name, std::string& replaced_name)
 {
     // Unfortunately, there's some questionable escaping going on sometimes. This is not a problem
     // when it comes to the preset header, but in the middle of the blob it can be problematic.
@@ -213,6 +216,8 @@ static std::string remove_name_from_preset_blob(const char *text, const char *na
     // Move right until we hit a space.
     std::size_t stop_pos = name_pos + strlen(name);
     while((name_replace[stop_pos] != ' ') && (stop_pos < name_replace.length())) stop_pos += 1;
+
+    replaced_name = name_replace.substr(start_pos, stop_pos - start_pos);
     name_replace.replace(start_pos, stop_pos - start_pos, stop_pos - start_pos, '_');
 
     return name_replace;
@@ -223,6 +228,7 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
     ysfx_state_t state{};
     std::vector<ysfx_state_slider_t> sliders;
 
+    preset->blob_name = nullptr;
     const char *text = (const char *)data.data();
     size_t len = data.size();
 
@@ -245,9 +251,14 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
     state.data = const_cast<uint8_t *>(data.data() + pos);
     state.data_size = len - pos;
 
-    std::string name_replace = remove_name_from_preset_blob(text, name);
-    if (!name_replace.empty()) {
-        text = name_replace.c_str();
+    std::string replaced_name;
+    std::string name_removed = remove_name_from_preset_blob(text, name, replaced_name);
+    if (!name_removed.empty()) {
+        text = name_removed.c_str();
+
+        // Store the blob name for recall later. This allows us to save files without changing
+        // these names in any way (they may not actually be the same as the preset name unfortunately)
+        preset->blob_name = ysfx::strdup_using_new(replaced_name.c_str());
     }
 
     // parse a line of 64 slider floats (or '-' if missing)
@@ -269,6 +280,10 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
 
         // Token 64 has the "name" of the preset again, but escaped weirdly (see WDL/projectcontext.cpp maybe?).
         const char *str = parser.gettoken_str(65);  // Determines whether we continue
+        if (name_removed.empty()) {
+            // Store the blob name for recall later
+            preset->blob_name = ysfx::strdup_using_new(escapeString(parser.gettoken_str(64)).c_str());
+        }
 
         if (str[0] != '\0') {
             // Grab the rest
@@ -286,6 +301,11 @@ static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *n
 
         state.sliders = sliders.data();
         state.slider_count = (uint32_t)sliders.size();
+    }
+
+    // If for whatever reason we didn't find a blob name, use the regular name instead.
+    if (!preset->blob_name) {
+        preset->blob_name = ysfx::strdup_using_new(escapeString(name).c_str());
     }
 
     preset->name = ysfx::strdup_using_new(name);
@@ -331,12 +351,14 @@ ysfx_bank_t *ysfx_add_preset_to_bank(ysfx_bank_t *bank_in, const char* preset_na
     for (uint32_t i=0; i < bank_in->preset_count; i++) {
         if ((!found) || (i != (found - 1))) {
             bank->presets[i].name = ysfx::strdup_using_new(bank_in->presets[i].name);
+            bank->presets[i].blob_name = ysfx::strdup_using_new(bank_in->presets[i].blob_name);
             bank->presets[i].state = ysfx_state_dup(bank_in->presets[i].state);
         }
     }
 
     uint32_t index = (found == 0) ? (bank->preset_count - 1) : (found - 1);
     bank->presets[index].name = ysfx::strdup_using_new(preset_name);
+    bank->presets[index].blob_name = ysfx::strdup_using_new(escapeString(preset_name).c_str());
     bank->presets[index].state = state;
 
     return bank.release();
@@ -357,6 +379,7 @@ ysfx_bank_t *ysfx_delete_preset_from_bank(ysfx_bank_t *bank_in, const char* pres
     for (uint32_t i=0; i < bank_in->preset_count; i++) {
         if (i != (found - 1)) {
             bank->presets[j].name = ysfx::strdup_using_new(bank_in->presets[i].name);
+            bank->presets[j].blob_name = ysfx::strdup_using_new(bank_in->presets[i].blob_name);
             bank->presets[j].state = ysfx_state_dup(bank_in->presets[i].state);
             j += 1;
         }
@@ -379,7 +402,7 @@ std::string double_string(double value) {
     return result;
 }
 
-static std::string preset_blob(std::string name, ysfx_state_t *state)
+static std::string preset_blob(std::string blob_preset_name, ysfx_state_t *state)
 {
     std::string blob{""};
     blob.reserve(4096);
@@ -406,7 +429,7 @@ static std::string preset_blob(std::string name, ysfx_state_t *state)
     }
 
     // Print escaped name again
-    blob += escapeString(name.c_str()) + " ";
+    blob += blob_preset_name + " ";
 
     // Serialize the remaining 192 sliders
     if (more_than_64) {
@@ -443,8 +466,9 @@ std::string ysfx_save_bank_to_rpl_text(ysfx_bank_t *bank)
 
     for (uint32_t i = 0; i < bank->preset_count; i++) {
         ysfx_preset_t preset = bank->presets[i];
-        std::string preset_name{preset.name};  // TODO: should be escaped!
-        std::string presetString{"  <PRESET `" + preset_name + "`\n" + preset_blob(preset_name, preset.state) + "  >\n"};
+        std::string preset_name{preset.name};
+        std::string blob_name{preset.blob_name};
+        std::string presetString{"  <PRESET `" + preset_name + "`\n" + preset_blob(blob_name, preset.state) + "  >\n"};
         rpl_text += presetString;
     }
 
