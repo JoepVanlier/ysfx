@@ -244,6 +244,12 @@ static juce::File getCustomBankLocation(ysfx_t *fx) {
     return customBankPath;
 }
 
+bool YsfxProcessor::presetExists(const char* presetName)
+{
+    auto sourceBank = m_impl->m_info->bank.get();
+    return ysfx_preset_exists(sourceBank, presetName) > 0;
+}
+
 void YsfxProcessor::saveCurrentPreset(const char* preset_name)
 {
     ysfx_t *fx = m_impl->m_fx.get();

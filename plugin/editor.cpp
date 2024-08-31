@@ -541,8 +541,23 @@ void YsfxEditor::Impl::popupPresets()
                     "Enter preset name",
                     "",
                     [this](juce::String presetName, bool wantSave){
+                        std::string preset = presetName.toStdString();
                         if (wantSave) {
-                            m_proc->saveCurrentPreset(presetName.toStdString().c_str());
+                            if (m_proc->presetExists(preset.c_str())) {
+                                juce::AlertWindow::showAsync(
+                                    juce::MessageBoxOptions()
+                                        .withTitle("Overwrite?")
+                                        .withMessage("Preset with that name already exists.\nAre you sure you want to overwrite the preset?")
+                                        .withButton("Yes")
+                                        .withButton("No")
+                                        .withIconType(juce::MessageBoxIconType::NoIcon),
+                                    [this, preset](int result){
+                                        if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
+                                    }
+                                );
+                            } else {
+                                m_proc->saveCurrentPreset(preset.c_str());
+                            }
                         }
                     }
                 );
