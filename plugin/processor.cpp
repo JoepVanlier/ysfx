@@ -768,7 +768,7 @@ void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
     syncSlidersToParameters(notify);
 
     YsfxCurrentPresetInfo::Ptr presetInfo{new YsfxCurrentPresetInfo()};
-    presetInfo->m_lastChosenPreset = preset.name;
+    presetInfo->m_lastChosenPreset = juce::String::fromUTF8(preset.name);
 
     // notify parameters later, on the message thread
     for (int i=0; i < ysfx_max_slider_groups; i++) {

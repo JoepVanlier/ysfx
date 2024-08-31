@@ -525,7 +525,7 @@ void YsfxEditor::Impl::popupPresets()
         m_presetsPopup->addItem(1, "Save preset", true, false);
         for (uint32_t i = 0; i < bank->preset_count; ++i) {
             bool wasLastChosen = presetInfo->m_lastChosenPreset.compare(bank->presets[i].name) == 0;
-            m_presetsPopup->addItem((int)(i + 2), bank->presets[i].name, true, wasLastChosen);
+            m_presetsPopup->addItem((int)(i + 2), juce::String::fromUTF8(bank->presets[i].name), true, wasLastChosen);
         }
     }
 
