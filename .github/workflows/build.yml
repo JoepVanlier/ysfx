@@ -80,7 +80,7 @@ jobs:
       build_type: Release
       num_jobs: 2
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install dependencies (Linux)
@@ -97,6 +97,8 @@ jobs:
             libxinerama-dev
             libxcursor-dev
             libxss-dev
+            g++-10
+            gcc-10
       - uses: ilammy/setup-nasm@v1
         if: ${{matrix.os-type == 'Windows'}}
       - uses: msys2/setup-msys2@v2
@@ -117,10 +119,17 @@ jobs:
         if: ${{matrix.os-type == 'Windows'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake "${Env:GITHUB_WORKSPACE}" -G"${Env:cmake_generator}" -A"${Env:release_arch}" -DCMAKE_BUILD_TYPE="${Env:build_type}" -DYSFX_TESTS=ON
-      - name: Configure CMake (Linux and macOS)
-        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS'}}
+      - name: Configure CMake (macOS)
+        if: ${{matrix.os-type == 'macOS'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DYSFX_TESTS=ON
+      - name: Configure CMake (Linux)
+        if: ${{matrix.os-type == 'Linux'}}
+        working-directory: ${{runner.workspace}}/build
+        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DYSFX_TESTS=ON
+        env:
+          CC:   gcc-10
+          CXX:  g++-10
       - name: Configure CMake (MinGW)
         if: ${{matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
@@ -144,17 +153,17 @@ jobs:
         if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${build_type}" -j "${num_jobs}"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         if: ${{matrix.artifacts == 'yes'}}
         with:
           name: ${{matrix.display-name}} VST3
           path: "${{runner.workspace}}/build/*_artefacts/${{env.build_type}}/VST3/*.vst3"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         if: ${{matrix.artifacts == 'yes'}}
         with:
           name: ${{matrix.display-name}} CLAP
           path: "${{runner.workspace}}/build/*_artefacts/${{env.build_type}}/CLAP/*.clap"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         if: ${{matrix.os-type == 'macOS' && matrix.artifacts == 'yes'}}
         with:
           name: ${{matrix.display-name}} AU
