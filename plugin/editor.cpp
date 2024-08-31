@@ -248,20 +248,17 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     YsfxInfo::Ptr info = m_proc->getCurrentInfo();
     YsfxCurrentPresetInfo::Ptr presetInfo = m_proc->getCurrentPresetInfo();
 
-    bool updateLabel = false;
     if (m_currentPresetInfo != presetInfo) {
         m_currentPresetInfo = presetInfo;
-        updateLabel = true;
     }
     if (m_info != info) {
         m_info = info;
         updateInfo();
         m_btnLoadFile->setButtonText(TRANS("Load"));
-        updateLabel = true;
         m_btnRecentFiles->setVisible(true);
     }
 
-    if (updateLabel) m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
+    m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
     
     if ((m_proc->retryLoad() == RetryState::mustRetry) && !m_fileChooserActive) {
         chooseFileAndLoad();
