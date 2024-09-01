@@ -1312,6 +1312,11 @@ void ysfx_set_time_info(ysfx_t *fx, const ysfx_time_info_t *info)
     *fx->var.ts_denom = (EEL_F)info->time_signature[1];
 }
 
+void ysfx_send_automation(ysfx_t *fx, const ysfx_param_event_t *event)
+{
+    return ysfx_param_push(fx->automation.in.get(), event);
+}
+
 bool ysfx_send_midi(ysfx_t *fx, const ysfx_midi_event_t *event)
 {
     return ysfx_midi_push(fx->midi.in.get(), event);

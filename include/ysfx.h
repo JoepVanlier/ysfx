@@ -316,6 +316,15 @@ typedef struct ysfx_midi_event_s {
     const uint8_t *data;
 } ysfx_midi_event_t;
 
+typedef struct ysfx_param_event_s {
+    // parameter index
+    uint8_t parameter;
+    // the frame when it happens within the cycle
+    uint32_t offset;
+    // the size of the message
+    ysfx_real value;
+} ysfx_param_event_t;
+
 // send MIDI, it will be processed during the cycle
 YSFX_API bool ysfx_send_midi(ysfx_t *fx, const ysfx_midi_event_t *event);
 // receive MIDI, after having processed the cycle

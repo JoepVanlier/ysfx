@@ -28,6 +28,8 @@ add_library(ysfx-private
         "sources/ysfx_config.hpp"
         "sources/ysfx_midi.cpp"
         "sources/ysfx_midi.hpp"
+        "sources/ysfx_sample_accurate.cpp"
+        "sources/ysfx_sample_accurate.hpp"
         "sources/ysfx_reader.cpp"
         "sources/ysfx_reader.hpp"
         "sources/ysfx_parse.cpp"

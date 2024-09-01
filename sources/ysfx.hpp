@@ -18,6 +18,7 @@
 #pragma once
 #include "ysfx.h"
 #include "ysfx_midi.hpp"
+#include "ysfx_sample_accurate.hpp"
 #include "ysfx_parse.hpp"
 #include "ysfx_api_eel.hpp"
 #include "ysfx_api_reaper.hpp"
@@ -148,6 +149,11 @@ struct ysfx_s {
         ysfx_midi_buffer_u in;
         ysfx_midi_buffer_u out;
     } midi;
+
+    // Sample accurate automation
+    struct {
+        ysfx_automation_buffer_u in;
+    } automation;
 
     // Slider
     struct {
