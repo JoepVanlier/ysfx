@@ -243,7 +243,12 @@ void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, ui
 }
 
 static juce::File getCustomBankLocation(ysfx_t *fx) {
-    juce::File customBankPath{ysfx_get_bank_path(fx)};
+    std::string pathString{ysfx_get_bank_path(fx)};
+    if (pathString.empty()) {
+        // No bank exists yet
+        pathString = std::string{ysfx_get_file_path(fx)} + ".rpl";
+    }
+    juce::File customBankPath{pathString};
     customBankPath = juce::File(customBankPath.getParentDirectory().getFullPathName()).getChildFile(customBankPath.getFileNameWithoutExtension() + "-ysfx.rpl");
     return customBankPath;
 }
