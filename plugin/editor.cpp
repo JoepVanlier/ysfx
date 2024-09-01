@@ -38,6 +38,7 @@ struct YsfxEditor::Impl {
     YsfxProcessor *m_proc = nullptr;
     YsfxInfo::Ptr m_info;
     YsfxCurrentPresetInfo::Ptr m_currentPresetInfo;
+    ysfx_bank_shared m_bank;
     std::unique_ptr<juce::Timer> m_infoTimer;
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
@@ -116,6 +117,7 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->m_proc = &proc;
     m_impl->m_info = proc.getCurrentInfo();
     m_impl->m_currentPresetInfo = proc.getCurrentPresetInfo();
+    m_impl->m_bank = proc.getCurrentBank();
 
     static YsfxLookAndFeel lnf;
     setLookAndFeel(&lnf);
@@ -247,6 +249,7 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
 {
     YsfxInfo::Ptr info = m_proc->getCurrentInfo();
     YsfxCurrentPresetInfo::Ptr presetInfo = m_proc->getCurrentPresetInfo();
+    ysfx_bank_shared bank = m_proc->getCurrentBank();
 
     if (m_currentPresetInfo != presetInfo) {
         m_currentPresetInfo = presetInfo;
@@ -256,6 +259,10 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
         updateInfo();
         m_btnLoadFile->setButtonText(TRANS("Load"));
         m_btnRecentFiles->setVisible(true);
+    }
+    if (m_bank != bank) {
+        m_bank = bank;
+        updateInfo();
     }
 
     m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
@@ -511,7 +518,7 @@ void YsfxEditor::Impl::popupPresets()
     m_presetsPopup.reset(new juce::PopupMenu);
 
     YsfxInfo::Ptr info = m_info;
-    ysfx_bank_t *bank = info->bank.get();
+    ysfx_bank_shared bank = m_bank;
     YsfxCurrentPresetInfo::Ptr presetInfo = m_currentPresetInfo;
     if (!bank) {
         m_presetsPopup->addItem(32767, TRANS("No presets"), false);
@@ -532,7 +539,7 @@ void YsfxEditor::Impl::popupPresets()
     juce::PopupMenu::Options quickSearchOptions = PopupMenuQuickSearchOptions{}
         .withTargetComponent(*m_btnLoadPreset);
 
-    showPopupMenuWithQuickSearch(*m_presetsPopup, quickSearchOptions, [this, info](int index) {
+    showPopupMenuWithQuickSearch(*m_presetsPopup, quickSearchOptions, [this, info, bank](int index) {
             if (index == 1) {
                 show_async_text_input(
                     "Enter preset name",
@@ -559,7 +566,7 @@ void YsfxEditor::Impl::popupPresets()
                     }
                 );
             } else if ((index > 1) && (index < 32767)) {
-                m_proc->loadJsfxPreset(info, (uint32_t)(index - 2), true);
+                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 2), true);
             }
         }
     );

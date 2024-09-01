@@ -36,6 +36,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     ysfx::sync_bitset64 m_sliderParametersChanged[ysfx_max_slider_groups];
     YsfxInfo::Ptr m_info{new YsfxInfo};
     YsfxCurrentPresetInfo::Ptr m_currentPresetInfo{new YsfxCurrentPresetInfo};
+    ysfx_bank_shared m_bank{nullptr};
 
     double m_sample_rate{44100.0};
     uint32_t m_block_size{256};
@@ -52,7 +53,8 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     void syncParameterToSlider(int index);
     void syncSliderToParameter(int index, bool notify);
     static YsfxInfo::Ptr createNewFx(juce::CharPointer_UTF8 filePath, ysfx_state_t *initialState);
-    void installNewFx(YsfxInfo::Ptr info);
+    void installNewFx(YsfxInfo::Ptr info, ysfx_bank_shared bank);
+    ysfx_bank_shared loadDefaultBank(YsfxInfo::Ptr info);
     void loadNewPreset(const ysfx_preset_t &preset);
 
     //==========================================================================
@@ -67,6 +69,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
 
     struct PresetRequest : public std::enable_shared_from_this<PresetRequest> {
         YsfxInfo::Ptr info;
+        ysfx_bank_shared bank;
         uint32_t index = 0;
         volatile bool completion = false;
         std::mutex completionMutex;
@@ -145,7 +148,7 @@ YsfxProcessor::YsfxProcessor()
     m_impl->m_fx.reset(fx);
     YsfxInfo::Ptr info{new YsfxInfo};
     info->effect.reset(fx);
-    ysfx_add_ref(fx);
+    ysfx_add_ref(fx);  // why?
     std::atomic_store(&m_impl->m_info, info);
 
     ///
@@ -225,10 +228,11 @@ void YsfxProcessor::loadJsfxFile(const juce::String &filePath, ysfx_state_t *ini
     }
 }
 
-void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, uint32_t index, bool async)
+void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, uint32_t index, bool async)
 {
     Impl::PresetRequest::Ptr presetRequest{new Impl::PresetRequest};
     presetRequest->info = info;
+    presetRequest->bank = bank;
     presetRequest->index = index;
     std::atomic_store(&m_impl->m_presetRequest, presetRequest);
     m_impl->m_background->wakeUp();
@@ -246,8 +250,8 @@ static juce::File getCustomBankLocation(ysfx_t *fx) {
 
 bool YsfxProcessor::presetExists(const char* presetName)
 {
-    auto sourceBank = m_impl->m_info->bank.get();
-    return ysfx_preset_exists(sourceBank, presetName) > 0;
+    auto sourceBank = m_impl->m_bank;
+    return ysfx_preset_exists(sourceBank.get(), presetName) > 0;
 }
 
 void YsfxProcessor::saveCurrentPreset(const char* preset_name)
@@ -255,19 +259,23 @@ void YsfxProcessor::saveCurrentPreset(const char* preset_name)
     ysfx_t *fx = m_impl->m_fx.get();
     if (!fx) return;
 
-    auto sourceBank = m_impl->m_info->bank.get();
-    if (!sourceBank) sourceBank = ysfx_create_empty_bank(m_impl->m_info->m_name.toUTF8());
-
     // Make a backup copy before we write in case there's trouble
     juce::File bankLocation = getCustomBankLocation(fx);
     juce::File bankCopy(bankLocation.getFullPathName() + "-bak");
     bankLocation.copyFileTo(bankCopy);
 
-    ysfx_bank_u newBank{ysfx_add_preset_to_bank(sourceBank, preset_name, ysfx_save_state(fx))};
-    ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
+    ysfx_bank_shared bank = m_impl->m_bank;  // Make sure we keep it alive while we are operating on it
 
-    m_impl->m_info->bank.reset(newBank.release());  // TODO: is this thread-safe?
-    loadJsfxPreset(m_impl->m_info, ysfx_preset_exists(m_impl->m_info->bank.get(), preset_name) - 1, true);
+    ysfx_bank_shared newBank;
+    if (!bank) {
+        ysfx_bank_u emptyBank{ysfx_create_empty_bank(m_impl->m_info->m_name.toUTF8())};
+        newBank.reset(ysfx_add_preset_to_bank(emptyBank.get(), preset_name, ysfx_save_state(fx)));
+    } else {
+        newBank.reset(ysfx_add_preset_to_bank(bank.get(), preset_name, ysfx_save_state(fx)));
+    }
+
+    ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
+    loadJsfxPreset(m_impl->m_info, newBank, ysfx_preset_exists(newBank.get(), preset_name) - 1, true);
 }
 
 YsfxInfo::Ptr YsfxProcessor::getCurrentInfo()
@@ -278,6 +286,11 @@ YsfxInfo::Ptr YsfxProcessor::getCurrentInfo()
 YsfxCurrentPresetInfo::Ptr YsfxProcessor::getCurrentPresetInfo()
 {
     return std::atomic_load(&m_impl->m_currentPresetInfo);
+}
+
+ysfx_bank_shared YsfxProcessor::getCurrentBank()
+{
+    return std::atomic_load(&m_impl->m_bank);
 }
 
 //==============================================================================
@@ -709,15 +722,6 @@ YsfxInfo::Ptr YsfxProcessor::Impl::createNewFx(juce::CharPointer_UTF8 filePath, 
     ysfx_load_file(fx, filePath, loadopts);
     ysfx_compile(fx, compileopts);
 
-    // Check if we have a customized bank
-    const char *bankpath = ysfx_get_bank_path(fx);
-    juce::File customBankPath = getCustomBankLocation(fx);
-    if (customBankPath.existsAsFile()) {
-        info->bank.reset(ysfx_load_bank(customBankPath.getFullPathName().toStdString().c_str()));
-    } else {
-        info->bank.reset(ysfx_load_bank(bankpath));
-    }
-
     info->m_name = juce::File{filePath}.getFileNameWithoutExtension();
 
     if (initialState)
@@ -726,7 +730,23 @@ YsfxInfo::Ptr YsfxProcessor::Impl::createNewFx(juce::CharPointer_UTF8 filePath, 
     return info;
 }
 
-void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
+ysfx_bank_shared YsfxProcessor::Impl::loadDefaultBank(YsfxInfo::Ptr info)
+{
+    // Check if we have a customized bank
+    const char *bankpath = ysfx_get_bank_path(info->effect.get());
+    juce::File customBankPath = getCustomBankLocation(info->effect.get());
+
+    ysfx_bank_shared bank;
+    if (customBankPath.existsAsFile()) {
+        bank.reset(ysfx_load_bank(customBankPath.getFullPathName().toStdString().c_str()));
+    } else {
+        bank.reset(ysfx_load_bank(bankpath));
+    }
+
+    return bank;
+}
+
+void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info, ysfx_bank_shared bank)
 {
     AudioProcessorSuspender sus{*m_self};
     sus.lockCallbacks();
@@ -757,7 +777,7 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info)
 
     YsfxCurrentPresetInfo::Ptr presetInfo{new YsfxCurrentPresetInfo()};
     std::atomic_store(&m_currentPresetInfo, presetInfo);
-
+    std::atomic_store(&m_bank, bank);
     std::atomic_store(&m_info, info);
     m_background->wakeUp();
 }
@@ -870,7 +890,8 @@ void YsfxProcessor::Impl::Background::processSliderNotifications(uint64_t slider
 void YsfxProcessor::Impl::Background::processLoadRequest(LoadRequest &req)
 {
     YsfxInfo::Ptr info = createNewFx(req.filePath.toUTF8(), req.initialState.get());
-    m_impl->installNewFx(info);
+    ysfx_bank_shared bank = m_impl->loadDefaultBank(info);
+    m_impl->installNewFx(info, bank);
 
     {
         const juce::ScopedLock sl(m_impl->m_loadLock);
@@ -895,10 +916,14 @@ void YsfxProcessor::Impl::Background::processLoadRequest(LoadRequest &req)
 
 void YsfxProcessor::Impl::Background::processPresetRequest(PresetRequest &req)
 {
+    // Verify that we still have the same plugin loaded
     if (m_impl->m_info != req.info)
         return;
 
-    ysfx_bank_t *bank = req.info->bank.get();
+    if (m_impl->m_bank != req.bank)
+        std::atomic_store(&m_impl->m_bank, req.bank);
+
+    ysfx_bank_t *bank = req.bank.get();
     if (!bank || req.index >= bank->preset_count)
         return;
 

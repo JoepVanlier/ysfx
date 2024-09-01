@@ -604,6 +604,18 @@ YSFX_DEFINE_AUTO_PTR(ysfx_u, ysfx_t, ysfx_free);
 YSFX_DEFINE_AUTO_PTR(ysfx_state_u, ysfx_state_t, ysfx_state_free);
 YSFX_DEFINE_AUTO_PTR(ysfx_bank_u, ysfx_bank_t, ysfx_bank_free);
 YSFX_DEFINE_AUTO_PTR(ysfx_menu_u, ysfx_menu_t, ysfx_menu_free);
+
+#define YSFX_DEFINE_SHARED_PTR(sptr, styp, freefn)               \
+    struct sptr##_deleter {                                      \
+        void operator()(styp *x) const noexcept { freefn(x); }   \
+    };                                                           \
+    using sptr = std::shared_ptr<styp>;                          \
+    inline sptr make_##sptr(styp *ptr) {                         \
+        return sptr(ptr, sptr##_deleter());                      \
+    }
+
+YSFX_DEFINE_SHARED_PTR(ysfx_bank_shared, ysfx_bank_t, ysfx_bank_free);
+
 #endif // defined(__cplusplus) && (__cplusplus >= 201103L || (defined(_MSC_VER) && _MSVC_LANG >= 201103L))
 
 //------------------------------------------------------------------------------
