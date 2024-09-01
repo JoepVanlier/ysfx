@@ -118,20 +118,20 @@
                 struct MenuItemComponent : public juce::Component
                 {
                     QuickSearchItem e;
-                    bool highlighted = false;
-                    PopupMenuQuickSearch* owner;
-                    MenuItemComponent (PopupMenuQuickSearch* owner) : owner (owner) {}
+                    bool m_highlighted = false;
+                    PopupMenuQuickSearch* m_owner;
+                    MenuItemComponent (PopupMenuQuickSearch* owner) : m_owner (owner) {}
                     void paint (juce::Graphics& g) override
                     {
                         getLookAndFeel().drawPopupMenuItem (
-                            g, getLocalBounds(), false /* isSeparator */, e.popup_menu_item->isEnabled /* isActive */, highlighted /* isHighlighted */, e.popup_menu_item->isTicked, false /* hasSubMenu */, e.label, e.popup_menu_item->shortcutKeyDescription, e.popup_menu_item->image.get(), e.popup_menu_item->colour.isTransparent() ? nullptr : &e.popup_menu_item->colour);
+                            g, getLocalBounds(), false /* isSeparator */, e.popup_menu_item->isEnabled /* isActive */, m_highlighted /* isHighlighted */, e.popup_menu_item->isTicked, false /* hasSubMenu */, e.label, e.popup_menu_item->shortcutKeyDescription, e.popup_menu_item->image.get(), e.popup_menu_item->colour.isTransparent() ? nullptr : &e.popup_menu_item->colour);
                     }
                     void updateWith (QuickSearchItem& new_e, bool new_highlighted)
                     {
-                        if (new_e.popup_menu_item != e.popup_menu_item || highlighted != new_highlighted)
+                        if (new_e.popup_menu_item != e.popup_menu_item || m_highlighted != new_highlighted)
                         {
                             this->e = new_e;
-                            this->highlighted = new_highlighted;
+                            this->m_highlighted = new_highlighted;
                             repaint();
                         }
                     }
@@ -140,17 +140,17 @@
                         if (! event.mouseWasDraggedSinceMouseDown())
                         {
                             if (e.popup_menu_item->isEnabled)
-                                owner->quickSearchFinished (e.id);
+                                m_owner->quickSearchFinished (e.id);
                         }
                     }
                     void mouseExit (const juce::MouseEvent&) override
                     {
-                        highlighted = false;
+                        m_highlighted = false;
                         repaint();
                     }
                     void mouseEnter (const juce::MouseEvent&) override
                     {
-                        highlighted = true;
+                        m_highlighted = true;
                         repaint();
                     }
                 };
@@ -231,8 +231,8 @@
                 
                 juce::Rectangle<int> getTargetScreenArea() {
                     auto target_screen_area = owner->options.getTargetScreenArea();
-                    target_screen_area.setX(target_screen_area.getX() / m_scaleFactor);
-                    target_screen_area.setY(target_screen_area.getY() / m_scaleFactor);
+                    target_screen_area.setX((int) (target_screen_area.getX() / m_scaleFactor));
+                    target_screen_area.setY((int) (target_screen_area.getY() / m_scaleFactor));
                     return target_screen_area;
                 }
 
@@ -410,22 +410,22 @@
                     }
 
                     best_items.resize (nb_visible_matches);
-                    for (int i = 0; i < nb_visible_matches; ++i)
+                    for (size_t i = 0; i < nb_visible_matches; ++i)
                     {
                         if (best_items.at (i) == nullptr)
                         {
                             best_items[i] = std::make_unique<MenuItemComponent> (owner);
                             addAndMakeVisible (*best_items[i]);
                         }
-                        int ii = first_displayed_match + i;
+                        size_t ii = first_displayed_match + i;
                         best_items[i]->updateWith (quick_search_items.at (matches.at (ii)), ii == highlighted_match);
                         if (displayed_over_or_under == 1)
                         {
-                            best_items[i]->setBounds (0, (h + separator_height) + i * h, item_width, h);
+                            best_items[i]->setBounds (0, (h + separator_height) + (int) i * h, item_width, h);
                         }
                         else
                         {
-                            best_items[i]->setBounds (0, total_h - (h + separator_height) - (i + 1) * h, item_width, h);
+                            best_items[i]->setBounds (0, total_h - (h + separator_height) - (int) (i + 1) * h, item_width, h);
                         }
                     }
 
@@ -520,7 +520,7 @@
                     int y_separator = item_height + item_height / 4;
                     if (displayed_over_or_under == -1)
                         y_separator = getHeight() - y_separator;
-                    g.drawHorizontalLine (y_separator, item_height / 2, getWidth() - item_height / 2);
+                    g.drawHorizontalLine (y_separator, (float) item_height / 2, getWidth() - (float) item_height / 2);
                     if (matches.empty())
                     {
                         g.setFont (search_label.getFont());
@@ -678,7 +678,7 @@
                 if (quick_search)
                 {
                     is_finishing = true; // stop stealing keypress when running user_callback
-                    quick_search = 0;
+                    quick_search = nullptr;
                     if (target_component_weak_ref.get())
                     {
                         user_callback (result);

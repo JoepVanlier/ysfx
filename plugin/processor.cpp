@@ -943,7 +943,7 @@ void YsfxProcessor::Impl::audioProcessorParameterChanged(AudioProcessor *process
 
     int sliderIndex = parameterIndex - m_sliderParamOffset;
     if (sliderIndex >= 0 && sliderIndex < ysfx_max_sliders) {
-        uint8_t group = ysfx_fetch_slider_group_index(sliderIndex);
+        uint8_t group = ysfx_fetch_slider_group_index((uint32_t) sliderIndex);
         m_sliderParametersChanged[group].fetch_or(ysfx_slider_mask((uint32_t) sliderIndex, group));
     }
 }
