@@ -27,7 +27,13 @@ static void show_async_text_input(juce::String title, juce::String message, std:
     auto inputFilter = std::make_unique<ExclusionFilter>("`");
     textEditor->setInputFilter(inputFilter.release(), true);
 
-    auto finalize_success = [window, textEditor, callback]() { callback(textEditor->getText(), true); window->exitModalState(0); };
+    auto finalize_success = [window, textEditor, callback]() { 
+        if (textEditor->getText().isEmpty()) {
+            window->setMessage("Please enter a preset name or press cancel.");
+        } else {
+            callback(textEditor->getText(), true); window->exitModalState(0);
+        };
+    };
     auto finalize_cancel = [window, textEditor, callback]() { callback(textEditor->getText(), false); window->exitModalState(0); };
 
     textEditor->onReturnKey = finalize_success;
