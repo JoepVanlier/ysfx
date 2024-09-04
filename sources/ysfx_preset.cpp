@@ -318,7 +318,7 @@ uint32_t ysfx_preset_exists(ysfx_bank_t *bank, const char* preset_name)
 
     uint32_t found = 0;
     for (uint32_t i=0; i < bank->preset_count; i++) {
-        if (strcmp(bank->presets[i].name, preset_name) == 0) {
+        if (stricmp(bank->presets[i].name, preset_name) == 0) {
             // Preset already exists! We're gonna be overwriting this thing.
             found = i + 1;
         }
@@ -383,6 +383,32 @@ ysfx_bank_t *ysfx_delete_preset_from_bank(ysfx_bank_t *bank_in, const char* pres
             bank->presets[j].state = ysfx_state_dup(bank_in->presets[i].state);
             j += 1;
         }
+    }
+
+    return bank.release();
+}
+
+// Rename a preset from the bank. This function returns a *new* bank and you are responsible for cleaning up the old bank.
+ysfx_bank_t *ysfx_rename_preset_from_bank(ysfx_bank_t *bank_in, const char* preset_name, const char* new_preset_name)
+{
+    ysfx_bank_u bank{new ysfx_bank_t{}};
+    bank->name = ysfx::strdup_using_new(bank_in->name);
+
+    uint32_t found = ysfx_preset_exists(bank_in, preset_name);
+    bank->preset_count = (uint32_t)(bank_in->preset_count);
+
+    bank->presets = new ysfx_preset_t[(uint32_t)bank->preset_count]{};
+    uint32_t j = 0;
+    for (uint32_t i=0; i < bank_in->preset_count; i++) {
+        bank->presets[j].state = ysfx_state_dup(bank_in->presets[i].state);
+        if (i != (found - 1)) {
+            bank->presets[j].name = ysfx::strdup_using_new(bank_in->presets[i].name);
+            bank->presets[j].blob_name = ysfx::strdup_using_new(bank_in->presets[i].blob_name);
+        } else {
+            bank->presets[j].name = ysfx::strdup_using_new(new_preset_name);
+            bank->presets[j].blob_name = ysfx::strdup_using_new(new_preset_name);
+        }
+        j += 1;
     }
 
     return bank.release();
