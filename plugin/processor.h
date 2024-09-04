@@ -32,9 +32,11 @@ public:
 
     YsfxParameter *getYsfxParameter(int sliderIndex);
     void loadJsfxFile(const juce::String &filePath, ysfx_state_t *initialState, bool async);
-    void loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, uint32_t index, bool async);
+    void loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, uint32_t index, bool load, bool async);
     bool presetExists(const char *preset_name);
     void saveCurrentPreset(const char* preset_name);
+    void renameCurrentPreset(const char *new_preset_name);
+    void deleteCurrentPreset();
     YsfxInfo::Ptr getCurrentInfo();
     YsfxCurrentPresetInfo::Ptr getCurrentPresetInfo();
     ysfx_bank_shared getCurrentBank();

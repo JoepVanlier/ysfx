@@ -18,7 +18,7 @@ class ExclusionFilter : public juce::TextEditor::InputFilter
 };
 
 
-static void show_async_text_input(juce::String title, juce::String message, std::function<void(juce::String, bool)> callback)
+static void show_async_text_input(juce::String title, juce::String message, std::function<void(juce::String, bool)> callback, std::optional<std::function<juce::String(juce::String)>> validator=std::nullopt)
 {
     auto* window = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
     window->addTextEditor("textField", "", "");
@@ -27,10 +27,18 @@ static void show_async_text_input(juce::String title, juce::String message, std:
     auto inputFilter = std::make_unique<ExclusionFilter>("`");
     textEditor->setInputFilter(inputFilter.release(), true);
 
-    auto finalize_success = [window, textEditor, callback]() { 
+    auto finalize_success = [window, textEditor, callback, validator]() { 
         if (textEditor->getText().isEmpty()) {
             window->setMessage("Please enter a preset name or press cancel.");
         } else {
+            if (validator) {
+                juce::String warning = (*validator)(textEditor->getText());
+                if (warning.isNotEmpty()) {
+                    window->setMessage(warning);
+                    return;
+                }
+            }
+
             callback(textEditor->getText(), true); window->exitModalState(0);
         };
     };

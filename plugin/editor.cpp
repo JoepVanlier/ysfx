@@ -44,6 +44,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::FileChooser> m_fileChooser;
     std::unique_ptr<juce::PopupMenu> m_recentFilesPopup;
     std::unique_ptr<juce::PopupMenu> m_presetsPopup;
+    std::unique_ptr<juce::PopupMenu> m_presetsOptsPopup;
     std::unique_ptr<juce::PropertiesFile> m_pluginProperties;
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
@@ -55,6 +56,7 @@ struct YsfxEditor::Impl {
     void loadFile(const juce::File &file);
     void popupRecentFiles();
     void popupPresets();
+    void popupPresetOptions();
     void switchEditor(bool showGfx);
     void openCodeEditor();
     static juce::File getAppDataDirectory();
@@ -82,6 +84,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::TextButton> m_btnRecentFiles;
     std::unique_ptr<juce::TextButton> m_btnEditCode;
     std::unique_ptr<juce::TextButton> m_btnLoadPreset;
+    std::unique_ptr<juce::TextButton> m_btnPresetOpts;
     std::unique_ptr<juce::TextButton> m_btnSwitchEditor;
     std::unique_ptr<juce::TextButton> m_btnReload;
     std::unique_ptr<juce::TextButton> m_btnGfxScaling;
@@ -513,60 +516,118 @@ void YsfxEditor::Impl::popupRecentFiles()
     });
 }
 
-void YsfxEditor::Impl::popupPresets()
+void YsfxEditor::Impl::popupPresetOptions()
 {
-    m_presetsPopup.reset(new juce::PopupMenu);
+    m_presetsOptsPopup.reset(new juce::PopupMenu);
 
     YsfxInfo::Ptr info = m_info;
     ysfx_bank_shared bank = m_bank;
     YsfxCurrentPresetInfo::Ptr presetInfo = m_currentPresetInfo;
-    if (!bank) {
-        m_presetsPopup->addItem(32767, TRANS("No presets"), false);
-        if (info->m_name.isNotEmpty()) {
-            m_presetsPopup->addItem(1, "Save preset", true, false);
-        }
-    } else {
-        m_presetsPopup->addItem(1, "Save preset", true, false);
-        for (uint32_t i = 0; i < bank->preset_count; ++i) {
-            bool wasLastChosen = presetInfo->m_lastChosenPreset.compare(bank->presets[i].name) == 0;
-            m_presetsPopup->addItem((int)(i + 2), juce::String::fromUTF8(bank->presets[i].name), true, wasLastChosen);
-        }
+
+    if (info->m_name.isNotEmpty()) {
+        m_presetsOptsPopup->addItem(1, "Save preset", true, false);
+        m_presetsOptsPopup->addItem(2, "Rename preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
+        m_presetsOptsPopup->addSeparator();
+        m_presetsOptsPopup->addItem(3, "Delete preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
     }
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
-        .withTargetComponent(*m_btnLoadPreset);
-    
+        .withTargetComponent(*m_btnPresetOpts);
+
+    m_presetsOptsPopup->showMenuAsync(
+        popupOptions, [this, info](int index) 
+        {
+            switch (index) {
+                case 1:
+                    // Save
+                    show_async_text_input(
+                        "Enter preset name",
+                        "",
+                        [this](juce::String presetName, bool wantSave) {
+                            std::string preset = presetName.toStdString();
+                            if (wantSave) {
+                                if (m_proc->presetExists(preset.c_str())) {
+                                    juce::AlertWindow::showAsync(
+                                        juce::MessageBoxOptions()
+                                            .withTitle("Overwrite?")
+                                            .withMessage("Preset with that name already exists.\nAre you sure you want to overwrite the preset?")
+                                            .withButton("Yes")
+                                            .withButton("No")
+                                            .withIconType(juce::MessageBoxIconType::NoIcon),
+                                        [this, preset](int result){
+                                            if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
+                                        }
+                                    );
+                                } else {
+                                    m_proc->saveCurrentPreset(preset.c_str());
+                                }
+                            }
+                        }
+                    );
+                    return;
+                case 2:
+                    // Rename
+                    show_async_text_input(
+                        "Enter new name",
+                        "",
+                        [this](juce::String presetName, bool wantRename) {
+                            std::string preset = presetName.toStdString();
+                            if (wantRename) {
+                                m_proc->renameCurrentPreset(preset.c_str());
+                            }
+                        },
+                        [this](juce::String presetName) {
+                            if (m_proc->presetExists(presetName.toStdString().c_str())) {
+                                return juce::String("Preset with that name already exists.\nChoose a different name or click cancel.");
+                            } else {
+                                return juce::String("");
+                            }
+                        }
+                    );
+                    break;
+                case 3:
+                    // Delete
+                    juce::AlertWindow::showAsync(
+                        juce::MessageBoxOptions()
+                            .withTitle("Delete?")
+                            .withMessage("Are you sure you want to delete the preset named " + m_currentPresetInfo->m_lastChosenPreset + "?")
+                            .withButton("Yes")
+                            .withButton("No")
+                            .withIconType(juce::MessageBoxIconType::NoIcon),
+                            [this](int result) {
+                                if (result == 1) m_proc->deleteCurrentPreset();
+                            }
+                    );
+                    break;
+                default:
+                    break;
+            }
+        }
+    );
+}
+
+void YsfxEditor::Impl::popupPresets()
+{
+    YsfxInfo::Ptr info = m_info;
+    ysfx_bank_shared bank = m_bank;
+    YsfxCurrentPresetInfo::Ptr presetInfo = m_currentPresetInfo;
+
+    m_presetsPopup.reset(new juce::PopupMenu);
+    if (!bank) {
+        m_presetsPopup->addItem(32767, TRANS("No presets"), false);
+    } else {
+        for (uint32_t i = 0; i < bank->preset_count; ++i) {
+            bool wasLastChosen = presetInfo->m_lastChosenPreset.compare(bank->presets[i].name) == 0;
+            m_presetsPopup->addItem((int)(i + 1), juce::String::fromUTF8(bank->presets[i].name), true, wasLastChosen);
+        }
+    }
+   
     juce::PopupMenu::Options quickSearchOptions = PopupMenuQuickSearchOptions{}
         .withTargetComponent(*m_btnLoadPreset);
 
     showPopupMenuWithQuickSearch(*m_presetsPopup, quickSearchOptions, [this, info, bank](int index) {
-            if (index == 1) {
-                show_async_text_input(
-                    "Enter preset name",
-                    "",
-                    [this](juce::String presetName, bool wantSave){
-                        std::string preset = presetName.toStdString();
-                        if (wantSave) {
-                            if (m_proc->presetExists(preset.c_str())) {
-                                juce::AlertWindow::showAsync(
-                                    juce::MessageBoxOptions()
-                                        .withTitle("Overwrite?")
-                                        .withMessage("Preset with that name already exists.\nAre you sure you want to overwrite the preset?")
-                                        .withButton("Yes")
-                                        .withButton("No")
-                                        .withIconType(juce::MessageBoxIconType::NoIcon),
-                                    [this, preset](int result){
-                                        if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
-                                    }
-                                );
-                            } else {
-                                m_proc->saveCurrentPreset(preset.c_str());
-                            }
-                        }
-                    }
-                );
-            } else if ((index > 1) && (index < 32767)) {
-                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 2), true);
+            if ((index > 0) && (index < 32767)) {
+                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 1), true, true);
             }
         }
     );
@@ -680,6 +741,8 @@ void YsfxEditor::Impl::createUI()
     m_btnGfxScaling->setTooltip("Render JSFX UI at lower resolution and upscale the result. Ths is intended for JSFX that do not implement scaling themselves. For JSFX that do, it is better to simply resize the plugin.");
     m_btnLoadPreset.reset(new juce::TextButton(TRANS("Preset")));
     m_self->addAndMakeVisible(*m_btnLoadPreset);
+    m_btnPresetOpts.reset(new juce::TextButton(TRANS(juce::CharPointer_UTF8("\xe2\x96\xBC"))));
+    m_self->addAndMakeVisible(*m_btnPresetOpts);
     m_btnSwitchEditor.reset(new juce::TextButton(TRANS("Sliders")));
     m_btnSwitchEditor->setClickingTogglesState(true);
     m_self->addAndMakeVisible(*m_btnSwitchEditor);
@@ -724,6 +787,7 @@ void YsfxEditor::Impl::connectUI()
     m_btnSwitchEditor->onClick = [this]() { switchEditor(m_btnSwitchEditor->getToggleState()); };
     m_btnEditCode->onClick = [this]() { openCodeEditor(); };
     m_btnLoadPreset->onClick = [this]() { popupPresets(); };
+    m_btnPresetOpts->onClick = [this]() { popupPresetOptions(); };
     m_btnReload->onClick = [this] {
         YsfxInfo::Ptr info = m_info;
         ysfx_t *fx = info->effect.get();
@@ -797,6 +861,8 @@ void YsfxEditor::Impl::relayoutUI()
     temp = topRow.reduced(10, 10);
     m_btnSwitchEditor->setBounds(temp.removeFromRight(80));
     temp.removeFromRight(spacing);
+    m_btnPresetOpts->setBounds(temp.removeFromRight(25));
+    temp.removeFromRight(0);
     m_btnLoadPreset->setBounds(temp.removeFromRight(width));
     temp.removeFromRight(spacing);
     m_btnEditCode->setBounds(temp.removeFromRight(60));
