@@ -282,9 +282,9 @@ void YsfxProcessor::saveCurrentPreset(const char* preset_name)
     ysfx_bank_shared newBank;
     if (!bank) {
         ysfx_bank_u emptyBank{ysfx_create_empty_bank(m_impl->m_info->m_name.toUTF8())};
-        newBank.reset(ysfx_add_preset_to_bank(emptyBank.get(), preset_name, ysfx_save_state(fx)));
+        newBank = make_ysfx_bank_shared(ysfx_add_preset_to_bank(emptyBank.get(), preset_name, ysfx_save_state(fx)));
     } else {
-        newBank.reset(ysfx_add_preset_to_bank(bank.get(), preset_name, ysfx_save_state(fx)));
+        newBank = make_ysfx_bank_shared(ysfx_add_preset_to_bank(bank.get(), preset_name, ysfx_save_state(fx)));
     }
 
     ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
@@ -306,7 +306,7 @@ void YsfxProcessor::renameCurrentPreset(const char* new_preset_name)
     auto currentPreset = m_impl->m_currentPresetInfo->m_lastChosenPreset;
     if (currentPreset.isEmpty()) return;
 
-    ysfx_bank_shared newBank{ysfx_rename_preset_from_bank(bank.get(), currentPreset.toStdString().c_str(), new_preset_name)};
+    ysfx_bank_shared newBank = make_ysfx_bank_shared(ysfx_rename_preset_from_bank(bank.get(), currentPreset.toStdString().c_str(), new_preset_name));
     ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
     loadJsfxPreset(m_impl->m_info, newBank, ysfx_preset_exists(newBank.get(), new_preset_name) - 1, true, true);
 }
@@ -326,7 +326,7 @@ void YsfxProcessor::deleteCurrentPreset()
     auto currentPreset = m_impl->m_currentPresetInfo->m_lastChosenPreset;
     if (currentPreset.isEmpty()) return;
 
-    ysfx_bank_shared newBank{ysfx_delete_preset_from_bank(bank.get(), currentPreset.toStdString().c_str())};
+    ysfx_bank_shared newBank = make_ysfx_bank_shared(ysfx_delete_preset_from_bank(bank.get(), currentPreset.toStdString().c_str()));
     ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
     loadJsfxPreset(m_impl->m_info, newBank, 0, false, true);
 }
@@ -791,9 +791,9 @@ ysfx_bank_shared YsfxProcessor::Impl::loadDefaultBank(YsfxInfo::Ptr info)
 
     ysfx_bank_shared bank;
     if (customBankPath.existsAsFile()) {
-        bank.reset(ysfx_load_bank(customBankPath.getFullPathName().toStdString().c_str()));
+        bank = make_ysfx_bank_shared(ysfx_load_bank(customBankPath.getFullPathName().toStdString().c_str()));
     } else {
-        bank.reset(ysfx_load_bank(bankpath));
+        bank = make_ysfx_bank_shared(ysfx_load_bank(bankpath));
     }
 
     return bank;
