@@ -28,6 +28,7 @@
 #include "components/ide_view.h"
 #include "components/searchable_popup.h"
 #include "components/modal_textinputbox.h"
+#include "components/divider.h"
 #include "utility/functional_timer.h"
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -48,6 +49,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::PropertiesFile> m_pluginProperties;
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
+    float m_currentScaling{1.0f};
 
     //==========================================================================
     void updateInfo();
@@ -93,6 +95,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::Label> m_lblIO;
     std::unique_ptr<juce::Viewport> m_centerViewPort;
     std::unique_ptr<juce::Viewport> m_topViewPort;
+    std::unique_ptr<Divider> m_divider; 
     std::unique_ptr<YsfxParametersPanel> m_parametersPanel;
     std::unique_ptr<YsfxParametersPanel> m_miniParametersPanel;
     std::unique_ptr<YsfxGraphicsView> m_graphicsView;
@@ -253,6 +256,11 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     YsfxInfo::Ptr info = m_proc->getCurrentInfo();
     YsfxCurrentPresetInfo::Ptr presetInfo = m_proc->getCurrentPresetInfo();
     ysfx_bank_shared bank = m_proc->getCurrentBank();
+
+    if (m_graphicsView->getTotalScaling() != m_currentScaling) {
+        relayoutUILater();
+        m_currentScaling = m_graphicsView->getTotalScaling();
+    }
 
     if (m_currentPresetInfo != presetInfo) {
         m_currentPresetInfo = presetInfo;
@@ -423,7 +431,8 @@ void YsfxEditor::Impl::saveScaling()
                 juce::ScopedLock lock{m_pluginProperties->getLock()};
                 m_pluginProperties->setValue(getKey("_width"), m_self->getWidth());
                 m_pluginProperties->setValue(getKey("_height"), m_self->getHeight());
-                m_pluginProperties->needsToBeSaved();
+                m_pluginProperties->setNeedsToBeSaved(true);
+                m_pluginProperties->setValue(getKey("_divider"), m_divider->m_position);
             }
         }
     }
@@ -463,6 +472,11 @@ void YsfxEditor::Impl::loadScaling()
             if (width && height) {
                 m_self->setSize(width, height);
                 m_mustResizeToGfx = false;
+            }
+
+            key = getKey("_divider");
+            if (m_pluginProperties->containsKey(key)) {
+                m_divider->setPosition((int) m_pluginProperties->getValue(key).getFloatValue());
             }
         }
     }
@@ -761,6 +775,10 @@ void YsfxEditor::Impl::createUI()
     m_topViewPort.reset(new juce::Viewport);
     m_topViewPort->setScrollBarsShown(true, false);
     m_self->addAndMakeVisible(*m_topViewPort);
+
+    m_divider.reset(new Divider(m_self));
+    m_topViewPort->addAndMakeVisible(m_divider.get());
+
     m_parametersPanel.reset(new YsfxParametersPanel);
     m_miniParametersPanel.reset(new YsfxParametersPanel);
     m_graphicsView.reset(new YsfxGraphicsView);
@@ -844,6 +862,7 @@ void YsfxEditor::Impl::relayoutUI()
         int w = juce::jmax(defaultEditorWidth, (int)(gfxDim[0] * scaling_factor) + 2 * sideTrim);
         int h = juce::jmax(defaultEditorHeight, (int)(gfxDim[1] * scaling_factor) + m_self->m_headerSize + 2 * bottomTrim);
 
+        m_divider->resetDragged();
         m_self->setSize(w, h + parameterHeight);
         m_mustResizeToGfx = false;
     }
@@ -907,19 +926,28 @@ void YsfxEditor::Impl::relayoutUI()
     temp.expand(0, 10);
     m_lblFilePath->setBounds(temp);
 
+    int nonParameterSpace = (int) (m_self->m_headerSize + 2 * bottomTrim + gfxDim[1] * m_graphicsView->getTotalScaling());
+
     juce::Component *viewed;
     if (m_btnSwitchEditor->getToggleState()) {
         int maxParamArea = m_self->getHeight();
-        if (fx && ysfx_has_section(fx, ysfx_section_gfx)) maxParamArea /= 2;
-        const juce::Rectangle<int> paramArea = centerArea.withHeight(std::min(parameterHeight, maxParamArea));
-        const juce::Rectangle<int> gfxArea = centerArea.withTrimmedTop(parameterHeight);
+        if (fx && ysfx_has_section(fx, ysfx_section_gfx)) maxParamArea -= nonParameterSpace;
+        m_divider->setSizes(std::min(parameterHeight, std::max(200, maxParamArea)), 0, m_miniParametersPanel->getRecommendedHeight(0));
+
+        const juce::Rectangle<int> paramArea = centerArea.withHeight(m_divider->m_position);
+        const juce::Rectangle<int> gfxArea = centerArea.withTrimmedTop(m_divider->m_position);
 
         if (parameterHeight) {
             viewed = m_miniParametersPanel.get();
             viewed->setSize(paramArea.getWidth(), m_miniParametersPanel->getRecommendedHeight(0));
+            
             m_topViewPort->setBounds(paramArea);
+            m_divider->setBounds(m_topViewPort->getX(), m_topViewPort->getHeight() - 4, m_topViewPort->getWidth(), 4);
+
             m_topViewPort->setViewedComponent(viewed, false);
             m_topViewPort->setVisible(true);
+            m_divider->setVisible(true);
+            m_divider->toFront(true);
         } else {
             m_topViewPort->setViewedComponent(nullptr, false);
             m_topViewPort->setVisible(false);
