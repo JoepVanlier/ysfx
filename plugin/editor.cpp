@@ -50,6 +50,8 @@ struct YsfxEditor::Impl {
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
     float m_currentScaling{1.0f};
+    uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
+    bool m_visibleSlidersChanged{false};
 
     //==========================================================================
     void updateInfo();
@@ -276,6 +278,19 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
         updateInfo();
     }
 
+    for (uint8_t i = 0; i < ysfx_max_slider_groups; i++) {
+        ysfx_t *fx = m_info.get()->effect.get();
+
+        if (fx) {
+            uint64_t newValue = ysfx_get_slider_visibility(fx, i);
+            if (newValue != m_sliderVisible[i]) {
+                m_sliderVisible[i] = newValue;
+                m_visibleSlidersChanged = true;
+            }
+            if (m_visibleSlidersChanged) relayoutUILater();
+        }
+    }
+    
     m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
     
     if ((m_proc->retryLoad() == RetryState::mustRetry) && !m_fileChooserActive) {
@@ -893,6 +908,30 @@ void YsfxEditor::Impl::relayoutUI()
     auto labelText = m_lblFilePath->getText();
     auto lines = juce::StringArray::fromTokens(labelText, "\n", "");
 
+    if (m_visibleSlidersChanged) {
+        juce::Array<YsfxParameter *> params2;
+        params2.ensureStorageAllocated(ysfx_max_sliders);
+        for (auto group = 0; group < ysfx_max_slider_groups; ++group) {
+            auto group_offset = group << 6;
+            for (auto idx = 0; idx < 64; idx++) {
+                if (m_sliderVisible[group] & ((uint64_t)1 << idx)) {
+                    params2.add(m_proc->getYsfxParameter(group_offset + idx));
+                }
+            }
+        }
+        m_visibleSlidersChanged = false;
+        m_miniParametersPanel->setParametersDisplayed(params2);
+
+        // Resize the divider if the number of parameters changed.
+        int new_parameterHeight = m_miniParametersPanel->getRecommendedHeight(0);
+        if (new_parameterHeight > parameterHeight) {
+            if (m_divider->m_position == parameterHeight) {
+                m_divider->m_position = new_parameterHeight;
+                parameterHeight = new_parameterHeight;
+            }
+        }
+    }
+
     int max_text_width = 0;
     for (auto line : lines) {
         int current_text_width = static_cast<int>(m_lblFilePath->getFont().getStringWidthFloat(line));
@@ -942,7 +981,7 @@ void YsfxEditor::Impl::relayoutUI()
             viewed->setSize(paramArea.getWidth(), m_miniParametersPanel->getRecommendedHeight(0));
             
             m_topViewPort->setBounds(paramArea);
-            m_divider->setBounds(m_topViewPort->getX(), m_topViewPort->getHeight() - 4, m_topViewPort->getWidth(), 4);
+            m_divider->setBounds(m_topViewPort->getX(), m_topViewPort->getHeight() - 2, m_topViewPort->getWidth(), 4);
 
             m_topViewPort->setViewedComponent(viewed, false);
             m_topViewPort->setVisible(true);
