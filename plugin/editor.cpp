@@ -742,7 +742,7 @@ void YsfxEditor::Impl::initializeProperties()
 {
     juce::PropertiesFile::Options options;
 
-    options.applicationName = JucePlugin_Name;
+    options.applicationName = "ysfx_saike_mod";
     options.storageFormat = juce::PropertiesFile::StorageFormat::storeAsXML;
     options.filenameSuffix = ".prefs";
     options.osxLibrarySubFolder = "Application Support";
