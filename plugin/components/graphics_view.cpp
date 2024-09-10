@@ -275,22 +275,6 @@ float YsfxGraphicsView::getTotalScaling()
 
 void YsfxGraphicsView::paint(juce::Graphics &g)
 {
-    ysfx_t *fx = m_impl->m_fx.get();
-
-    if (!(fx && ysfx_has_section(fx, ysfx_section_gfx))) {
-        juce::Rectangle<int> bounds = getLocalBounds();
-
-        g.setColour(juce::Colours::white);
-        g.drawRect(bounds);
-
-        juce::Font font;
-        font.setHeight(32.0f);
-
-        g.setFont(font);
-        g.drawText(TRANS("No graphics"), bounds, juce::Justification::centred);
-        return;
-    }
-
     ///
     Impl::GfxTarget *target = m_impl->m_gfxTarget.get();
 

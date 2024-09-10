@@ -357,8 +357,8 @@ void YsfxEditor::Impl::updateInfo()
     else
         m_ideView->setStatusText(TRANS("Compiled OK"));
 
-    bool hasGfx = ysfx_has_section(fx, ysfx_section_gfx);
-    switchEditor(hasGfx);
+    // We always just want the sliders the user meant to expose
+    switchEditor(true);
 
     juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
     m_mustResizeToGfx = true;
@@ -968,9 +968,9 @@ void YsfxEditor::Impl::relayoutUI()
     int nonParameterSpace = (int) (m_self->m_headerSize + 2 * bottomTrim + gfxDim[1] * m_graphicsView->getTotalScaling());
 
     juce::Component *viewed;
-    if (m_btnSwitchEditor->getToggleState()) {
+    if (m_btnSwitchEditor->getToggleState() && (fx && ysfx_has_section(fx, ysfx_section_gfx))) {
         int maxParamArea = m_self->getHeight();
-        if (fx && ysfx_has_section(fx, ysfx_section_gfx)) maxParamArea -= nonParameterSpace;
+        maxParamArea -= nonParameterSpace;
         m_divider->setSizes(std::min(parameterHeight, std::max(200, maxParamArea)), 0, m_miniParametersPanel->getRecommendedHeight(0));
 
         const juce::Rectangle<int> paramArea = centerArea.withHeight(m_divider->m_position);
@@ -981,7 +981,7 @@ void YsfxEditor::Impl::relayoutUI()
             viewed->setSize(paramArea.getWidth(), m_miniParametersPanel->getRecommendedHeight(0));
             
             m_topViewPort->setBounds(paramArea);
-            m_divider->setBounds(m_topViewPort->getX(), m_topViewPort->getHeight() - 2, m_topViewPort->getWidth(), 4);
+            m_divider->setBounds(m_topViewPort->getX(), m_topViewPort->getHeight() - 4, m_topViewPort->getWidth(), 4);
 
             m_topViewPort->setViewedComponent(viewed, false);
             m_topViewPort->setVisible(true);
@@ -995,13 +995,14 @@ void YsfxEditor::Impl::relayoutUI()
         m_centerViewPort->setBounds(gfxArea);
         viewed = m_graphicsView.get();
         viewed->setSize(gfxArea.getWidth(), gfxArea.getHeight());
-    }
-    else {
+    } else {
+        m_divider->setVisible(false);
         m_centerViewPort->setBounds(centerArea);
         m_topViewPort->setViewedComponent(nullptr, false);
         m_topViewPort->setVisible(false);
-        viewed = m_parametersPanel.get();
-        viewed->setSize(centerArea.getWidth(), m_parametersPanel->getRecommendedHeight(m_centerViewPort->getHeight()));
+        // Choose whether we only want the "visible" sliders or all of them
+        viewed = m_btnSwitchEditor->getToggleState() ? m_miniParametersPanel.get() : m_parametersPanel.get();
+        viewed->setSize(centerArea.getWidth(), m_parametersPanel->getRecommendedHeight(centerArea.getHeight()));
     }
 
     m_centerViewPort->setViewedComponent(viewed, false);
