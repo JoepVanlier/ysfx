@@ -372,13 +372,14 @@ void YsfxProcessor::Impl::processBlockGenerically(const void *inputs[], void *ou
 {
     ysfx_t *fx = m_fx.get();
 
-    for (uint8_t group = 0; group < ysfx_max_slider_groups; group++) {
+    for (auto group = 0; group < ysfx_max_slider_groups; group++) {
         uint64_t sliderParametersChanged = m_sliderParametersChanged[group].exchange(0);
     
         if (sliderParametersChanged) {
-            for (int slider = 0; slider < ysfx_max_sliders; ++slider) {
-                if (sliderParametersChanged & ysfx_slider_mask((uint32_t) slider, group)) {
-                    syncParameterToSlider(slider);
+            auto group_offset = group << 6;
+            for (auto idx = 0; idx < 64; idx++) {
+                if (sliderParametersChanged & ((uint64_t)1 << idx)) {
+                    syncParameterToSlider(group_offset + idx);
                 }
             }
         }
