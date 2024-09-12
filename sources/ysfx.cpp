@@ -1386,7 +1386,15 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
     *fx->var.trigger = (EEL_F)fx->triggers;
     fx->triggers = 0;
 
-    if (fx->code.compiled) {
+    if (!fx->code.compiled) {
+        // Forward audio if it exists
+        for (uint32_t ch = 0; ch < std::min(num_ins, num_outs); ++ch)
+            memcpy(outs[ch], ins[ch], num_frames * sizeof(Real));
+        
+        // Otherwise silence, since not all DAWs initialize their outs
+        for (uint32_t ch = std::min(num_ins, num_outs); ch < num_outs; ++ch)
+            memset(outs[ch], 0, num_frames * sizeof(Real));
+    } else {
         // compute @init if needed
         if (fx->must_compute_init)
             ysfx_init(fx);
@@ -1396,6 +1404,7 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
             denorm_value = 0.0;
         }
 
+        const uint32_t orig_num_ins = num_ins;
         const uint32_t orig_num_outs = num_outs;
         const uint32_t num_code_ins = (uint32_t)fx->source.main->header.in_pins.size();
         const uint32_t num_code_outs = (uint32_t)fx->source.main->header.out_pins.size();
@@ -1432,6 +1441,13 @@ void ysfx_process_generic(ysfx_t *fx, const Real *const *ins, Real *const *outs,
                     outs[ch][i] = (Real)*spl[ch];
             }
         }
+
+        // either forward or clear any output above the maximum count
+        for (uint32_t ch = num_outs; ch < std::min(orig_num_ins, orig_num_outs); ++ch)
+            memcpy(outs[ch], ins[ch], num_frames * sizeof(Real));
+
+        for (uint32_t ch = std::max(num_outs, std::min(orig_num_ins, orig_num_outs)); ch < orig_num_outs; ++ch)
+            memset(outs[ch], 0, num_frames * sizeof(Real));
     }
 
     // prepare MIDI input for writing, output for reading
