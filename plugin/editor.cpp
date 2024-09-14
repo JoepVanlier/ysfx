@@ -673,6 +673,12 @@ void YsfxEditor::Impl::switchEditor(bool showGfx)
 
 void YsfxEditor::Impl::openCodeEditor()
 {
+    if (!m_codeWindow) {
+        m_codeWindow.reset(new CodeWindow(TRANS("Edit"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
+        m_codeWindow->setResizable(true, false);
+        m_codeWindow->setContentNonOwned(m_ideView.get(), true);
+    }
+
     m_codeWindow->setVisible(true);
     m_codeWindow->toFront(true);
     m_ideView->focusOnCodeEditor();
@@ -798,11 +804,7 @@ void YsfxEditor::Impl::createUI()
     m_miniParametersPanel.reset(new YsfxParametersPanel);
     m_graphicsView.reset(new YsfxGraphicsView);
     m_ideView.reset(new YsfxIDEView);
-    m_ideView->setVisible(true);
     m_ideView->setSize(1000, 600);
-    m_codeWindow.reset(new CodeWindow(TRANS("Edit"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
-    m_codeWindow->setResizable(true, false);
-    m_codeWindow->setContentNonOwned(m_ideView.get(), true);
     m_tooltipWindow.reset(new juce::TooltipWindow);
 }
 

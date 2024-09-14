@@ -75,6 +75,7 @@ YsfxIDEView::YsfxIDEView()
     m_impl->relayoutUILater();
 
     m_impl->setupNewFx();
+    this->setVisible(false);
 }
 
 YsfxIDEView::~YsfxIDEView()

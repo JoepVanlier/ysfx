@@ -616,7 +616,7 @@ YSFX_DEFINE_AUTO_PTR(ysfx_menu_u, ysfx_menu_t, ysfx_menu_free);
         return sptr(ptr, sptr##_deleter());                      \
     }
 
-YSFX_DEFINE_SHARED_PTR(ysfx_bank_shared, ysfx_bank_t, ysfx_bank_free);
+YSFX_DEFINE_SHARED_PTR(ysfx_bank_shared, ysfx_bank_t, ysfx_bank_free)
 
 #endif // defined(__cplusplus) && (__cplusplus >= 201103L || (defined(_MSC_VER) && _MSVC_LANG >= 201103L))
 
