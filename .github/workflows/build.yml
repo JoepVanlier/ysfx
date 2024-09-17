@@ -153,18 +153,51 @@ jobs:
         if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${build_type}" -j "${num_jobs}"
+      - name: Reorganize files (windows)
+        if: ${{matrix.os-type == 'Windows'}}
+        working-directory: ${{runner.workspace}}
+        run: |
+          powershell -Command "New-Item -Path 'VST3' -ItemType Directory -Force"
+          powershell -Command "New-Item -Path 'CLAP' -ItemType Directory -Force"
+          powershell -Command "Copy-Item -Path 'build\*_artefacts\${env:build_type}\VST3\*.vst3' -Destination 'VST3' -Recurse"
+          powershell -Command "Copy-Item -Path 'build\*_artefacts\${env:build_type}\CLAP\*.clap' -Destination 'CLAP' -Recurse"
+          powershell -Command "Copy-Item -Path '$env:GITHUB_WORKSPACE\plugin_license\*' -Destination '${{runner.workspace}}' -Recurse"
+      - name: Reorganize files (linux/mac)
+        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS'}}
+        working-directory: ${{runner.workspace}}
+        run: |
+          mkdir -p VST3
+          mkdir -p CLAP
+          cp -r build/*_artefacts/${{env.build_type}}/VST3/*.vst3 ./VST3
+          cp -r build/*_artefacts/${{env.build_type}}/CLAP/*.clap ./CLAP
+          cp -r ${GITHUB_WORKSPACE}/plugin_license/* .
+      - name: Reorganize files (mac)
+        if: ${{matrix.os-type == 'macOS'}}
+        working-directory: ${{runner.workspace}}
+        run: |
+          mkdir -p AU
+          cp -r ./build/*_artefacts/${{env.build_type}}/AU/*.component ./AU
       - uses: actions/upload-artifact@v4
-        if: ${{matrix.artifacts == 'yes'}}
+        if: ${{matrix.artifacts == 'yes'}} && {{matrix.os-type != 'MinGW'}}
         with:
           name: ${{matrix.display-name}} VST3
-          path: "${{runner.workspace}}/build/*_artefacts/${{env.build_type}}/VST3/*.vst3"
+          path: |
+            ${{runner.workspace}}/VST3/*
+            ${{runner.workspace}}/LICENSE
+            ${{runner.workspace}}/README
       - uses: actions/upload-artifact@v4
-        if: ${{matrix.artifacts == 'yes'}}
+        if: ${{matrix.artifacts == 'yes'}} && {{matrix.os-type != 'MinGW'}}
         with:
           name: ${{matrix.display-name}} CLAP
-          path: "${{runner.workspace}}/build/*_artefacts/${{env.build_type}}/CLAP/*.clap"
+          path: |
+            ${{runner.workspace}}/CLAP/*
+            ${{runner.workspace}}/LICENSE
+            ${{runner.workspace}}/README
       - uses: actions/upload-artifact@v4
         if: ${{matrix.os-type == 'macOS' && matrix.artifacts == 'yes'}}
         with:
           name: ${{matrix.display-name}} AU
-          path: "${{runner.workspace}}/build/*_artefacts/${{env.build_type}}/AU/*.component"
+          path: |
+            ${{runner.workspace}}/AU/*
+            ${{runner.workspace}}/LICENSE
+            ${{runner.workspace}}/README

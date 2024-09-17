@@ -1,0 +1,23 @@
+About YSFX
+----------
+
+This package provides a plugin to run audio and MIDI effects developed with the JSFX language. These effects exist in source code form, and they are compiled and ran natively by hosting software.
+Despite what the name might suggest, JSFX is not JavaScript. These technologies are unrelated to each other.
+
+For CLAP and VST3 plugins, you will find two variants of the plugins.
+One is an instrument (marked instrument), the other an effect (marked FX).
+For  most use cases, you will likely want the FX one.
+
+Remarks
+-------
+
+This project is not the work of Cockos, Inc; however, it is based on several free and open source components from the WDL. Originally, this project was based on jsusfx by Pascal Gauthier, which was then rewritten by jpcima.
+
+Some time after the realization of this project, Cockos announced the release of JSFX as open source under the LGPL. This does not affect the development of this project, which remains a custom implementation based on the liberally licensed bits of the WDL.
+
+Unfortunately, the original maintainer (jpcima) seems to have disappeared, so I (Joep Vanlier) have decided to fork the project to update it with some more recent JSFX features and bugfixes.
+
+License
+-------
+
+Note that this distribution of the plugin is licensed under aGPLv3. You can find the source code that produced these binaries here: https://github.com/joepvanlier/ysfx
