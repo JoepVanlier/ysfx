@@ -39,15 +39,21 @@ if(YSFX_PLUGIN_VST3_SDK_PATH)
     juce_set_vst3_sdk_path("${YSFX_PLUGIN_VST3_SDK_PATH}")
 endif()
 
+add_subdirectory(thirdparty/clap-juce-extensions EXCLUDE_FROM_ALL)
+
 function(add_new_target target_name is_synth)
     if(${is_synth})
         set(SUFFIX "")
         set(CODE_END "y")
+        set(CLAP_SUFFIX "")
         set(CATEGORY "Instrument")
+        set(CLAP_TYPE "instrument")
     else()
         set(SUFFIX " FX")
         set(CODE_END "z")
+        set(CLAP_SUFFIX "-fx")
         set(CATEGORY "Fx")
+        set(CLAP_TYPE "audio-effect")
     endif()
 
     juce_add_plugin("${target_name}"
@@ -125,17 +131,17 @@ function(add_new_target target_name is_synth)
     if(YSFX_PLUGIN_FORCE_DEBUG)
         target_compile_definitions("${target_name}" PRIVATE "JUCE_FORCE_DEBUG=1")
     endif()
+
+    clap_juce_extensions_plugin(
+        TARGET "${target_name}"
+        PLUGIN_NAME "ysfx-s${SUFFIX}"
+        CLAP_ID "org.saike.ysfx-s${CLAP_SUFFIX}"
+        CLAP_FEATURES "${CLAP_TYPE}"
+        CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 64
+        CLAP_USE_JUCE_PARAMETER_RANGES DISCRETE
+        MANUFACTURER_NAME "Sai'ke"
+        MANUFACTURER_CODE S4IK)
 endfunction()
 
 add_new_target(ysfx_plugin_instrument TRUE)
 add_new_target(ysfx_plugin FALSE)
-
-add_subdirectory(thirdparty/clap-juce-extensions EXCLUDE_FROM_ALL)
-
-clap_juce_extensions_plugin(
-    TARGET ysfx_plugin
-    CLAP_ID "org.saike.${target}"
-    CLAP_FEATURES instrument audio-effect
-    CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 64
-    CLAP_USE_JUCE_PARAMETER_RANGES DISCRETE
-)
