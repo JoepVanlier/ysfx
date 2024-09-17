@@ -43,7 +43,7 @@ add_subdirectory(thirdparty/clap-juce-extensions EXCLUDE_FROM_ALL)
 
 function(add_new_target target_name is_synth)
     if(${is_synth})
-        set(SUFFIX "")
+        set(SUFFIX " instrument")
         set(CODE_END "y")
         set(CLAP_SUFFIX "")
         set(CATEGORY "Instrument")
