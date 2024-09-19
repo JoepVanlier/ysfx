@@ -105,6 +105,7 @@ TEST_CASE("slider manipulation", "[sliders]")
             "slider_show(slider5,1);" "\n"
             "slider_show(slider6,-1);" "\n"
             "slider_show(slider254,1);" "\n"
+            "slider_show(8,1);" "\n"
             "slider_show(slider255,-1);" "\n";
 
         scoped_new_dir dir_fx("${root}/Effects");
@@ -136,6 +137,7 @@ TEST_CASE("slider manipulation", "[sliders]")
         REQUIRE(!slider_is_visible(3));
         REQUIRE(!slider_is_visible(4));
         REQUIRE(!slider_is_visible(5));
+        REQUIRE(!slider_is_visible(7));
 
         visible = ysfx_get_slider_visibility(fx.get(), 3);
         REQUIRE(!slider_is_visible(253));
@@ -150,6 +152,7 @@ TEST_CASE("slider manipulation", "[sliders]")
         REQUIRE(!slider_is_visible(3));
         REQUIRE(slider_is_visible(4));
         REQUIRE(slider_is_visible(5));
+        REQUIRE(!slider_is_visible(7));
 
         visible = ysfx_get_slider_visibility(fx.get(), 3);
         REQUIRE(slider_is_visible(253));

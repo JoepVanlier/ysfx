@@ -131,31 +131,34 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_slider_show(void *opaque, EEL_F *mask_or_s
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
-    uint8_t group;
-    uint64_t mask;
-    if (slider < ysfx_max_sliders) {
-        group = ysfx_fetch_slider_group_index(slider);
-        mask = ysfx_slider_mask(slider, group);
-    } else {
-        group = 0;
-        mask = ysfx_eel_round<uint64_t>(std::fabs(*mask_or_slider_));
+    if (ysfx_slider_exists(fx, slider)) {
+        uint8_t group;
+        uint64_t mask;
+        if (slider < ysfx_max_sliders) {
+            group = ysfx_fetch_slider_group_index(slider);
+            mask = ysfx_slider_mask(slider, group);
+        } else {
+            group = 0;
+            mask = ysfx_eel_round<uint64_t>(std::fabs(*mask_or_slider_));
+        }
+
+        if (*value_ >= (EEL_F)+0.5) {
+            // show
+            fx->slider.visible_mask[group] |= mask;
+        }
+        else if (*value_ >= (EEL_F)-0.5) {
+            // hide
+            mask = ~mask;
+            fx->slider.visible_mask[group] &= mask;
+        }
+        else {
+            // toggle
+            mask = fx->slider.visible_mask[group].fetch_xor(mask) ^ mask;
+        }
+        return (EEL_F)mask;
     }
 
-    if (*value_ >= (EEL_F)+0.5) {
-        // show
-        fx->slider.visible_mask[group] |= mask;
-    }
-    else if (*value_ >= (EEL_F)-0.5) {
-        // hide
-        mask = ~mask;
-        fx->slider.visible_mask[group] &= mask;
-    }
-    else {
-        // toggle
-        mask = fx->slider.visible_mask[group].fetch_xor(mask) ^ mask;
-    }
-
-    return (EEL_F)mask;
+    return (EEL_F)0;
 }
 
 static EEL_F NSEEL_CGEN_CALL ysfx_api_midisend(void *opaque, INT_PTR np, EEL_F **parms)
