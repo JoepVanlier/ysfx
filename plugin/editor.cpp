@@ -44,6 +44,8 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
     std::unique_ptr<juce::PopupMenu> m_recentFilesPopup;
+    std::unique_ptr<juce::PopupMenu> m_recentFilesOptsPopup;
+    std::unique_ptr<juce::PopupMenu> m_recentFilesOptsSubmenuPopup;
     std::unique_ptr<juce::PopupMenu> m_presetsPopup;
     std::unique_ptr<juce::PopupMenu> m_presetsOptsPopup;
     std::unique_ptr<juce::PropertiesFile> m_pluginProperties;
@@ -59,6 +61,7 @@ struct YsfxEditor::Impl {
     void chooseFileAndLoad();
     void loadFile(const juce::File &file);
     void popupRecentFiles();
+    void popupRecentOpts();
     void popupPresets();
     void popupPresetOptions();
     void switchEditor(bool showGfx);
@@ -86,6 +89,7 @@ struct YsfxEditor::Impl {
     //==========================================================================
     std::unique_ptr<juce::TextButton> m_btnLoadFile;
     std::unique_ptr<juce::TextButton> m_btnRecentFiles;
+    std::unique_ptr<juce::TextButton> m_btnRecentFilesOpts;
     std::unique_ptr<juce::TextButton> m_btnEditCode;
     std::unique_ptr<juce::TextButton> m_btnLoadPreset;
     std::unique_ptr<juce::TextButton> m_btnPresetOpts;
@@ -516,10 +520,6 @@ void YsfxEditor::Impl::loadFile(const juce::File &file)
 void YsfxEditor::Impl::popupRecentFiles()
 {
     m_recentFilesPopup.reset(new juce::PopupMenu);
-
-    m_recentFilesPopup->addItem(1000, TRANS("Clear items"));
-    m_recentFilesPopup->addSeparator();
-
     juce::RecentlyOpenedFilesList recent = loadRecentFiles();
     recent.createPopupMenuItems(*m_recentFilesPopup, 100, false, true);
 
@@ -530,9 +530,7 @@ void YsfxEditor::Impl::popupRecentFiles()
         .withTargetComponent(*m_btnRecentFiles);
     
     m_recentFilesPopup->showMenuAsync(popupOptions, [this, recent](int index) {
-        if (index == 1000)
-            clearRecentFiles();
-        else if (index != 0) {
+        if (index != 0) {
             juce::File selectedFile = recent.getFile(index - 100);
             _quickAlertBox(
                 ysfx_is_compiled(m_info->effect.get()),
@@ -541,6 +539,34 @@ void YsfxEditor::Impl::popupRecentFiles()
                     loadFile(selectedFile);
                 }
             );
+        }
+    });
+}
+
+void YsfxEditor::Impl::popupRecentOpts()
+{
+    m_recentFilesOptsPopup.reset(new juce::PopupMenu);
+    m_recentFilesOptsSubmenuPopup.reset(new juce::PopupMenu);
+
+    juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
+        .withTargetComponent(*m_btnRecentFilesOpts);
+
+    juce::RecentlyOpenedFilesList recent = loadRecentFiles();
+    recent.createPopupMenuItems(*m_recentFilesOptsSubmenuPopup, 100, false, true);
+
+    m_recentFilesOptsPopup->addItem(1000, TRANS("Clear all items"), true, false);
+    m_recentFilesOptsPopup->addSeparator();
+    YsfxInfo::Ptr info = m_info;
+    m_recentFilesOptsPopup->addSubMenu("Remove from recent", *m_recentFilesOptsSubmenuPopup, true);
+    
+    m_recentFilesOptsPopup->showMenuAsync(popupOptions, [this](int index) {
+        if (index == 1000) {
+            clearRecentFiles();
+        } else if (index != 0) {
+            juce::RecentlyOpenedFilesList recent = loadRecentFiles();
+            juce::File file = recent.getFile(index - 100);
+            recent.removeFile(file);
+            saveRecentFiles(recent);
         }
     });
 }
@@ -778,6 +804,8 @@ void YsfxEditor::Impl::createUI()
     m_self->addAndMakeVisible(*m_btnLoadPreset);
     m_btnPresetOpts.reset(new juce::TextButton(TRANS(juce::CharPointer_UTF8("\xe2\x96\xBC"))));
     m_self->addAndMakeVisible(*m_btnPresetOpts);
+    m_btnRecentFilesOpts.reset(new juce::TextButton(TRANS(juce::CharPointer_UTF8("\xe2\x96\xBC"))));
+    m_self->addAndMakeVisible(*m_btnRecentFilesOpts);
     m_btnSwitchEditor.reset(new juce::TextButton(TRANS("Sliders")));
     m_btnSwitchEditor->setClickingTogglesState(true);
     m_self->addAndMakeVisible(*m_btnSwitchEditor);
@@ -819,6 +847,7 @@ void YsfxEditor::Impl::connectUI()
 {
     m_btnLoadFile->onClick = [this]() { chooseFileAndLoad(); };
     m_btnRecentFiles->onClick = [this]() { popupRecentFiles(); };
+    m_btnRecentFilesOpts->onClick = [this]() { popupRecentOpts(); };
     m_btnSwitchEditor->onClick = [this]() { switchEditor(m_btnSwitchEditor->getToggleState()); };
     m_btnEditCode->onClick = [this]() { openCodeEditor(); };
     m_btnLoadPreset->onClick = [this]() { popupPresets(); };
@@ -953,6 +982,7 @@ void YsfxEditor::Impl::relayoutUI()
     m_btnLoadFile->setBounds(temp.removeFromLeft(width));
     temp.removeFromLeft(spacing);
     m_btnRecentFiles->setBounds(temp.removeFromLeft(width));
+    m_btnRecentFilesOpts->setBounds(temp.removeFromLeft(25));
     temp.removeFromLeft(spacing);
 
     int buttonWidth = width + spacing + std::min(0, ioWidth);
