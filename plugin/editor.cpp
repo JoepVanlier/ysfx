@@ -1024,20 +1024,20 @@ void YsfxEditor::Impl::relayoutUI()
             m_topViewPort->setVisible(false);
         }
 
-        m_centerViewPort->setBounds(gfxArea);
         viewed = m_graphicsView.get();
         viewed->setSize(gfxArea.getWidth(), gfxArea.getHeight());
+        m_centerViewPort->setViewedComponent(viewed, false);
+        m_centerViewPort->setBounds(gfxArea);
     } else {
         m_divider->setVisible(false);
-        m_centerViewPort->setBounds(centerArea);
         m_topViewPort->setViewedComponent(nullptr, false);
         m_topViewPort->setVisible(false);
         // Choose whether we only want the "visible" sliders or all of them
         viewed = m_btnSwitchEditor->getToggleState() ? m_miniParametersPanel.get() : m_parametersPanel.get();
         viewed->setSize(centerArea.getWidth(), m_parametersPanel->getRecommendedHeight(centerArea.getHeight()));
+        m_centerViewPort->setViewedComponent(viewed, false);
+        m_centerViewPort->setBounds(centerArea);
     }
-
-    m_centerViewPort->setViewedComponent(viewed, false);
 
     if (m_relayoutTimer)
         m_relayoutTimer->stopTimer();
