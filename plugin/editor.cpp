@@ -231,6 +231,36 @@ YsfxEditor::~YsfxEditor()
     }
 }
 
+//------------------------------------------------------------------------------
+bool YsfxEditor::isInterestedInFileDrag(const juce::StringArray &files)
+{
+    (void)files;
+
+    YsfxInfo::Ptr info = m_impl->m_info;
+    ysfx_t *fx = info->effect.get();
+
+    return !ysfx_is_compiled(fx);
+}
+
+void YsfxEditor::filesDropped(const juce::StringArray &files, int x, int y)
+{
+    (void)x;
+    (void)y;
+    
+    // We only allow jsfx drops if no JSFX was loaded.
+    YsfxInfo::Ptr info = m_impl->m_info;
+    ysfx_t *fx = info->effect.get();
+
+    if (!ysfx_is_compiled(fx)) {
+        if (files.size() == 1) {
+            juce::File file{files[0]};
+            if (file.existsAsFile()) {
+                m_impl->loadFile(files[0]);
+            }   
+        }
+    }
+}
+
 void YsfxEditor::resized()
 {
     m_impl->relayoutUILater();

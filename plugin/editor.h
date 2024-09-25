@@ -20,7 +20,7 @@
 #include <memory>
 class YsfxProcessor;
 
-class YsfxEditor : public juce::AudioProcessorEditor {
+class YsfxEditor : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget {
 public:
     explicit YsfxEditor(YsfxProcessor &proc);
     ~YsfxEditor() override;
@@ -28,6 +28,8 @@ public:
 protected:
     void resized() override;
     void paint (juce::Graphics& g) override;
+    bool isInterestedInFileDrag(const juce::StringArray &files) override;
+    void filesDropped(const juce::StringArray &files, int x, int y) override;
 
 private:
     void readTheme();
