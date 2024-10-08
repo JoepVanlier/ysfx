@@ -1851,21 +1851,42 @@ void ysfx_gfx_update_mouse(ysfx_t *fx, uint32_t mods, int32_t xpos, int32_t ypos
     *fx->var.mouse_wheel += 512 * wheel;
     *fx->var.mouse_hwheel += 512 * hwheel;
 
+    /*  
+        1: lmb
+        2: rmb
+        4: Control (Windows) or Command (macOS) key
+        8: Shift key
+        16: Alt (Windows) or Option (macOS) key
+        32: Windows (Windows) or Control (macOS) key
+        64: middle mouse button
+    */
+
     uint32_t mouse_cap = 0;
-    if (mods & ysfx_mod_shift)
-        mouse_cap |= 8;
-    if (mods & ysfx_mod_ctrl)
-        mouse_cap |= 4;
-    if (mods & ysfx_mod_alt)
-        mouse_cap |= 16;
-    if (mods & ysfx_mod_super)
-        mouse_cap |= 32;
     if (buttons & ysfx_button_left)
         mouse_cap |= 1;
-    if (buttons & ysfx_button_middle)
-        mouse_cap |= 64;
     if (buttons & ysfx_button_right)
         mouse_cap |= 2;
+    if (buttons & ysfx_button_middle)
+        mouse_cap |= 64;
+    
+    if (mouse_cap) {  
+        if (mods & ysfx_mod_shift)
+            mouse_cap |= 8;
+        if (mods & ysfx_mod_alt)
+            mouse_cap |= 16;
+    
+#ifdef __APPLE__
+        if (mods & ysfx_mod_ctrl)
+            mouse_cap |= 32;
+        if (mods & ysfx_mod_super)
+            mouse_cap |= 4;
+#else
+        // Windows key is currently unavailable
+        if (mods & ysfx_mod_ctrl)
+            mouse_cap |= 4;
+#endif
+    }
+    
     *fx->var.mouse_cap = (EEL_F)mouse_cap;
 
 #else
