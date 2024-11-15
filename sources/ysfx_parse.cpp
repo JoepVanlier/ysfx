@@ -19,6 +19,21 @@
 #include "ysfx_utils.hpp"
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
+
+ysfx_section_t* new_or_append(ysfx_section_u &section, uint32_t line_no)
+{
+    if (!section) {
+        section.reset(new ysfx_section_t);
+        section->line_offset = line_no + 1;
+    } else {
+        // We insert blank lines to ensure that the line numbers provided will be correct
+        std::string::difference_type num_lines = std::count(section->text.begin(), section->text.end(), '\n');
+        section->text.append(line_no - section->line_offset - num_lines + 1, '\n');
+    }
+
+    return section.get();
+}
 
 bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, ysfx_parse_error *error)
 {
@@ -39,20 +54,18 @@ bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, y
             // a new section starts
             ysfx::string_list tokens = ysfx::split_strings_noempty(linep, &ysfx::ascii_isspace);
 
-            current = new ysfx_section_t;
-
             if (tokens[0] == "@init")
-                toplevel.init.reset(current);
+                current = new_or_append(toplevel.init, lineno);
             else if (tokens[0] == "@slider")
-                toplevel.slider.reset(current);
+                current = new_or_append(toplevel.slider, lineno);
             else if (tokens[0] == "@block")
-                toplevel.block.reset(current);
+                current = new_or_append(toplevel.block, lineno);
             else if (tokens[0] == "@sample")
-                toplevel.sample.reset(current);
+                current = new_or_append(toplevel.sample, lineno);
             else if (tokens[0] == "@serialize")
-                toplevel.serialize.reset(current);
+                current = new_or_append(toplevel.serialize, lineno);
             else if (tokens[0] == "@gfx") {
-                toplevel.gfx.reset(current);
+                current = new_or_append(toplevel.gfx, lineno);
                 long gfx_w = 0;
                 long gfx_h = 0;
                 if (tokens.size() > 1)
@@ -63,14 +76,12 @@ bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, y
                 toplevel.gfx_h = (gfx_h > 0) ? (uint32_t)gfx_h : 0;
             }
             else {
-                delete current;
                 if (error) {
                     error->line = lineno;
                     error->message = std::string("Invalid section: ") + line;
                 }
                 return false;
             }
-            current->line_offset = lineno + 1;
         }
         else {
             current->text.append(line);

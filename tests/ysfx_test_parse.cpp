@@ -254,6 +254,48 @@ TEST_CASE("section splitting", "[parse]")
         REQUIRE(toplevel.gfx_w == 0);
         REQUIRE(toplevel.gfx_h == 0);
     }
+
+    SECTION("sections more init")
+    {
+        const char *text =
+            "// the header" "\n"
+            "@init" "\n"
+            "the init" "\n"
+            "@slider" "\n"
+            "the slider, part 1" "\n"
+            "the slider, part 2" "\n"
+            "@block" "\n"
+            "the block" "\n"
+            "@init" "\n"
+            "more init!" "\n"
+            "@block" "\n"
+            "more block" "\n"
+            "@init" "\n"
+            "more?" "\n";
+        ysfx::string_text_reader reader(text);
+
+        ysfx_parse_error err;
+        ysfx_toplevel_t toplevel;
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(!err);
+
+        REQUIRE(toplevel.header);
+        REQUIRE(toplevel.init);
+        REQUIRE(toplevel.slider);
+        REQUIRE(toplevel.block);
+        REQUIRE(!toplevel.sample);
+        REQUIRE(!toplevel.serialize);
+        REQUIRE(!toplevel.gfx);
+
+        REQUIRE(toplevel.header->line_offset == 0);
+        REQUIRE(toplevel.header->text == "// the header" "\n");
+        REQUIRE(toplevel.init->line_offset == 2);
+        REQUIRE(toplevel.init->text == "the init" "\n" "\n" "\n" "\n" "\n" "\n" "\n" "more init!" "\n" "\n" "\n" "\n" "more?" "\n");
+        REQUIRE(toplevel.slider->line_offset == 4);
+        REQUIRE(toplevel.slider->text == "the slider, part 1" "\n" "the slider, part 2" "\n");
+        REQUIRE(toplevel.block->line_offset == 7);
+        REQUIRE(toplevel.block->text == "the block" "\n" "\n" "\n" "\n" "more block" "\n");
+    }
 }
 
 //------------------------------------------------------------------------------
