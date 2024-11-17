@@ -1,4 +1,4 @@
-// Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,24 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#pragma once
 #include "ysfx.h"
-#include <juce_core/juce_core.h>
-#include <memory>
 
-struct YsfxCurrentPresetInfo : public std::enable_shared_from_this<YsfxCurrentPresetInfo> {
-    juce::String m_lastChosenPreset{""};
-    using Ptr = std::shared_ptr<YsfxCurrentPresetInfo>;
-};
-
-struct YsfxInfo : public std::enable_shared_from_this<YsfxInfo> {
-    ysfx_u effect;
-    juce::Time timeStamp;
-    juce::StringArray errors;
-    juce::StringArray warnings;
-    juce::String m_name;
-
-    using Ptr = std::shared_ptr<YsfxInfo>;
-};
-
-juce::File getCustomBankLocation(ysfx_t *fx);
+bool save_bank(const char *path, ysfx_bank_t* bank);
+ysfx_bank_t* load_bank(const char *path);

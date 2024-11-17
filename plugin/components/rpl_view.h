@@ -1,4 +1,4 @@
-// Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,22 +17,21 @@
 
 #pragma once
 #include "ysfx.h"
-#include <juce_core/juce_core.h>
-#include <memory>
+#include <juce_gui_basics/juce_gui_basics.h>
 
-struct YsfxCurrentPresetInfo : public std::enable_shared_from_this<YsfxCurrentPresetInfo> {
-    juce::String m_lastChosenPreset{""};
-    using Ptr = std::shared_ptr<YsfxCurrentPresetInfo>;
+class YsfxRPLView : public juce::Component {
+public:
+    YsfxRPLView();
+    ~YsfxRPLView() override;
+    void setEffect(ysfx_t *fx);
+    void setBankUpdateCallback(std::function<void(void)> callback);
+
+    void focusOnPresetViewer();
+
+protected:
+    void resized() override;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
 };
-
-struct YsfxInfo : public std::enable_shared_from_this<YsfxInfo> {
-    ysfx_u effect;
-    juce::Time timeStamp;
-    juce::StringArray errors;
-    juce::StringArray warnings;
-    juce::String m_name;
-
-    using Ptr = std::shared_ptr<YsfxInfo>;
-};
-
-juce::File getCustomBankLocation(ysfx_t *fx);

@@ -23,6 +23,7 @@
 #include "utility/rt_semaphore.h"
 #include "utility/sync_bitset.hpp"
 #include "ysfx.h"
+#include "bank_io.h"
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -245,17 +246,6 @@ void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, ui
     }
 }
 
-static juce::File getCustomBankLocation(ysfx_t *fx) {
-    std::string pathString{ysfx_get_bank_path(fx)};
-    if (pathString.empty()) {
-        // No bank exists yet
-        pathString = std::string{ysfx_get_file_path(fx)} + ".rpl";
-    }
-    juce::File customBankPath{pathString};
-    customBankPath = juce::File(customBankPath.getParentDirectory().getFullPathName()).getChildFile(customBankPath.getFileNameWithoutExtension() + "-ysfx.rpl");
-    return customBankPath;
-}
-
 bool YsfxProcessor::presetExists(const char* presetName)
 {
     auto sourceBank = m_impl->m_bank;
@@ -268,7 +258,16 @@ void backupPresetFile(juce::File bankLocation)
     bankLocation.copyFileTo(bankCopy);
 }
 
-void YsfxProcessor::saveCurrentPreset(const char* preset_name)
+void YsfxProcessor::reloadBank()
+{
+    if (!m_impl->m_info)
+        return;
+
+    ysfx_bank_shared bank = m_impl->loadDefaultBank(m_impl->m_info);
+    loadJsfxPreset(m_impl->m_info, bank, false, false, true);
+}
+
+void YsfxProcessor::savePreset(const char* preset_name, ysfx_state_t* preset, bool load)
 {
     ysfx_t *fx = m_impl->m_fx.get();
     if (!fx) return;
@@ -282,13 +281,21 @@ void YsfxProcessor::saveCurrentPreset(const char* preset_name)
     ysfx_bank_shared newBank;
     if (!bank) {
         ysfx_bank_u emptyBank{ysfx_create_empty_bank(m_impl->m_info->m_name.toUTF8())};
-        newBank = make_ysfx_bank_shared(ysfx_add_preset_to_bank(emptyBank.get(), preset_name, ysfx_save_state(fx)));
+        newBank = make_ysfx_bank_shared(ysfx_add_preset_to_bank(emptyBank.get(), preset_name, preset));
     } else {
-        newBank = make_ysfx_bank_shared(ysfx_add_preset_to_bank(bank.get(), preset_name, ysfx_save_state(fx)));
+        newBank = make_ysfx_bank_shared(ysfx_add_preset_to_bank(bank.get(), preset_name, preset));
     }
 
-    ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
-    loadJsfxPreset(m_impl->m_info, newBank, ysfx_preset_exists(newBank.get(), preset_name) - 1, true, true);
+    save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
+    loadJsfxPreset(m_impl->m_info, newBank, ysfx_preset_exists(newBank.get(), preset_name) - 1, load, true);
+}
+
+void YsfxProcessor::saveCurrentPreset(const char* preset_name)
+{
+    ysfx_t *fx = m_impl->m_fx.get();
+    if (!fx) return;
+
+    savePreset(preset_name, ysfx_save_state(fx), true);
 }
 
 void YsfxProcessor::renameCurrentPreset(const char* new_preset_name)
@@ -307,7 +314,7 @@ void YsfxProcessor::renameCurrentPreset(const char* new_preset_name)
     if (currentPreset.isEmpty()) return;
 
     ysfx_bank_shared newBank = make_ysfx_bank_shared(ysfx_rename_preset_from_bank(bank.get(), currentPreset.toStdString().c_str(), new_preset_name));
-    ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
+    save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
     loadJsfxPreset(m_impl->m_info, newBank, ysfx_preset_exists(newBank.get(), new_preset_name) - 1, true, true);
 }
 
@@ -327,7 +334,7 @@ void YsfxProcessor::deleteCurrentPreset()
     if (currentPreset.isEmpty()) return;
 
     ysfx_bank_shared newBank = make_ysfx_bank_shared(ysfx_delete_preset_from_bank(bank.get(), currentPreset.toStdString().c_str()));
-    ysfx_save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
+    save_bank(bankLocation.getFullPathName().toStdString().c_str(), newBank.get());
     loadJsfxPreset(m_impl->m_info, newBank, 0, false, true);
 }
 
@@ -792,9 +799,9 @@ ysfx_bank_shared YsfxProcessor::Impl::loadDefaultBank(YsfxInfo::Ptr info)
 
     ysfx_bank_shared bank;
     if (customBankPath.existsAsFile()) {
-        bank = make_ysfx_bank_shared(ysfx_load_bank(customBankPath.getFullPathName().toStdString().c_str()));
+        bank = make_ysfx_bank_shared(load_bank(customBankPath.getFullPathName().toStdString().c_str()));
     } else {
-        bank = make_ysfx_bank_shared(ysfx_load_bank(bankpath));
+        bank = make_ysfx_bank_shared(load_bank(bankpath));
     }
 
     return bank;

@@ -34,6 +34,8 @@ public:
     void loadJsfxFile(const juce::String &filePath, ysfx_state_t *initialState, bool async);
     void loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, uint32_t index, bool load, bool async);
     bool presetExists(const char *preset_name);
+    void reloadBank();
+    void savePreset(const char* preset_name, ysfx_state_t *preset, bool load);
     void saveCurrentPreset(const char* preset_name);
     void renameCurrentPreset(const char *new_preset_name);
     void deleteCurrentPreset();

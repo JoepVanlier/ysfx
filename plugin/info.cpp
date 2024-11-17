@@ -16,3 +16,20 @@
 //
 
 #include "info.h"
+
+juce::File getCustomBankLocation(ysfx_t *fx) {
+    std::string pathString{ysfx_get_bank_path(fx)};
+    if (pathString.empty()) {
+        // No bank exists yet
+        pathString = std::string{ysfx_get_file_path(fx)};
+        if (pathString.empty()) {
+            // Invalid JSFX
+            return juce::File{};
+        } else {
+            pathString += ".rpl";
+        }
+    }
+    juce::File customBankPath{pathString};
+    customBankPath = juce::File(customBankPath.getParentDirectory().getFullPathName()).getChildFile(customBankPath.getFileNameWithoutExtension() + "-ysfx.rpl");
+    return customBankPath;
+}

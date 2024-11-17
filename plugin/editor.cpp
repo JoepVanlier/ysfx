@@ -26,6 +26,7 @@
 #include "components/parameters_panel.h"
 #include "components/graphics_view.h"
 #include "components/ide_view.h"
+#include "components/rpl_view.h"
 #include "components/searchable_popup.h"
 #include "components/modal_textinputbox.h"
 #include "components/divider.h"
@@ -66,6 +67,7 @@ struct YsfxEditor::Impl {
     void popupPresetOptions();
     void switchEditor(bool showGfx);
     void openCodeEditor();
+    void openPresetWindow();
     static juce::File getAppDataDirectory();
     static juce::File getDefaultEffectsDirectory();
     juce::RecentlyOpenedFilesList loadRecentFiles();
@@ -78,7 +80,7 @@ struct YsfxEditor::Impl {
     juce::String getJsfxName();
 
     //==========================================================================
-    class CodeWindow : public juce::DocumentWindow {
+    class SubWindow : public juce::DocumentWindow {
     public:
         using juce::DocumentWindow::DocumentWindow;
 
@@ -106,7 +108,9 @@ struct YsfxEditor::Impl {
     std::unique_ptr<YsfxParametersPanel> m_miniParametersPanel;
     std::unique_ptr<YsfxGraphicsView> m_graphicsView;
     std::unique_ptr<YsfxIDEView> m_ideView;
-    std::unique_ptr<CodeWindow> m_codeWindow;
+    std::unique_ptr<SubWindow> m_codeWindow;
+    std::unique_ptr<YsfxRPLView> m_rplView;
+    std::unique_ptr<SubWindow> m_presetWindow;
     std::unique_ptr<juce::TooltipWindow> m_tooltipWindow;
 
     //==========================================================================
@@ -391,6 +395,13 @@ void YsfxEditor::Impl::updateInfo()
     else
         m_ideView->setStatusText(TRANS("Compiled OK"));
 
+    m_rplView->setEffect(fx);
+    m_rplView->setBankUpdateCallback(
+        [this](void){
+            m_proc->reloadBank();
+        }
+    );
+
     // We always just want the sliders the user meant to expose
     switchEditor(true);
 
@@ -614,6 +625,8 @@ void YsfxEditor::Impl::popupPresetOptions()
         m_presetsOptsPopup->addItem(2, "Rename preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
         m_presetsOptsPopup->addSeparator();
         m_presetsOptsPopup->addItem(3, "Delete preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
+        m_presetsOptsPopup->addSeparator();
+        m_presetsOptsPopup->addItem(4, "Preset manager", true, false);
     }
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
@@ -684,6 +697,8 @@ void YsfxEditor::Impl::popupPresetOptions()
                             }
                     );
                     break;
+                case 4:
+                    this->openPresetWindow();
                 default:
                     break;
             }
@@ -730,7 +745,7 @@ void YsfxEditor::Impl::switchEditor(bool showGfx)
 void YsfxEditor::Impl::openCodeEditor()
 {
     if (!m_codeWindow) {
-        m_codeWindow.reset(new CodeWindow(TRANS("Edit"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
+        m_codeWindow.reset(new SubWindow(TRANS("Edit"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
         m_codeWindow->setResizable(true, false);
         m_codeWindow->setContentNonOwned(m_ideView.get(), true);
     }
@@ -738,6 +753,18 @@ void YsfxEditor::Impl::openCodeEditor()
     m_codeWindow->setVisible(true);
     m_codeWindow->toFront(true);
     m_ideView->focusOnCodeEditor();
+}
+
+void YsfxEditor::Impl::openPresetWindow()
+{
+    if (!m_presetWindow) {
+        m_presetWindow.reset(new SubWindow(TRANS("Preset Manager"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
+        m_presetWindow->setResizable(true, false);
+        m_presetWindow->setContentNonOwned(m_rplView.get(), true);
+    }
+
+    m_presetWindow->setVisible(true);
+    m_presetWindow->toFront(true);
 }
 
 juce::RecentlyOpenedFilesList YsfxEditor::Impl::loadRecentFiles()
@@ -864,6 +891,9 @@ void YsfxEditor::Impl::createUI()
     m_ideView.reset(new YsfxIDEView);
     m_ideView->setSize(1000, 600);
     m_tooltipWindow.reset(new juce::TooltipWindow);
+
+    m_rplView.reset(new YsfxRPLView);
+    m_rplView->setSize(1000, 600);
 }
 
 void YsfxEditor::Impl::setScale(float newScaling)
