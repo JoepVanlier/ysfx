@@ -412,7 +412,7 @@ void YsfxEditor::Impl::updateInfo()
     relayoutUILater();
 }
 
-void _quickAlertBox(bool confirmationRequired, std::function<void()> callbackOnSuccess)
+void _quickAlertBox(bool confirmationRequired, std::function<void()> callbackOnSuccess, juce::Component* parent)
 {
     if (confirmationRequired) {
         juce::AlertWindow::showAsync(
@@ -421,6 +421,7 @@ void _quickAlertBox(bool confirmationRequired, std::function<void()> callbackOnS
                 .withMessage("Are you certain you want to (re)load the plugin?\n\nNote that you will lose your current preset.")
                 .withButton("Yes")
                 .withButton("No")
+                .withParentComponent(parent)
                 .withIconType(juce::MessageBoxIconType::NoIcon),
             [callbackOnSuccess](int result){
                 if (result == 1) callbackOnSuccess();
@@ -473,7 +474,8 @@ void YsfxEditor::Impl::chooseFileAndLoad()
                     [this, normalLoad, result]() {
                         if (normalLoad) saveScaling();
                         loadFile(result);
-                    }
+                    },
+                    this->m_self
                 );
             }
             m_fileChooserActive = false;
@@ -578,7 +580,8 @@ void YsfxEditor::Impl::popupRecentFiles()
                 [this, selectedFile]() {
                     saveScaling();
                     loadFile(selectedFile);
-                }
+                },
+                this->m_self
             );
         }
     });
@@ -651,6 +654,7 @@ void YsfxEditor::Impl::popupPresetOptions()
                                             .withMessage("Preset with that name already exists.\nAre you sure you want to overwrite the preset?")
                                             .withButton("Yes")
                                             .withButton("No")
+                                            .withParentComponent(this->m_self)
                                             .withIconType(juce::MessageBoxIconType::NoIcon),
                                         [this, preset](int result){
                                             if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
@@ -691,6 +695,7 @@ void YsfxEditor::Impl::popupPresetOptions()
                             .withMessage("Are you sure you want to delete the preset named " + m_currentPresetInfo->m_lastChosenPreset + "?")
                             .withButton("Yes")
                             .withButton("No")
+                            .withParentComponent(this->m_self)
                             .withIconType(juce::MessageBoxIconType::NoIcon),
                             [this](int result) {
                                 if (result == 1) m_proc->deleteCurrentPreset();
@@ -921,7 +926,8 @@ void YsfxEditor::Impl::connectUI()
             [this, file]() {
                 resetScaling(file);
                 loadFile(file);
-            }
+            },
+            this->m_self
         );
     };
     m_btnGfxScaling->onClick = [this] {
