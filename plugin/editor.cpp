@@ -1084,7 +1084,7 @@ void YsfxEditor::Impl::relayoutUI()
             m_topViewPort->setViewedComponent(viewed, false);
             m_topViewPort->setVisible(true);
             m_divider->setVisible(true);
-            m_divider->toFront(true);
+            m_divider->toFront(false);
         } else {
             m_topViewPort->setViewedComponent(nullptr, false);
             m_topViewPort->setVisible(false);
