@@ -45,7 +45,7 @@ jobs:
             artifacts: yes
           - name: macos
             display-name: macOS
-            runs-on: macos-12
+            runs-on: macos-latest
             os-type: macOS
             shell: bash
             artifacts: yes
