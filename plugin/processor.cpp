@@ -338,6 +338,37 @@ void YsfxProcessor::deleteCurrentPreset()
     loadJsfxPreset(m_impl->m_info, newBank, 0, false, true);
 }
 
+void YsfxProcessor::cyclePreset(int direction)
+{
+    if (!m_impl->m_bank) return;
+
+    // Look up current preset or default to last (since we consider it new)
+    auto currentPreset = m_impl->m_currentPresetInfo->m_lastChosenPreset;
+    auto bank = m_impl->m_bank.get();
+    auto max_preset = bank->preset_count;
+
+    if (max_preset < 1) return;
+    
+    uint32_t preset_index;
+    if (currentPreset.isEmpty()) {
+        preset_index = bank->preset_count;
+    } else {
+        preset_index = ysfx_preset_exists(bank, currentPreset.toStdString().c_str());
+        if (preset_index > 0) {
+            preset_index -= 1;
+        }
+    }
+    
+    int next_preset = static_cast<int>(preset_index) + direction;
+    if (next_preset < 0) {
+        next_preset = bank->preset_count - 1;
+    } else if (next_preset >= static_cast<int>(bank->preset_count)) {
+        next_preset = 0;
+    }
+
+    loadJsfxPreset(m_impl->m_info, m_impl->m_bank, next_preset, true, true);
+}
+
 YsfxInfo::Ptr YsfxProcessor::getCurrentInfo()
 {
     return std::atomic_load(&m_impl->m_info);

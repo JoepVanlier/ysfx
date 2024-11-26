@@ -36,6 +36,7 @@ public:
     bool presetExists(const char *preset_name);
     void reloadBank();
     void savePreset(const char* preset_name, ysfx_state_t *preset, bool load);
+    void cyclePreset(int direction);
     void saveCurrentPreset(const char* preset_name);
     void renameCurrentPreset(const char *new_preset_name);
     void deleteCurrentPreset();

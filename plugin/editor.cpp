@@ -627,9 +627,12 @@ void YsfxEditor::Impl::popupPresetOptions()
         m_presetsOptsPopup->addItem(1, "Save preset", true, false);
         m_presetsOptsPopup->addItem(2, "Rename preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
         m_presetsOptsPopup->addSeparator();
-        m_presetsOptsPopup->addItem(3, "Delete preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
+        m_presetsOptsPopup->addItem(3, "Next preset", true, false);
+        m_presetsOptsPopup->addItem(4, "Previous preset", true, false);
+        m_presetsOptsPopup->addSeparator();        
+        m_presetsOptsPopup->addItem(5, "Delete preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
         m_presetsOptsPopup->addSeparator();
-        m_presetsOptsPopup->addItem(4, "Preset manager", true, false);
+        m_presetsOptsPopup->addItem(6, "Preset manager", true, false);
     }
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
@@ -688,6 +691,12 @@ void YsfxEditor::Impl::popupPresetOptions()
                     );
                     break;
                 case 3:
+                    m_proc->cyclePreset(1);
+                    break;
+                case 4:
+                    m_proc->cyclePreset(-1);
+                    break;                    
+                case 5:
                     // Delete
                     juce::AlertWindow::showAsync(
                         juce::MessageBoxOptions()
@@ -702,8 +711,9 @@ void YsfxEditor::Impl::popupPresetOptions()
                             }
                     );
                     break;
-                case 4:
+                case 6:
                     this->openPresetWindow();
+                    break;
                 default:
                     break;
             }
