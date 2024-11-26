@@ -324,6 +324,9 @@ bool YsfxGraphicsView::keyPressed(const juce::KeyPress &key)
         inputs->m_ysfxKeys.emplace(kp.ymods, kp.ykey, true);
     }
 
+    // Pass escape through so users can close the plugin
+    if (key.getKeyCode() == key.escapeKey) return false;
+
     return true;
 }
 
