@@ -22,6 +22,7 @@
 #include "utility/functional_timer.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <algorithm>
+#include "components/modal_textinputbox.h"
 
 class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxModel, public juce::DragAndDropTarget
 {
@@ -48,8 +49,15 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
             m_dblClickCallback = dblClickCallback;
         }
 
+        void setRenameCallback(std::function<void(int)> renameCallback) {
+            m_renameCallback = renameCallback;
+        }
+
     private:
+        std::unique_ptr<juce::AlertWindow> m_editDialog;
+        std::unique_ptr<juce::PopupMenu> m_itemMenu;
         std::vector<juce::String> m_items;
+        std::function<void(int)> m_renameCallback;
         std::function<void(int)> m_dblClickCallback;
         std::function<void(std::vector<int>, juce::WeakReference<juce::Component>)> m_dropCallback;
         std::function<void(std::vector<int>)> m_deleteCallback;
@@ -129,6 +137,24 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
         {
             m_dblClickCallback(row);
         }
+
+        void listBoxItemClicked(int row, const juce::MouseEvent& evnt) override
+        {
+            if (evnt.mods.isRightButtonDown() && m_renameCallback) {
+                m_itemMenu.reset(new juce::PopupMenu);
+
+                juce::PopupMenu::Options presetOptions = juce::PopupMenu::Options{}
+                    .withTargetComponent(getComponentForRowNumber(row));
+                
+                m_itemMenu->addItem(1, "Rename");
+                
+                m_itemMenu->showMenuAsync(presetOptions, [this, row](int index) {
+                    if (index == 1) {
+                        m_renameCallback(row);
+                    }
+                });
+            }
+        }
 };
 
 class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
@@ -137,6 +163,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         juce::File m_file;
         ysfx_bank_shared m_bank;
 
+        std::unique_ptr<juce::AlertWindow> m_editDialog;
         std::unique_ptr<BankItemsListBoxModel> m_listBox;
         std::unique_ptr<juce::Label> m_label;
         std::unique_ptr<juce::TextButton> m_btnLoadFile;
@@ -255,6 +282,35 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             );
         }
 
+        void renamePreset(int row) {
+            if (!m_bank) return;
+            if (row > static_cast<int>(m_bank->preset_count)) return;
+
+            std::string currentPreset{m_bank->presets[row].name};
+            
+            m_editDialog.reset(
+                show_async_text_input(
+                    "Enter new name",
+                    "",
+                    [this, currentPreset](juce::String presetName, bool wantRename) {
+                        if (wantRename) {
+                            m_bank.reset(ysfx_rename_preset_from_bank(m_bank.get(), currentPreset.c_str(), presetName.toStdString().c_str()));
+                            this->m_listBox->deselectAllRows();
+                            save_bank(m_file.getFullPathName().toStdString().c_str(), m_bank.get());
+                            if (m_bankUpdatedCallback) m_bankUpdatedCallback();
+                        }
+                    },
+                    [this](juce::String presetName) {
+                        if (ysfx_preset_exists(m_bank.get(), presetName.toStdString().c_str())) {
+                            return juce::String("Preset with that name already exists.\nChoose a different name or click cancel.");
+                        } else {
+                            return juce::String("");
+                        }
+                    }
+                )
+            );
+        }
+
         void createUI(bool withLoad)
         {
             m_listBox.reset(new BankItemsListBoxModel());
@@ -268,6 +324,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_listBox->setOutlineThickness(1);
             m_listBox->setDropCallback([this](std::vector<int> indices, juce::WeakReference<juce::Component> ref) { this->transferPresets(indices, ref); });
             m_listBox->setDeleteCallback([this](std::vector<int> indices) { this->deletePresets(indices); });
+            m_listBox->setRenameCallback([this](int row) { this->renamePreset(row); });
             m_listBox->setDoubleClickCallback([this](int idx) { if (m_loadPresetCallback) m_loadPresetCallback(std::string{m_bank->presets[idx].name}); });
             addAndMakeVisible(*m_listBox);
             addAndMakeVisible(*m_label);
@@ -283,6 +340,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             if (m_file == juce::File{}) {
                 m_listBox->setItems({});
                 m_listBox->updateContent();
+                repaint();
                 return;
             }
 
@@ -303,9 +361,9 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 names.push_back(juce::String::fromUTF8(m_bank->presets[i].name));
             }
             m_listBox->setItems(names);
-            m_listBox->updateContent();
-
+            m_listBox->updateContent();           
             m_label->setText(m_file.getFileName() + juce::String(" (") + juce::String(bank->name) + juce::String(")"), juce::dontSendNotification);
+            repaint();
         }
 
         void setFile(juce::File file)

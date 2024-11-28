@@ -410,7 +410,7 @@ void YsfxEditor::Impl::updateInfo()
 
             auto index = ysfx_preset_exists(bank.get(), preset.c_str());
             if (index > 0) {
-                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 1), true, true);
+                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 1), PresetLoadMode::load, true);
             }
         }
     );
@@ -759,7 +759,7 @@ void YsfxEditor::Impl::popupPresets()
 
     showPopupMenuWithQuickSearch(*m_presetsPopup, quickSearchOptions, [this, info, bank](int index) {
             if ((index > 0) && (index < 32767)) {
-                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 1), true, true);
+                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 1), PresetLoadMode::load, true);
             }
         }
     );
