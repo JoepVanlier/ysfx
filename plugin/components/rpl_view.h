@@ -24,7 +24,8 @@ public:
     YsfxRPLView();
     ~YsfxRPLView() override;
     void setEffect(ysfx_t *fx);
-    void setBankUpdateCallback(std::function<void(void)> callback);
+    void setBankUpdateCallback(std::function<void(void)> bankUpdateCallback);
+    void setLoadPresetCallback(std::function<void(std::string)> loadPresetCallback);
 
     void focusOnPresetViewer();
 

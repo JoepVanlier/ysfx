@@ -401,6 +401,18 @@ void YsfxEditor::Impl::updateInfo()
             m_proc->reloadBank();
         }
     );
+    m_rplView->setLoadPresetCallback(
+        [this](std::string preset) {
+            YsfxInfo::Ptr info = m_info;
+            ysfx_bank_shared bank = m_bank;
+            if (!bank) return;
+
+            auto index = ysfx_preset_exists(bank.get(), preset.c_str());
+            if (index > 0) {
+                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 1), true, true);
+            }
+        }
+    );
 
     // We always just want the sliders the user meant to expose
     switchEditor(true);
