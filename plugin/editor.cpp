@@ -41,6 +41,7 @@ struct YsfxEditor::Impl {
     YsfxInfo::Ptr m_info;
     YsfxCurrentPresetInfo::Ptr m_currentPresetInfo;
     ysfx_bank_shared m_bank;
+    std::unique_ptr<juce::AlertWindow> m_editDialog;
     std::unique_ptr<juce::Timer> m_infoTimer;
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
@@ -656,50 +657,54 @@ void YsfxEditor::Impl::popupPresetOptions()
             switch (index) {
                 case 1:
                     // Save
-                    show_async_text_input(
-                        "Enter preset name",
-                        "",
-                        [this](juce::String presetName, bool wantSave) {
-                            std::string preset = presetName.toStdString();
-                            if (wantSave) {
-                                if (m_proc->presetExists(preset.c_str())) {
-                                    juce::AlertWindow::showAsync(
-                                        juce::MessageBoxOptions()
-                                            .withTitle("Overwrite?")
-                                            .withMessage("Preset with that name already exists.\nAre you sure you want to overwrite the preset?")
-                                            .withButton("Yes")
-                                            .withButton("No")
-                                            .withParentComponent(this->m_self)
-                                            .withIconType(juce::MessageBoxIconType::NoIcon),
-                                        [this, preset](int result){
-                                            if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
-                                        }
-                                    );
-                                } else {
-                                    m_proc->saveCurrentPreset(preset.c_str());
+                    m_editDialog.reset(
+                        show_async_text_input(
+                            "Enter preset name",
+                            "",
+                            [this](juce::String presetName, bool wantSave) {
+                                std::string preset = presetName.toStdString();
+                                if (wantSave) {
+                                    if (m_proc->presetExists(preset.c_str())) {
+                                        juce::AlertWindow::showAsync(
+                                            juce::MessageBoxOptions()
+                                                .withTitle("Overwrite?")
+                                                .withMessage("Preset with that name already exists.\nAre you sure you want to overwrite the preset?")
+                                                .withButton("Yes")
+                                                .withButton("No")
+                                                .withParentComponent(this->m_self)
+                                                .withIconType(juce::MessageBoxIconType::NoIcon),
+                                            [this, preset](int result){
+                                                if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
+                                            }
+                                        );
+                                    } else {
+                                        m_proc->saveCurrentPreset(preset.c_str());
+                                    }
                                 }
                             }
-                        }
+                        )
                     );
                     return;
                 case 2:
                     // Rename
-                    show_async_text_input(
-                        "Enter new name",
-                        "",
-                        [this](juce::String presetName, bool wantRename) {
-                            std::string preset = presetName.toStdString();
-                            if (wantRename) {
-                                m_proc->renameCurrentPreset(preset.c_str());
+                    m_editDialog.reset(
+                        show_async_text_input(
+                            "Enter new name",
+                            "",
+                            [this](juce::String presetName, bool wantRename) {
+                                std::string preset = presetName.toStdString();
+                                if (wantRename) {
+                                    m_proc->renameCurrentPreset(preset.c_str());
+                                }
+                            },
+                            [this](juce::String presetName) {
+                                if (m_proc->presetExists(presetName.toStdString().c_str())) {
+                                    return juce::String("Preset with that name already exists.\nChoose a different name or click cancel.");
+                                } else {
+                                    return juce::String("");
+                                }
                             }
-                        },
-                        [this](juce::String presetName) {
-                            if (m_proc->presetExists(presetName.toStdString().c_str())) {
-                                return juce::String("Preset with that name already exists.\nChoose a different name or click cancel.");
-                            } else {
-                                return juce::String("");
-                            }
-                        }
+                        )
                     );
                     break;
                 case 3:

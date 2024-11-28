@@ -18,7 +18,7 @@ class ExclusionFilter : public juce::TextEditor::InputFilter
 };
 
 
-static void show_async_text_input(juce::String title, juce::String message, std::function<void(juce::String, bool)> callback, std::optional<std::function<juce::String(juce::String)>> validator=std::nullopt)
+static juce::AlertWindow* show_async_text_input(juce::String title, juce::String message, std::function<void(juce::String, bool)> callback, std::optional<std::function<juce::String(juce::String)>> validator=std::nullopt)
 {
     auto* window = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
     window->addTextEditor("textField", "", "");
@@ -39,10 +39,16 @@ static void show_async_text_input(juce::String title, juce::String message, std:
                 }
             }
 
-            callback(textEditor->getText(), true); window->exitModalState(0);
+            callback(textEditor->getText(), true);
+            window->exitModalState(0);
+            window->setVisible(false);
         };
     };
-    auto finalize_cancel = [window, textEditor, callback]() { callback(textEditor->getText(), false); window->exitModalState(0); };
+    auto finalize_cancel = [window, textEditor, callback]() {
+        callback(textEditor->getText(), false);
+        window->exitModalState(0);
+        window->setVisible(false);
+    };
 
     textEditor->onReturnKey = finalize_success;
     window->addButton("Ok", 1);
@@ -51,7 +57,9 @@ static void show_async_text_input(juce::String title, juce::String message, std:
     window->getButton("Cancel")->onClick = finalize_cancel;
 
     window->setAlwaysOnTop(true);
-    window->enterModalState(true, nullptr, true);
+    window->enterModalState(true, nullptr, false);
     textEditor->setWantsKeyboardFocus(true);
     textEditor->grabKeyboardFocus();
+
+    return window;
 }
