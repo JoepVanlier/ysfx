@@ -236,7 +236,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             ysfx_bank_shared src_bank = loadedBank->getBank();
             if (!src_bank) return;
 
-            transferPresetRecursive(indices, src_bank);
+            transferPresetRecursive(indices, src_bank, false);
         }
 
         void deletePresets(std::vector<int> indices)
@@ -376,37 +376,49 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         }
 
     private:
-        void transferPresetRecursive(std::vector<int> indices, ysfx_bank_shared src_bank)
+        std::unique_ptr<juce::AlertWindow> m_confirmDialog;
+
+        void transferPresetRecursive(std::vector<int> indices, ysfx_bank_shared src_bank, bool force_accept)
         {
             uint32_t idx = indices.back();
             indices.pop_back();
 
-            auto copy_lambda = [this, indices, src_bank, idx](int result){
+            auto copy_lambda = [this, indices, src_bank, idx, force_accept](int result){
+                bool alwaysAccept = force_accept;
+                bool shouldContinue = true;
                 if (result == 1) {
                     m_bank.reset(ysfx_add_preset_to_bank(m_bank.get(), src_bank->presets[idx].name, src_bank->presets[idx].state));
+                } else if (result == 3) {
+                    // Yes to all
+                    alwaysAccept = true;
+                } else if (result == 4) {
+                    // Cancel
+                    shouldContinue = false;
                 }
 
-                if (indices.empty()) {
+                if (shouldContinue) {
+                    if (indices.empty()) {
+                        save_bank(m_file.getFullPathName().toStdString().c_str(), m_bank.get());
+                        if (m_bankUpdatedCallback) m_bankUpdatedCallback();
+                    } else {
+                        this->transferPresetRecursive(indices, src_bank, alwaysAccept);
+                    }
+                } else {
                     save_bank(m_file.getFullPathName().toStdString().c_str(), m_bank.get());
                     if (m_bankUpdatedCallback) m_bankUpdatedCallback();
-                } else {
-                    this->transferPresetRecursive(indices, src_bank);
                 }
             };
 
             if (idx < src_bank->preset_count) {
-                if (ysfx_preset_exists(m_bank.get(), src_bank->presets[idx].name)) {
+                if (ysfx_preset_exists(m_bank.get(), src_bank->presets[idx].name) && !force_accept) {
                     // Ask for overwrite
-                    juce::AlertWindow::showAsync
-                    (
-                        juce::MessageBoxOptions()
-                        .withTitle("Are you certain?")
-                        .withMessage(TRANS("Are you certain you want to overwrite the preset named ") + juce::String(src_bank->presets[idx].name) + "?")
-                        .withButton("Yes")
-                        .withButton("No")
-                        .withParentComponent(this)
-                        .withIconType(juce::MessageBoxIconType::NoIcon),
-                        copy_lambda
+                    m_confirmDialog.reset(
+                        show_overwrite_window(
+                            TRANS("Are you certain?"),
+                            TRANS("Are you certain you want to overwrite the preset named ") + juce::String(src_bank->presets[idx].name) + "?",
+                            std::vector<juce::String>{"Yes", "No", "Yes to all", "Cancel"},
+                            copy_lambda
+                        )
                     );
                 } else {
                     copy_lambda(1);  // No need to ask

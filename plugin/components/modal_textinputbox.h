@@ -63,3 +63,31 @@ static juce::AlertWindow* show_async_text_input(juce::String title, juce::String
 
     return window;
 }
+
+
+static juce::AlertWindow* show_overwrite_window(juce::String title, juce::String message, std::vector<juce::String> buttons, std::function<void(int result)> callback)
+{
+    auto* window = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
+    window->setMessage(message);
+
+    auto finalize = [callback, window](int value) {
+        window->exitModalState(value);
+        window->setVisible(false);
+        callback(value);
+    };
+
+    int result = 1;
+    for (auto label : buttons) {
+        window->addButton(label, result);
+        window->getButton(label)->onClick = [finalize, result]() { finalize(result); };
+        result++;
+    }
+
+    window->setAlwaysOnTop(true);
+    window->enterModalState(true, nullptr, false);
+    window->setWantsKeyboardFocus(true);
+    window->grabKeyboardFocus();
+    window->setEscapeKeyCancels(true);
+
+    return window;
+}
