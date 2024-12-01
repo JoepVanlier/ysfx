@@ -16,6 +16,7 @@
 //
 
 #include "bank_io.h"
+#include <mutex>
 #include <shared_mutex>
 
 std::shared_timed_mutex bank_mutex;
