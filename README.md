@@ -14,6 +14,14 @@ This contains a hosting library, providing a JSFX compiler and runtime.
 In addition, there is an audio plugin which can act as a JSFX host in a digital
 audio workstation.
 
+# Helping out
+
+The best way to help out is by using the plugin and reporting bugs you run into. 
+While I do make an effort to try builds prior to release in different DAWs, 
+it is pretty likely that certain things get missed or overlooked. If you run 
+into incorrect behavior, please report it using the issue tracker above and 
+I will do my best to fix it. Thank you!
+
 # Forked Project
 
 Note, this is a fork of YSFX with a few modifications to support newer JSFX
