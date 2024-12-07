@@ -69,6 +69,7 @@ struct ysfx_s {
     bool must_compute_init = false;
     bool must_compute_slider = false;
     bool has_serialize = false;
+    bool want_undo = false;
 
     std::unordered_map<ysfx_real *, uint32_t> slider_of_var;
     

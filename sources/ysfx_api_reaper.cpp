@@ -108,6 +108,13 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_sliderchange(void *opaque, EEL_F *mask_or_
     //NOTE: callable from @gfx thread
 
     ysfx_t *fx = REAPER_GET_INTERFACE(opaque);
+
+    bool wantUndo = static_cast<int64_t>(*mask_or_slider_) == -1;
+    if (wantUndo) {
+        fx->want_undo = true;
+        return 0;
+    }
+
     uint32_t slider = ysfx_get_slider_of_var(fx, mask_or_slider_);
 
     uint8_t group;
