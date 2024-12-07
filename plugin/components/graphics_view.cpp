@@ -327,6 +327,13 @@ bool YsfxGraphicsView::keyPressed(const juce::KeyPress &key)
     // Pass escape through so users can close the plugin
     if (key.getKeyCode() == key.escapeKey) return false;
 
+    // Pass space through so users can change transport state
+    if (key.getKeyCode() == key.spaceKey) return false;
+
+    // Pass modifier-based key combos through
+    juce::ModifierKeys mods = key.getModifiers();
+    if (mods.isCtrlDown() || mods.isCommandDown()) return false;
+
     return true;
 }
 
@@ -350,6 +357,10 @@ bool YsfxGraphicsView::keyStateChanged(bool isKeyDown)
             }
         }
     }
+
+    // Make sure modifier-based key combos are not lost
+    juce::ModifierKeys mods = juce::ModifierKeys::getCurrentModifiers();
+    if (mods.isCtrlDown() || mods.isCommandDown()) return false;
 
     return true;
 }
