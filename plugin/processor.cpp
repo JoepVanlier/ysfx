@@ -83,6 +83,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
 
     LoadRequest::Ptr m_loadRequest;
     PresetRequest::Ptr m_presetRequest;
+    bool m_wantUndoPoint{false};
     ysfx::sync_bitset64 m_sliderParamsToNotify[ysfx_max_slider_groups];
     ysfx::sync_bitset64 m_sliderParamsTouching[ysfx_max_slider_groups];
     bool m_updateParamNames{false};
@@ -120,6 +121,18 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     };
 
     std::unique_ptr<DeferredUpdateHostDisplay> m_deferredUpdateHostDisplay;
+
+    class ManualUndoPointUpdater : public juce::AsyncUpdater {
+        public:
+            explicit ManualUndoPointUpdater(Impl *impl) : m_impl{impl} {}
+
+        protected:
+            void handleAsyncUpdate() override;
+        
+        private:
+            Impl *m_impl = nullptr;
+    };
+    std::unique_ptr<ManualUndoPointUpdater> m_manualUndoPointUpdater;
 
     //==========================================================================
     class Background {
@@ -218,6 +231,9 @@ YsfxProcessor::YsfxProcessor()
 
     ///
     m_impl->m_deferredUpdateHostDisplay.reset(new Impl::DeferredUpdateHostDisplay(m_impl.get()));
+
+    ///
+    m_impl->m_manualUndoPointUpdater.reset(new Impl::ManualUndoPointUpdater(m_impl.get()));
 
     ///
     m_impl->m_background.reset(new Impl::Background(m_impl.get()));
@@ -743,6 +759,11 @@ void YsfxProcessor::Impl::processSliderChanges()
         notify = automated ? true : notify;
     };
 
+    m_wantUndoPoint = m_wantUndoPoint | ysfx_fetch_want_undopoint(fx);
+    if (m_wantUndoPoint) {
+        notify = true;
+    };
+
     // this will sync parameters later (on message thread)
     if (notify) m_background->wakeUp();
 
@@ -930,6 +951,7 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info, ysfx_bank_shared bank
         m_sliderParamsTouching[i].store((uint64_t)0);
     }
     m_updateParamNames = true;
+    m_wantUndoPoint = false;
 
     YsfxCurrentPresetInfo::Ptr presetInfo{new YsfxCurrentPresetInfo()};
     std::atomic_store(&m_currentPresetInfo, presetInfo);
@@ -1011,6 +1033,11 @@ void YsfxProcessor::Impl::DeferredUpdateHostDisplay::handleAsyncUpdate()
 {
     m_impl->m_self->updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
 }
+    
+void YsfxProcessor::Impl::ManualUndoPointUpdater::handleAsyncUpdate()
+{
+    m_impl->m_self->updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
+}
 
 //==============================================================================
 YsfxProcessor::Impl::Background::Background(Impl *impl)
@@ -1055,6 +1082,12 @@ void YsfxProcessor::Impl::Background::run()
             processLoadRequest(*loadRequest);
         if (PresetRequest::Ptr presetRequest = std::atomic_exchange(&m_impl->m_presetRequest, PresetRequest::Ptr{}))
             processPresetRequest(*presetRequest);
+        
+        if (m_impl->m_wantUndoPoint) {
+            m_impl->m_wantUndoPoint = false;
+            Impl::ManualUndoPointUpdater *undoPointUpdater = m_impl->m_manualUndoPointUpdater.get();
+            undoPointUpdater->triggerAsyncUpdate();
+        }
     }
 }
 
