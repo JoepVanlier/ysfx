@@ -159,6 +159,35 @@ TEST_CASE("slider manipulation", "[sliders]")
         REQUIRE(!slider_is_visible(254));
     }
 
+    SECTION("push_undo_point")
+    {
+        const char *text =
+            "desc:example" "\n"
+            "out_pin:output" "\n"
+            "@block" "\n"
+            "sliderchange(-1);" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+
+        ysfx_init(fx.get());
+        REQUIRE(ysfx_fetch_want_undopoint(fx.get()) == false);
+
+        ysfx_process_float(fx.get(), nullptr, nullptr, 0, 0, 1);
+        REQUIRE(ysfx_fetch_want_undopoint(fx.get()) == true);
+        REQUIRE(ysfx_fetch_want_undopoint(fx.get()) == false);
+
+        ysfx_process_float(fx.get(), nullptr, nullptr, 0, 0, 1);
+        REQUIRE(ysfx_fetch_want_undopoint(fx.get()) == true);
+        REQUIRE(ysfx_fetch_want_undopoint(fx.get()) == false);
+    }
+
     SECTION("slider changes")
     {
         const char *text =

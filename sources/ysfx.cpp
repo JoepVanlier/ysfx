@@ -1386,6 +1386,15 @@ uint64_t ysfx_fetch_slider_automations(ysfx_t *fx, uint8_t slider_group_index)
     return fx->slider.automate_mask[slider_group_index].exchange(0);
 }
 
+bool ysfx_fetch_want_undopoint(ysfx_t *fx)
+{
+    if (!fx) return false;
+    
+    bool undo_point = fx->want_undo;
+    fx->want_undo = false;
+    return undo_point;
+}
+
 uint64_t ysfx_fetch_slider_touches(ysfx_t *fx, uint8_t slider_group_index)
 {
     return fx->slider.touch_mask[slider_group_index].load();
