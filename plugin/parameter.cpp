@@ -17,6 +17,11 @@
 
 #include "parameter.h"
 
+DummyParameter::DummyParameter(void) : AudioParameterFloat("__state_change_parameter__", "Internal state change", 0.0f, 1.0f, 0.5f) {};
+bool DummyParameter::isAutomatable(void) const {
+    return false;
+};
+
 YsfxParameter::YsfxParameter(ysfx_t *fx, int sliderIndex)
     : RangedAudioParameter(
         "slider" + juce::String(sliderIndex + 1),
