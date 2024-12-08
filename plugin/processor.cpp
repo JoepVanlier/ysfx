@@ -84,6 +84,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     PresetRequest::Ptr m_presetRequest;
     ysfx::sync_bitset64 m_sliderParamsToNotify[ysfx_max_slider_groups];
     ysfx::sync_bitset64 m_sliderParamsTouching[ysfx_max_slider_groups];
+    bool m_updateParamNames{false};
 
     //==========================================================================
     class SliderNotificationUpdater : public juce::AsyncUpdater {
@@ -106,6 +107,20 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     std::unique_ptr<SliderNotificationUpdater> m_sliderNotificationUpdater;
 
     //==========================================================================
+    class DeferredUpdateHostDisplay : public juce::AsyncUpdater {
+        public:
+            explicit DeferredUpdateHostDisplay(Impl *impl) : m_impl{impl} {}
+
+        protected:
+            void handleAsyncUpdate() override;
+
+        private:
+            Impl *m_impl = nullptr;
+    };
+
+    std::unique_ptr<DeferredUpdateHostDisplay> m_deferredUpdateHostDisplay;
+
+    //==========================================================================
     class Background {
     public:
         explicit Background(Impl *impl);
@@ -113,7 +128,6 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
         void wakeUp();
     private:
         void run();
-        void processSliderNotifications(uint64_t sliderMask, uint64_t touchMask, int group);
         void processLoadRequest(LoadRequest &req);
         void processPresetRequest(PresetRequest &req);
         Impl *m_impl = nullptr;
@@ -200,6 +214,9 @@ YsfxProcessor::YsfxProcessor()
 
     ///
     m_impl->m_sliderNotificationUpdater.reset(new Impl::SliderNotificationUpdater{m_impl.get()});
+
+    ///
+    m_impl->m_deferredUpdateHostDisplay.reset(new Impl::DeferredUpdateHostDisplay(m_impl.get()));
 
     ///
     m_impl->m_background.reset(new Impl::Background(m_impl.get()));
@@ -895,18 +912,18 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info, ysfx_bank_shared bank
     bool notify = false;
     syncSlidersToParameters(notify);
 
-    m_self->updateHostDisplay();
-
     // notify parameters later, on the message thread
     for (int i=0; i < ysfx_max_slider_groups; i++) {
         m_sliderParamsToNotify[i].store(~(uint64_t)0);
         m_sliderParamsTouching[i].store((uint64_t)0);
     }
+    m_updateParamNames = true;
 
     YsfxCurrentPresetInfo::Ptr presetInfo{new YsfxCurrentPresetInfo()};
     std::atomic_store(&m_currentPresetInfo, presetInfo);
     std::atomic_store(&m_bank, bank);
     std::atomic_store(&m_info, info);
+
     m_background->wakeUp();
 }
 
@@ -978,6 +995,12 @@ void YsfxProcessor::Impl::SliderNotificationUpdater::handleAsyncUpdate()
 }
 
 //==============================================================================
+void YsfxProcessor::Impl::DeferredUpdateHostDisplay::handleAsyncUpdate()
+{
+    m_impl->m_self->updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
+}
+
+//==============================================================================
 YsfxProcessor::Impl::Background::Background(Impl *impl)
     : m_impl(impl)
 {
@@ -1000,27 +1023,27 @@ void YsfxProcessor::Impl::Background::wakeUp()
 void YsfxProcessor::Impl::Background::run()
 {
     while (m_sema.wait(), m_running.load(std::memory_order_relaxed)) {
+        Impl *impl = this->m_impl;
+        Impl::SliderNotificationUpdater *updater = impl->m_sliderNotificationUpdater.get();
+        bool updatedAny = false;
         for (uint8_t group = 0; group < ysfx_max_slider_groups; group++) {
             if (uint64_t sliderMask = m_impl->m_sliderParamsToNotify[group].exchange(0)) {
                 uint64_t touchMask = m_impl->m_sliderParamsTouching[group].load();
-                processSliderNotifications(sliderMask, touchMask, group);
+                updater->addSlidersToNotify(sliderMask, group);
+                updater->updateTouch(touchMask, group);
+                updatedAny = true;
             }
+        }
+        if (updatedAny) updater->triggerAsyncUpdate();
+        if (m_impl->m_updateParamNames) {
+            m_impl->m_updateParamNames = false;
+            m_impl->m_deferredUpdateHostDisplay->triggerAsyncUpdate();
         }
         if (LoadRequest::Ptr loadRequest = std::atomic_exchange(&m_impl->m_loadRequest, LoadRequest::Ptr{}))
             processLoadRequest(*loadRequest);
         if (PresetRequest::Ptr presetRequest = std::atomic_exchange(&m_impl->m_presetRequest, PresetRequest::Ptr{}))
             processPresetRequest(*presetRequest);
     }
-}
-
-void YsfxProcessor::Impl::Background::processSliderNotifications(uint64_t sliderMask, uint64_t touchMask, int group)
-{
-    Impl *impl = this->m_impl;
-    Impl::SliderNotificationUpdater *updater = impl->m_sliderNotificationUpdater.get();
-
-    updater->addSlidersToNotify(sliderMask, group);
-    updater->updateTouch(touchMask, group);
-    updater->triggerAsyncUpdate();
 }
 
 void YsfxProcessor::Impl::Background::processLoadRequest(LoadRequest &req)
