@@ -19,6 +19,13 @@
 #include "ysfx.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
+// Dummy parameter to force state saving
+class DummyParameter final : public juce::AudioParameterFloat {
+    public:
+        explicit DummyParameter();
+        bool isAutomatable() const override;
+};
+
 class YsfxParameter final : public juce::RangedAudioParameter {
 public:
     explicit YsfxParameter(ysfx_t *fx, int sliderIndex);

@@ -124,13 +124,14 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
 
     class ManualUndoPointUpdater : public juce::AsyncUpdater {
         public:
-            explicit ManualUndoPointUpdater(Impl *impl) : m_impl{impl} {}
+            explicit ManualUndoPointUpdater(Impl *impl, DummyParameter* dummy) : m_impl{impl}, m_dummy{dummy} {}
 
         protected:
             void handleAsyncUpdate() override;
         
         private:
             Impl *m_impl = nullptr;
+            DummyParameter* m_dummy = nullptr;
     };
     std::unique_ptr<ManualUndoPointUpdater> m_manualUndoPointUpdater;
 
@@ -233,7 +234,11 @@ YsfxProcessor::YsfxProcessor()
     m_impl->m_deferredUpdateHostDisplay.reset(new Impl::DeferredUpdateHostDisplay(m_impl.get()));
 
     ///
-    m_impl->m_manualUndoPointUpdater.reset(new Impl::ManualUndoPointUpdater(m_impl.get()));
+    // Unfortunately, some DAWs ignore dirty flags for the state chunk. That's why we introduce
+    // a dummy variable that forces serialization when the JSFX requests for the state to be stored.
+    DummyParameter* dummy = new DummyParameter();
+    addParameter(dummy);
+    m_impl->m_manualUndoPointUpdater.reset(new Impl::ManualUndoPointUpdater(m_impl.get(), dummy));
 
     ///
     m_impl->m_background.reset(new Impl::Background(m_impl.get()));
@@ -1035,6 +1040,11 @@ void YsfxProcessor::Impl::DeferredUpdateHostDisplay::handleAsyncUpdate()
     
 void YsfxProcessor::Impl::ManualUndoPointUpdater::handleAsyncUpdate()
 {
+    JUCE_ASSERT_MESSAGE_THREAD
+    
+    float r = static_cast<float>(rand()) / static_cast <float>(RAND_MAX);
+    m_dummy->setValueNotifyingHost(r);
+    
     m_impl->m_self->updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
 }
 
