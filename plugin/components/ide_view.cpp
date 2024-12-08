@@ -37,6 +37,8 @@ struct YsfxIDEView::Impl {
     std::unique_ptr<juce::Label> m_lblStatus;
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::Timer> m_fileCheckTimer;
+    std::unique_ptr<juce::FileChooser> m_fileChooser;
+    bool m_fileChooserActive{false};
 
     struct VariableUI {
         ysfx_real *m_var = nullptr;
@@ -52,6 +54,8 @@ struct YsfxIDEView::Impl {
     //==========================================================================
     void setupNewFx();
     void saveCurrentFile();
+    void saveFile(juce::File filename);
+    void saveAs();
     void checkFileForModifications();
 
     //==========================================================================
@@ -197,21 +201,57 @@ void YsfxIDEView::Impl::setupNewFx()
     }
 }
 
-void YsfxIDEView::Impl::saveCurrentFile()
+void YsfxIDEView::Impl::saveAs()
 {
-    ysfx_t *fx = m_fx.get();
-    if (!fx)
-        return;
+    if (m_fileChooserActive) return;
 
-    juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
+    juce::File initialPath;
+    juce::File prevFilePath{juce::CharPointer_UTF8{ysfx_get_file_path(m_fx.get())}};
+    if (prevFilePath != juce::File{}) {
+        initialPath = prevFilePath.getParentDirectory();
+    }
 
+    m_fileChooser.reset(new juce::FileChooser(TRANS("Choose filename to save JSFX to"), initialPath));
+    m_fileChooser->launchAsync(
+        juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::canSelectFiles,
+        [this](const juce::FileChooser &chooser) {
+            juce::File chosenFile = chooser.getResult();
+            if (chosenFile != juce::File()) {
+                if (chosenFile.exists()) {
+                    juce::AlertWindow::showAsync(
+                        juce::MessageBoxOptions{}
+                        .withParentComponent(m_self)
+                        .withIconType(juce::MessageBoxIconType::QuestionIcon)
+                        .withTitle(TRANS("Overwrite?"))
+                        .withButton(TRANS("Yes"))
+                        .withButton(TRANS("No"))
+                        .withMessage(TRANS("File already exists! Overwrite?")),
+                        [this, chosenFile](int result) {
+                            if (result == 1) {
+                                this->saveFile(chosenFile);
+                                m_self->onFileSaved(chosenFile);
+                            };
+                        }
+                    );
+                } else {
+                    saveFile(chosenFile);
+                    m_self->onFileSaved(chosenFile);
+                }
+            }
+            m_fileChooserActive = false;
+        }
+    );
+}
+
+void YsfxIDEView::Impl::saveFile(juce::File file)
+{
     const juce::String content = m_document->getAllContent();
 
     bool success = file.replaceWithData(content.toRawUTF8(), content.getNumBytesAsUTF8());
     if (!success) {
         juce::AlertWindow::showAsync(
             juce::MessageBoxOptions{}
-            .withAssociatedComponent(m_self)
+            .withParentComponent(m_self)
             .withIconType(juce::MessageBoxIconType::WarningIcon)
             .withTitle(TRANS("Error"))
             .withButton(TRANS("OK"))
@@ -224,6 +264,20 @@ void YsfxIDEView::Impl::saveCurrentFile()
 
     if (m_self->onFileSaved)
         m_self->onFileSaved(file);
+}
+
+void YsfxIDEView::Impl::saveCurrentFile()
+{
+    ysfx_t *fx = m_fx.get();
+    if (!fx)
+        return;
+
+    juce::File file = juce::File{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
+    if (file.existsAsFile()) {
+        saveFile(file);
+    } else {
+        saveAs();
+    }
 }
 
 void YsfxIDEView::Impl::checkFileForModifications()
