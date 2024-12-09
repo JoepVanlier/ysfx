@@ -53,6 +53,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::PropertiesFile> m_pluginProperties;
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
+    bool m_maintainState = false;
     float m_currentScaling{1.0f};
     uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
     bool m_visibleSlidersChanged{false};
@@ -61,7 +62,7 @@ struct YsfxEditor::Impl {
     void updateInfo();
     void grabInfoAndUpdate();
     void chooseFileAndLoad();
-    void loadFile(const juce::File &file);
+    void loadFile(const juce::File &file, bool keepState);
     void popupRecentFiles();
     void popupRecentOpts();
     void popupPresets();
@@ -260,7 +261,7 @@ void YsfxEditor::filesDropped(const juce::StringArray &files, int x, int y)
         if (files.size() == 1) {
             juce::File file{files[0]};
             if (file.existsAsFile()) {
-                m_impl->loadFile(files[0]);
+                m_impl->loadFile(files[0], false);
             }   
         }
     }
@@ -416,7 +417,7 @@ void YsfxEditor::Impl::updateInfo()
     );
 
     // We always just want the sliders the user meant to expose
-    switchEditor(true);
+    if (!m_maintainState) switchEditor(true);
 
     juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
     m_mustResizeToGfx = true;
@@ -486,7 +487,7 @@ void YsfxEditor::Impl::chooseFileAndLoad()
                     mustAskConfirmation,
                     [this, normalLoad, result]() {
                         if (normalLoad) saveScaling();
-                        loadFile(result);
+                        loadFile(result, false);
                     },
                     this->m_self
                 );
@@ -557,15 +558,17 @@ void YsfxEditor::Impl::loadScaling()
     }
 }
 
-void YsfxEditor::Impl::loadFile(const juce::File &file)
+void YsfxEditor::Impl::loadFile(const juce::File &file, bool keepState)
 {
+    m_maintainState = keepState;
+
     {
         juce::ScopedLock lock{m_pluginProperties->getLock()};
         m_pluginProperties->setValue("load_path", file.getParentDirectory().getFullPathName());
         m_pluginProperties->save();
     }
 
-    m_proc->loadJsfxFile(file.getFullPathName(), nullptr, true);
+    m_proc->loadJsfxFile(file.getFullPathName(), nullptr, true, keepState);
     relayoutUILater();
 
     juce::RecentlyOpenedFilesList recent = loadRecentFiles();
@@ -592,7 +595,7 @@ void YsfxEditor::Impl::popupRecentFiles()
                 ysfx_is_compiled(m_info->effect.get()),
                 [this, selectedFile]() {
                     saveScaling();
-                    loadFile(selectedFile);
+                    loadFile(selectedFile, false);
                 },
                 this->m_self
             );
@@ -952,7 +955,7 @@ void YsfxEditor::Impl::connectUI()
             ysfx_is_compiled(fx),
             [this, file]() {
                 resetScaling(file);
-                loadFile(file);
+                loadFile(file, false);
             },
             this->m_self
         );
@@ -973,8 +976,8 @@ void YsfxEditor::Impl::connectUI()
         }
     };
 
-    m_ideView->onFileSaved = [this](const juce::File &file) { loadFile(file); };
-    m_ideView->onReloadRequested = [this](const juce::File &file) { loadFile(file); };
+    m_ideView->onFileSaved = [this](const juce::File &file) { loadFile(file, true); };
+    m_ideView->onReloadRequested = [this](const juce::File &file) { loadFile(file, true); };
 
     m_infoTimer.reset(FunctionalTimer::create([this]() { grabInfoAndUpdate(); }));
     m_infoTimer->startTimer(100);

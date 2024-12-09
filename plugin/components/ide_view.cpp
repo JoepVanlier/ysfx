@@ -97,6 +97,7 @@ void YsfxIDEView::setEffect(ysfx_t *fx, juce::Time timeStamp)
 
     m_impl->m_changeTime = timeStamp;
     m_impl->setupNewFx();
+    m_impl->m_btnSave->setEnabled(true);
 }
 
 void YsfxIDEView::setStatusText(const juce::String &text)
@@ -274,6 +275,7 @@ void YsfxIDEView::Impl::saveCurrentFile()
 
     juce::File file = juce::File{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
     if (file.existsAsFile()) {
+        m_btnSave->setEnabled(false);
         saveFile(file);
     } else {
         saveAs();

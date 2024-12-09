@@ -91,7 +91,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     public:
         explicit SliderNotificationUpdater(Impl *impl) : m_impl{impl} {}
         void addSlidersToNotify(uint64_t mask, int group) { m_sliderMask[group].fetch_or(mask); }
-        void updateTouch(uint64_t mask, int group) { m_touchMask[group].exchange(mask); };
+        void updateTouch(uint64_t mask, int group) { m_touchMask[group].exchange(mask); }
 
     protected:
         void handleAsyncUpdate() override;
@@ -257,10 +257,21 @@ YsfxParameter *YsfxProcessor::getYsfxParameter(int sliderIndex)
     return static_cast<YsfxParameter *>(getParameters()[paramIndex]);
 }
 
-void YsfxProcessor::loadJsfxFile(const juce::String &filePath, ysfx_state_t *initialState, bool async)
+void YsfxProcessor::loadJsfxFile(const juce::String &filePath, ysfx_state_t *initialState, bool async, bool preserveState)
 {
     Impl::LoadRequest::Ptr loadRequest{new Impl::LoadRequest};
     loadRequest->filePath = filePath;
+
+    if (preserveState) {
+        jassert(!initialState);
+        
+        {
+            AudioProcessorSuspender sus(*this);
+            sus.lockCallbacks();
+            ysfx_t *fx = m_impl->m_fx.get();
+            initialState = ysfx_save_state(fx);
+        }
+    }
 
     if (m_impl->m_failedLoad.load() == RetryState::retrying) {
         {
@@ -666,10 +677,10 @@ void YsfxProcessor::setStateInformation(const void *data, int sizeInBytes)
         state.slider_count = (uint32_t)sliders.size();
         state.data = (uint8_t *)dataBlock.getData();
         state.data_size = dataBlock.getSize();
-        loadJsfxFile(path.getFullPathName(), &state, false);
+        loadJsfxFile(path.getFullPathName(), &state, false, false);
     }
     else {
-        loadJsfxFile(path.getFullPathName(), nullptr, false);
+        loadJsfxFile(path.getFullPathName(), nullptr, false, false);
     }
 }
 

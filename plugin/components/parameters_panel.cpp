@@ -447,7 +447,6 @@ YsfxParametersPanel::~YsfxParametersPanel()
 void YsfxParametersPanel::setParametersDisplayed(const juce::Array<YsfxParameter *> &parameters)
 {
     paramComponents.clear();
-    setSize(0, 0);
 
     for (auto *param : parameters)
         if (param->isAutomatable())
