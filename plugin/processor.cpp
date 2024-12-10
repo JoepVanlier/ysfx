@@ -1069,8 +1069,16 @@ void YsfxProcessor::Impl::Background::processLoadRequest(LoadRequest &req)
         m_impl->m_lastLoadPath = req.filePath;
         if (!ysfx_is_compiled(m_impl->m_fx.get())) {
             if (req.initialState) {
-                m_impl->m_failedLoadState.reset(ysfx_state_dup(req.initialState.get()));
-                m_impl->m_failedLoad.store(RetryState::mustRetry);  // aww
+                if (!juce::File(req.filePath).existsAsFile())
+                {
+                    // If it is missing, we need to prompt the user to find the file, and NOT lose the state
+                    m_impl->m_failedLoadState.reset(ysfx_state_dup(req.initialState.get()));
+                    m_impl->m_failedLoad.store(RetryState::mustRetry);
+                } else {
+                    // If it is just erroneous, then the state is gonna be useless and we drop it
+                    m_impl->m_failedLoadState.reset(nullptr);
+                    m_impl->m_failedLoad.store(RetryState::ok);
+                }
             }
         } else {
             // Successful compile this time. We can let it go.
