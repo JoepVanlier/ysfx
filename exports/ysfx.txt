@@ -75,6 +75,7 @@ ysfx_fetch_slider_changes
 ysfx_fetch_slider_automations
 ysfx_fetch_slider_touches
 ysfx_get_slider_visibility
+ysfx_fetch_want_undopoint
 ysfx_process_float
 ysfx_process_double
 ysfx_load_state
