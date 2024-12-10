@@ -49,6 +49,8 @@ struct YsfxIDEView::Impl {
     juce::Array<VariableUI> m_vars;
     std::unique_ptr<juce::Timer> m_varsUpdateTimer;
 
+    juce::File m_file{};
+
     bool m_forceUpdate{false};
 
     //==========================================================================
@@ -145,10 +147,11 @@ void YsfxIDEView::Impl::setupNewFx()
     }
     else {
         juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
+        if (file != juce::File{}) m_file = file;
 
         {
             juce::MemoryBlock memBlock;
-            if (file.loadFileAsData(memBlock)) {
+            if (m_file.loadFileAsData(memBlock)) {
                 juce::String newContent = memBlock.toString();
                 memBlock = {};
                 if (newContent != m_document->getAllContent()) {
@@ -206,9 +209,8 @@ void YsfxIDEView::Impl::saveAs()
     if (m_fileChooserActive) return;
 
     juce::File initialPath;
-    juce::File prevFilePath{juce::CharPointer_UTF8{ysfx_get_file_path(m_fx.get())}};
-    if (prevFilePath != juce::File{}) {
-        initialPath = prevFilePath.getParentDirectory();
+    if (m_file != juce::File{}) {
+        initialPath = m_file.getParentDirectory();
     }
 
     m_fileChooser.reset(new juce::FileChooser(TRANS("Choose filename to save JSFX to"), initialPath));
@@ -272,10 +274,9 @@ void YsfxIDEView::Impl::saveCurrentFile()
     if (!fx)
         return;
 
-    juce::File file = juce::File{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-    if (file.existsAsFile()) {
+    if (m_file.existsAsFile()) {
         m_btnSave->setEnabled(false);
-        saveFile(file);
+        saveFile(m_file);
     } else {
         saveAs();
     }
@@ -287,11 +288,10 @@ void YsfxIDEView::Impl::checkFileForModifications()
     if (!fx)
         return;
 
-    juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-    if (file == juce::File{})
+    if (m_file == juce::File{})
         return;
 
-    juce::Time newMtime = file.getLastModificationTime();
+    juce::Time newMtime = m_file.getLastModificationTime();
     if (newMtime == juce::Time{})
         return;
 
@@ -301,11 +301,11 @@ void YsfxIDEView::Impl::checkFileForModifications()
         if (!m_reloadDialogGuard) {
             m_reloadDialogGuard = true;
 
-            auto callback = [this, file](int result) {
+            auto callback = [this](int result) {
                 m_reloadDialogGuard = false;
                 if (result != 0) {
                     if (m_self->onReloadRequested)
-                        m_self->onReloadRequested(file);
+                        m_self->onReloadRequested(m_file);
                 }
             };
 
