@@ -18,7 +18,7 @@
 #include "lookandfeel.h"
 #include "ide_view.h"
 #include "utility/functional_timer.h"
-#include <juce_gui_extra/juce_gui_extra.h>
+#include "tokenizer.h"
 #include <algorithm>
 
 struct YsfxIDEView::Impl {
@@ -27,7 +27,7 @@ struct YsfxIDEView::Impl {
     juce::Time m_changeTime;
     bool m_reloadDialogGuard = false;
     std::unique_ptr<juce::CodeDocument> m_document;
-    std::unique_ptr<juce::CodeTokeniser> m_tokenizer;
+    std::unique_ptr<JSFXTokenizer> m_tokenizer;
     std::unique_ptr<juce::CodeEditorComponent> m_editor;
     std::unique_ptr<juce::TextButton> m_btnSave;
     std::unique_ptr<juce::TextButton> m_btnUpdate;
@@ -71,8 +71,7 @@ YsfxIDEView::YsfxIDEView()
     m_impl->m_self = this;
 
     m_impl->m_document.reset(new juce::CodeDocument);
-
-    //TODO code tokenizer
+    m_impl->m_tokenizer.reset(new JSFXTokenizer());
 
     m_impl->createUI();
     m_impl->connectUI();
