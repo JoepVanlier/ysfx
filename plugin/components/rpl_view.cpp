@@ -213,9 +213,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 [this](const juce::FileChooser &chooser) {
                     juce::File result = chooser.getResult();
                     if (result != juce::File()) {
-                        if (this) {
-                            this->setFile(result);
-                        }
+                        this->setFile(result);
                     }
                 }
             );
@@ -254,31 +252,27 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
 
             if (names.empty()) return;
 
-            juce::AlertWindow::showAsync
-            (
-                juce::MessageBoxOptions()
-                .withTitle("Are you certain?")
-                .withMessage(
+            m_confirmDialog.reset(
+                show_option_window(
+                    TRANS("Are you certain?"),
                     TRANS("Are you certain you want to delete ") + 
                     ((names.size() > 1) ? TRANS("several presets") : names[0])
-                    + "\n" + TRANS("This operation cannot be undone!")
-                )
-                .withButton("Yes")
-                .withButton("No")
-                .withParentComponent(this)
-                .withIconType(juce::MessageBoxIconType::NoIcon),
-                [this, names](int result){
-                    if (result == 1) {
-                        for (auto name : names)
-                        {
-                            m_bank.reset(ysfx_delete_preset_from_bank(m_bank.get(), name.c_str()));
-                        }
+                    + "?\n" + TRANS("This operation cannot be undone!"),
+                    std::vector<juce::String>{"Yes", "No"},
+                    [this, names](int result){
+                        if (result == 1) {
+                            for (auto name : names)
+                            {
+                                m_bank.reset(ysfx_delete_preset_from_bank(m_bank.get(), name.c_str()));
+                            }
 
-                        this->m_listBox->deselectAllRows();
-                        save_bank(m_file.getFullPathName().toStdString().c_str(), m_bank.get());
-                        if (m_bankUpdatedCallback) m_bankUpdatedCallback();
-                    }
-                }
+                            this->m_listBox->deselectAllRows();
+                            save_bank(m_file.getFullPathName().toStdString().c_str(), m_bank.get());
+                            if (m_bankUpdatedCallback) m_bankUpdatedCallback();
+                        }
+                    },
+                    this
+                )
             );
         }
 
@@ -413,7 +407,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 if (ysfx_preset_exists(m_bank.get(), src_bank->presets[idx].name) && !force_accept) {
                     // Ask for overwrite
                     m_confirmDialog.reset(
-                        show_overwrite_window(
+                        show_option_window(
                             TRANS("Are you certain?"),
                             TRANS("Are you certain you want to overwrite the preset named ") + juce::String(src_bank->presets[idx].name) + "?",
                             std::vector<juce::String>{"Yes", "No", "Yes to all", "Cancel"},

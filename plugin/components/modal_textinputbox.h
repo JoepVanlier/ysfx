@@ -18,7 +18,7 @@ class ExclusionFilter : public juce::TextEditor::InputFilter
 };
 
 
-static juce::AlertWindow* show_async_text_input(juce::String title, juce::String message, std::function<void(juce::String, bool)> callback, std::optional<std::function<juce::String(juce::String)>> validator=std::nullopt)
+static juce::AlertWindow* show_async_text_input(juce::String title, juce::String message, std::function<void(juce::String, bool)> callback, std::optional<std::function<juce::String(juce::String)>> validator=std::nullopt, juce::Component* parent=nullptr)
 {
     auto* window = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
     window->addTextEditor("textField", "", "");
@@ -61,11 +61,15 @@ static juce::AlertWindow* show_async_text_input(juce::String title, juce::String
     textEditor->setWantsKeyboardFocus(true);
     textEditor->grabKeyboardFocus();
 
+    if (parent) {
+        window->setCentrePosition(parent->getScreenPosition() + juce::Point<int>{parent->getScreenBounds().getWidth() / 2, parent->getScreenBounds().getHeight() / 2});
+    }
+
     return window;
 }
 
 
-static juce::AlertWindow* show_overwrite_window(juce::String title, juce::String message, std::vector<juce::String> buttons, std::function<void(int result)> callback)
+static juce::AlertWindow* show_option_window(juce::String title, juce::String message, std::vector<juce::String> buttons, std::function<void(int result)> callback, juce::Component* parent=nullptr)
 {
     auto* window = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
     window->setMessage(message);
@@ -88,6 +92,10 @@ static juce::AlertWindow* show_overwrite_window(juce::String title, juce::String
     window->setWantsKeyboardFocus(true);
     window->grabKeyboardFocus();
     window->setEscapeKeyCancels(true);
+
+    if (parent) {
+        window->setCentrePosition(parent->getScreenPosition() + juce::Point<int>{parent->getScreenBounds().getWidth() / 2, parent->getScreenBounds().getHeight() / 2});
+    }
 
     return window;
 }

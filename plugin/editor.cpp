@@ -42,6 +42,7 @@ struct YsfxEditor::Impl {
     YsfxCurrentPresetInfo::Ptr m_currentPresetInfo;
     ysfx_bank_shared m_bank;
     std::unique_ptr<juce::AlertWindow> m_editDialog;
+    std::unique_ptr<juce::AlertWindow> m_modalAlert;
     std::unique_ptr<juce::Timer> m_infoTimer;
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
@@ -70,6 +71,7 @@ struct YsfxEditor::Impl {
     void switchEditor(bool showGfx);
     void openCodeEditor();
     void openPresetWindow();
+    void quickAlertBox(bool confirmationRequired, std::function<void()> callbackOnSuccess, juce::Component* parent);
     static juce::File getAppDataDirectory();
     static juce::File getDefaultEffectsDirectory();
     juce::RecentlyOpenedFilesList loadRecentFiles();
@@ -433,20 +435,19 @@ void YsfxEditor::Impl::updateInfo()
     relayoutUILater();
 }
 
-void _quickAlertBox(bool confirmationRequired, std::function<void()> callbackOnSuccess, juce::Component* parent)
+void YsfxEditor::Impl::quickAlertBox(bool confirmationRequired, std::function<void()> callbackOnSuccess, juce::Component* parent)
 {
     if (confirmationRequired) {
-        juce::AlertWindow::showAsync(
-            juce::MessageBoxOptions()
-                .withTitle("Are you certain?")
-                .withMessage("Are you certain you want to (re)load the plugin?\n\nNote that you will lose your current preset.")
-                .withButton("Yes")
-                .withButton("No")
-                .withParentComponent(parent)
-                .withIconType(juce::MessageBoxIconType::NoIcon),
-            [callbackOnSuccess](int result){
-                if (result == 1) callbackOnSuccess();
-            }
+        m_modalAlert.reset(
+            show_option_window(
+                "Are you certain?",
+                "Are you certain you want to (re)load the plugin?\n\nNote that you will lose your current preset.",
+                std::vector<juce::String>{"Yes", "No"},
+                [callbackOnSuccess](int result){
+                    if (result == 1) callbackOnSuccess();
+                },
+                parent
+            )
         );
     } else {
         callbackOnSuccess();
@@ -490,7 +491,7 @@ void YsfxEditor::Impl::chooseFileAndLoad()
         [this, normalLoad, mustAskConfirmation](const juce::FileChooser &chooser) {
             juce::File result = chooser.getResult();
             if (result != juce::File()) {
-                _quickAlertBox(
+                quickAlertBox(
                     mustAskConfirmation,
                     [this, normalLoad, result]() {
                         if (normalLoad) saveScaling();
@@ -598,7 +599,7 @@ void YsfxEditor::Impl::popupRecentFiles()
     m_recentFilesPopup->showMenuAsync(popupOptions, [this, recent](int index) {
         if (index != 0) {
             juce::File selectedFile = recent.getFile(index - 100);
-            _quickAlertBox(
+            quickAlertBox(
                 ysfx_is_compiled(m_info->effect.get()),
                 [this, selectedFile]() {
                     saveScaling();
@@ -675,23 +676,24 @@ void YsfxEditor::Impl::popupPresetOptions()
                                 std::string preset = presetName.toStdString();
                                 if (wantSave) {
                                     if (m_proc->presetExists(preset.c_str())) {
-                                        juce::AlertWindow::showAsync(
-                                            juce::MessageBoxOptions()
-                                                .withTitle("Overwrite?")
-                                                .withMessage("Preset with that name already exists.\nAre you sure you want to overwrite the preset?")
-                                                .withButton("Yes")
-                                                .withButton("No")
-                                                .withParentComponent(this->m_self)
-                                                .withIconType(juce::MessageBoxIconType::NoIcon),
-                                            [this, preset](int result){
-                                                if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
-                                            }
+                                        this->m_modalAlert.reset(
+                                            show_option_window(
+                                                "Overwrite?",
+                                                "Preset with that name already exists.\nAre you sure you want to overwrite the preset?",
+                                                std::vector<juce::String>{"Yes", "No"},
+                                                [this, preset](int result){
+                                                    if (result == 1) m_proc->saveCurrentPreset(preset.c_str());
+                                                },
+                                                this->m_self
+                                            )
                                         );
                                     } else {
                                         m_proc->saveCurrentPreset(preset.c_str());
                                     }
                                 }
-                            }
+                            },
+                            std::nullopt,
+                            this->m_self
                         )
                     );
                     return;
@@ -713,7 +715,8 @@ void YsfxEditor::Impl::popupPresetOptions()
                                 } else {
                                     return juce::String("");
                                 }
-                            }
+                            },
+                            this->m_self
                         )
                     );
                     break;
@@ -725,17 +728,16 @@ void YsfxEditor::Impl::popupPresetOptions()
                     break;                    
                 case 5:
                     // Delete
-                    juce::AlertWindow::showAsync(
-                        juce::MessageBoxOptions()
-                            .withTitle("Delete?")
-                            .withMessage("Are you sure you want to delete the preset named " + m_currentPresetInfo->m_lastChosenPreset + "?")
-                            .withButton("Yes")
-                            .withButton("No")
-                            .withParentComponent(this->m_self)
-                            .withIconType(juce::MessageBoxIconType::NoIcon),
+                    this->m_modalAlert.reset(
+                        show_option_window(
+                            "Delete?",
+                            "Are you sure you want to delete the preset named " + m_currentPresetInfo->m_lastChosenPreset + "?",
+                            std::vector<juce::String>{"Yes", "No"},
                             [this](int result) {
                                 if (result == 1) m_proc->deleteCurrentPreset();
-                            }
+                            },
+                            this->m_self
+                        )
                     );
                     break;
                 case 6:
@@ -958,7 +960,7 @@ void YsfxEditor::Impl::connectUI()
         YsfxInfo::Ptr info = m_info;
         ysfx_t *fx = info->effect.get();
         juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-        _quickAlertBox(
+        quickAlertBox(
             ysfx_is_compiled(fx),
             [this, file]() {
                 resetScaling(file);
