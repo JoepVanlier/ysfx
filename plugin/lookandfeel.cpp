@@ -101,7 +101,7 @@ void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t,
         jassert(it != colormap.end());  // This color doesn't have a default!
 
         if (it != colormap.end()) {
-            return juce::Colour(int(it->second[0]), int(it->second[1]), int(it->second[2]));
+            return juce::Colour(juce::uint8{it->second[0]}, juce::uint8{it->second[1]}, juce::uint8{it->second[2]});
         } else {
             return juce::Colour(255, 200, 200);
         } 

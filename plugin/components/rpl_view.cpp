@@ -37,19 +37,19 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
            m_items = items;
         }
 
-        void setDropCallback(std::function<void(std::vector<int>, juce::WeakReference<juce::Component>)> dropCallback) {
+        void setDropCallback(std::function<void(std::vector<uint32_t>, juce::WeakReference<juce::Component>)> dropCallback) {
             m_dropCallback = dropCallback;
         }
 
-        void setDeleteCallback(std::function<void(std::vector<int>)> deleteCallback) {
+        void setDeleteCallback(std::function<void(std::vector<uint32_t>)> deleteCallback) {
             m_deleteCallback = deleteCallback;
         }
 
-        void setDoubleClickCallback(std::function<void(int)> dblClickCallback) {
+        void setDoubleClickCallback(std::function<void(uint32_t)> dblClickCallback) {
             m_dblClickCallback = dblClickCallback;
         }
 
-        void setRenameCallback(std::function<void(int)> renameCallback) {
+        void setRenameCallback(std::function<void(uint32_t)> renameCallback) {
             m_renameCallback = renameCallback;
         }
 
@@ -59,8 +59,8 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
         std::vector<juce::String> m_items;
         std::function<void(int)> m_renameCallback;
         std::function<void(int)> m_dblClickCallback;
-        std::function<void(std::vector<int>, juce::WeakReference<juce::Component>)> m_dropCallback;
-        std::function<void(std::vector<int>)> m_deleteCallback;
+        std::function<void(std::vector<uint32_t>, juce::WeakReference<juce::Component>)> m_dropCallback;
+        std::function<void(std::vector<uint32_t>)> m_deleteCallback;
 
         int getNumRows() override
         {
@@ -69,15 +69,17 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
 
         void paintListBoxItem (int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override
         {
+            if (rowNumber < 0) return;
+
             if (rowIsSelected)
                 g.fillAll (juce::Colours::lightblue);
 
             g.setColour(juce::LookAndFeel::getDefaultLookAndFeel().findColour(juce::Label::textColourId));
             g.setFont((float) height * 0.7f);
-            g.drawText(m_items[rowNumber], 5, 0, width, height, juce::Justification::centredLeft, true);
+            g.drawText(m_items[static_cast<size_t>(rowNumber)], 5, 0, width, height, juce::Justification::centredLeft, true);
         }
 
-        juce::var getDragSourceDescription(const juce::SparseSet<int>& selectedRows)
+        juce::var getDragSourceDescription(const juce::SparseSet<int>& selectedRows) override
         {
             juce::Array<juce::var> juceArray;
             for (int i = 0; i < selectedRows.size(); ++i)
@@ -112,7 +114,8 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
                 return;
 
             juce::Array<juce::var> *payload = dragSourceDetails.description.getArray();
-            std::vector<int> elements{(*payload).begin(), (*payload).end()};
+            std::vector<uint32_t> elements;
+            for (const auto& value : *payload) elements.push_back(static_cast<uint32_t>(static_cast<int>(value)));
 
             if (!elements.empty()) {
                 m_dropCallback(elements, dragSourceDetails.sourceComponent);
@@ -123,10 +126,10 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
         {
             (void) arg;
 
-            std::vector<int> elements;
+            std::vector<uint32_t> elements;
             auto selection = getSelectedRows();
             for (int i = 0; i < selection.size(); ++i)
-                elements.push_back(selection[i]);
+                elements.push_back(static_cast<uint32_t>(selection[i]));
             
             if (!elements.empty()) {
                 m_deleteCallback(elements);
@@ -224,7 +227,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             return m_bank;
         }
 
-        void transferPresets(std::vector<int> indices, juce::WeakReference<juce::Component> ref)
+        void transferPresets(std::vector<uint32_t> indices, juce::WeakReference<juce::Component> ref)
         {
             if (!m_bank) return;
             
@@ -237,13 +240,13 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             transferPresetRecursive(indices, src_bank, false);
         }
 
-        void deletePresets(std::vector<int> indices)
+        void deletePresets(std::vector<uint32_t> indices)
         {
             if (!m_bank) return;
 
             // Grab the names first.
             std::vector<std::string> names;
-            for (uint32_t idx : indices)
+            for (auto idx : indices)
             {
                 if (idx < m_bank->preset_count) {
                     names.push_back(std::string(m_bank->presets[idx].name));
@@ -316,8 +319,8 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 addAndMakeVisible(*m_btnLoadFile);
             }
             m_listBox->setOutlineThickness(1);
-            m_listBox->setDropCallback([this](std::vector<int> indices, juce::WeakReference<juce::Component> ref) { this->transferPresets(indices, ref); });
-            m_listBox->setDeleteCallback([this](std::vector<int> indices) { this->deletePresets(indices); });
+            m_listBox->setDropCallback([this](std::vector<uint32_t> indices, juce::WeakReference<juce::Component> ref) { this->transferPresets(indices, ref); });
+            m_listBox->setDeleteCallback([this](std::vector<uint32_t> indices) { this->deletePresets(indices); });
             m_listBox->setRenameCallback([this](int row) { this->renamePreset(row); });
             m_listBox->setDoubleClickCallback([this](int idx) { if (m_loadPresetCallback) m_loadPresetCallback(std::string{m_bank->presets[idx].name}); });
             addAndMakeVisible(*m_listBox);
@@ -372,9 +375,9 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
     private:
         std::unique_ptr<juce::AlertWindow> m_confirmDialog;
 
-        void transferPresetRecursive(std::vector<int> indices, ysfx_bank_shared src_bank, bool force_accept)
+        void transferPresetRecursive(std::vector<uint32_t> indices, ysfx_bank_shared src_bank, bool force_accept)
         {
-            uint32_t idx = indices.back();
+            auto idx = indices.back();
             indices.pop_back();
 
             auto copy_lambda = [this, indices, src_bank, idx, force_accept](int result){

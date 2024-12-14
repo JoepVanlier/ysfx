@@ -86,7 +86,7 @@
             {
                 juce::Label search_label;
                 juce::TextEditor editor;
-                PopupMenuQuickSearch* owner;
+                PopupMenuQuickSearch* m_owner;
 
                 // the hierarchy of submenus in the PopupMenu (used when disambiguating duplicated label)
                 struct MenuTree
@@ -120,7 +120,7 @@
                     QuickSearchItem e;
                     bool m_highlighted = false;
                     PopupMenuQuickSearch* m_owner;
-                    MenuItemComponent (PopupMenuQuickSearch* owner) : m_owner (owner) {}
+                    MenuItemComponent (PopupMenuQuickSearch* owner) : m_owner(owner) {}
                     void paint (juce::Graphics& g) override
                     {
                         getLookAndFeel().drawPopupMenuItem (
@@ -159,9 +159,9 @@
             float m_scaleFactor{1.0f};
 
             public:
-                QuickSearchComponent (PopupMenuQuickSearch* owner, juce::String& initial_string, float scale_factor) : owner (owner), m_scaleFactor(scale_factor)
+                QuickSearchComponent (PopupMenuQuickSearch* owner, juce::String& initial_string, float scale_factor) : m_owner(owner), m_scaleFactor(scale_factor)
                 {
-                    jassert(owner->target_component_weak_ref.get());
+                    jassert(m_owner->target_component_weak_ref.get());
                     auto target_screen_area = getTargetScreenArea();
                     
                     setOpaque (true);
@@ -171,7 +171,7 @@
                     setAlwaysOnTop (true);
 
                     creation_time = juce::Time::getCurrentTime();
-                    readPopupMenuItems (menu_tree, owner->menu);
+                    readPopupMenuItems (menu_tree, m_owner->menu);
                     handleDuplicatedLabels();
 
                     /* compute the width and item height */
@@ -181,7 +181,7 @@
                         if (q.label.length() > longest_string.length())
                             longest_string = q.label;
                     }
-                    getLookAndFeel().getIdealPopupMenuItemSize (longest_string, false /* isSeparator */, owner->options.getStandardItemHeight(), item_width, item_height);
+                    getLookAndFeel().getIdealPopupMenuItemSize (longest_string, false /* isSeparator */, m_owner->options.getStandardItemHeight(), item_width, item_height);
 
                     if (item_width < target_screen_area.getWidth() && target_screen_area.getWidth() < 300)
                     {
@@ -230,7 +230,7 @@
                 }
                 
                 juce::Rectangle<int> getTargetScreenArea() {
-                    auto target_screen_area = owner->options.getTargetScreenArea();
+                    auto target_screen_area = m_owner->options.getTargetScreenArea();
                     target_screen_area.setX((int) (target_screen_area.getX() / m_scaleFactor));
                     target_screen_area.setY((int) (target_screen_area.getY() / m_scaleFactor));
                     return target_screen_area;
@@ -261,8 +261,8 @@
                             q.label = item.text;
                             q.menu = &tree;
                             q.popup_menu_item = &item;
-                            auto it = owner->options.itemsToIgnoreOrRenameInQuickSearch.find (q.id);
-                            if (it != owner->options.itemsToIgnoreOrRenameInQuickSearch.end())
+                            auto it = m_owner->options.itemsToIgnoreOrRenameInQuickSearch.find (q.id);
+                            if (it != m_owner->options.itemsToIgnoreOrRenameInQuickSearch.end())
                             {
                                 q.label = it->second; // the label is renamed, or just set to empty string if we want to
                                     // ignore this entry.
@@ -276,7 +276,7 @@
 
                 void handleDuplicatedLabels()
                 {
-                    if (! owner->options.mergeEntriesWithSameLabel)
+                    if (!m_owner->options.mergeEntriesWithSameLabel)
                     {
                         // use name of parent menu to disambiguate duplicates
                         std::vector<MenuTree*> parents (quick_search_items.size());
@@ -380,7 +380,7 @@
                     updateMatches();
 
                     int nb_visible_matches =
-                        std::min<int> (owner->options.maxNumberOfMatchesDisplayed, (int) matches.size());
+                        std::min<int> (m_owner->options.maxNumberOfMatchesDisplayed, (int) matches.size());
 
                     int h = item_height;
                     jassert (h);
@@ -409,16 +409,17 @@
                         editor.setBounds (editor.getX(), total_h - h, editor.getWidth(), h);
                     }
 
-                    best_items.resize (nb_visible_matches);
-                    for (size_t i = 0; i < nb_visible_matches; ++i)
+                    size_t best_item_size = static_cast<size_t>(nb_visible_matches);
+                    best_items.resize(best_item_size);
+                    for (size_t i = 0; i < best_item_size; ++i)
                     {
                         if (best_items.at (i) == nullptr)
                         {
-                            best_items[i] = std::make_unique<MenuItemComponent> (owner);
+                            best_items[i] = std::make_unique<MenuItemComponent>(m_owner);
                             addAndMakeVisible (*best_items[i]);
                         }
-                        size_t ii = first_displayed_match + i;
-                        best_items[i]->updateWith (quick_search_items.at (matches.at (ii)), ii == highlighted_match);
+                        size_t ii = static_cast<size_t>(first_displayed_match) + i;
+                        best_items[i]->updateWith (quick_search_items.at (matches.at (ii)), ii == static_cast<size_t>(highlighted_match));
                         if (displayed_over_or_under == 1)
                         {
                             best_items[i]->setBounds (0, (h + separator_height) + (int) i * h, item_width, h);
@@ -534,15 +535,16 @@
                 {
                     if (! matches.empty())
                     {
-                        auto& q = quick_search_items.at (matches.at (highlighted_match));
+                        jassert(highlighted_match >= 0);
+                        auto& q = quick_search_items.at (matches.at(static_cast<size_t>(highlighted_match)));
                         if (q.popup_menu_item->isEnabled)
                         {
-                            owner->quickSearchFinished (q.id);
+                            m_owner->quickSearchFinished (q.id);
                         }
                     }
                 }
 
-                void textEditorEscapeKeyPressed (juce::TextEditor&) override { owner->quickSearchFinished (0); }
+                void textEditorEscapeKeyPressed (juce::TextEditor&) override { m_owner->quickSearchFinished (0); }
 
                 void textEditorTextChanged (juce::TextEditor&) override { updateContent(); }
 
@@ -555,7 +557,7 @@
                     if (key == '\t')
                     {
                         // async because it will destroy the QuickSearchComponent and this is causing issues if done in the keyPressed callback
-                        juce::MessageManager::getInstance()->callAsync([this, ref=juce::WeakReference<Component>(this)]() { if (ref) { owner->showPopupMenu(); } });
+                        juce::MessageManager::getInstance()->callAsync([this, ref=juce::WeakReference<Component>(this)]() { if (ref) { m_owner->showPopupMenu(); } });
                     }
 
                     bool up = (key == juce::KeyPress::upKey), down = (key == juce::KeyPress::downKey);
@@ -582,7 +584,8 @@
                                 first_displayed_match = highlighted_match - (int) best_items.size() + 1;
                                 jassert (first_displayed_match >= 0);
                             }
-                            auto& q = quick_search_items.at (matches.at (highlighted_match));
+                            jassert(highlighted_match >= 0);
+                            auto& q = quick_search_items.at (matches.at(static_cast<size_t>(highlighted_match)));
                             if (! q.popup_menu_item->isEnabled)
                                 highlighted_match = 0;
                             updateContent();
@@ -606,7 +609,7 @@
                     double dt = (juce::Time::getCurrentTime() - creation_time).inSeconds();
                     if (dt > 0.2)
                     {
-                        owner->quickSearchFinished (0);
+                        m_owner->quickSearchFinished (0);
                     }
                 }
 

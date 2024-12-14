@@ -15,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include <cmath>
 #include "lookandfeel.h"
 #include "parameters_panel.h"
 #include "../parameter.h"
@@ -115,7 +116,7 @@ private:
 
     bool isParameterOn() const
     {
-        return getParameter().getValue() != 0.0f;
+        return getParameter().getValue() > 0.00001f;  /* Same threshold used in JSFX */
     }
 
     juce::ToggleButton button;
@@ -187,7 +188,7 @@ private:
 
     bool isParameterOn() const
     {
-        return getParameter().getValue() != 0.0f;
+        return getParameter().getValue() > 0.00001f;  /* Same threshold used in JSFX */
     }
 
     juce::TextButton buttons[2];
@@ -332,7 +333,7 @@ private:
     {
         auto newVal = (float)slider.getValue();
 
-        if (getParameter().getValue() != newVal) {
+        if (std::abs(getParameter().getValue() - newVal) > 1e-12) {
             if (!isDragging)
                 getParameter().beginChangeGesture();
 
@@ -362,12 +363,10 @@ private:
         const auto charptr = textValue.getCharPointer();
         auto ptr = charptr;
         auto newVal = juce::CharacterFunctions::readDoubleValue(ptr);
-        size_t chars_read = ptr - charptr;
+        size_t chars_read = static_cast<size_t>(ptr - charptr);
         
         if (chars_read == textValue.getNumBytesAsUTF8()) {
-            if (getParameter().getValue() != newVal) {
-                getParameter().setValueNotifyingHost(getParameter().convertFromYsfxValue(newVal));
-            }
+            getParameter().setValueNotifyingHost(getParameter().convertFromYsfxValue(newVal));
         } else {
             updateTextDisplay();
         }

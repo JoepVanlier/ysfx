@@ -31,6 +31,6 @@ class JSFXTokenizer : public juce::CPlusPlusCodeTokeniser
         };
 
     private:
-        int readNextToken(juce::CodeDocument::Iterator& source);
+        int readNextToken(juce::CodeDocument::Iterator& source) override;
         juce::CodeEditorComponent::ColourScheme m_colourScheme;
 };

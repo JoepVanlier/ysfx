@@ -24,7 +24,7 @@
 class YSFXCodeEditor : public juce::CodeEditorComponent 
 {
     public:
-        YSFXCodeEditor(juce::CodeDocument& document, juce::CodeTokeniser* codeTokeniser, std::function<bool(const juce::KeyPress&)> keyPressCallback): CodeEditorComponent(document, codeTokeniser), m_keyPressCallback{keyPressCallback} {};
+        YSFXCodeEditor(juce::CodeDocument& doc, juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback): CodeEditorComponent(doc, tokenizer), m_keyPressCallback{keyPressCallback} {}
         
         bool keyPressed(const juce::KeyPress &key) override 
         {

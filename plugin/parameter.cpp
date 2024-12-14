@@ -16,6 +16,7 @@
 //
 
 #include "parameter.h"
+#include <cmath>
 
 YsfxParameter::YsfxParameter(ysfx_t *fx, int sliderIndex)
     : RangedAudioParameter(
@@ -36,7 +37,7 @@ void YsfxParameter::setEffect(ysfx_t *fx)
         ysfx_add_ref(fx);
         {
             juce::ScopedLock nameLock(m_nameSection);
-            m_displayName = juce::String(ysfx_slider_get_name(fx, m_sliderIndex));
+            m_displayName = juce::String(ysfx_slider_get_name(fx, static_cast<uint32_t>(m_sliderIndex)));
         }
     }
 }
@@ -97,7 +98,7 @@ ysfx_real YsfxParameter::convertToYsfxValue(float normValue) const
 float YsfxParameter::convertFromYsfxValue(ysfx_real actualValue) const
 {
     ysfx_slider_curve_t curve = getSliderCurve();
-    if (curve.min == curve.max)
+    if (std::abs(curve.max - curve.min) < 1e-12)
         return 0.0f;
     
     // NOTE: if enumerated, round value into an index
@@ -170,7 +171,6 @@ juce::String YsfxParameter::getText(float normalisedValue, int) const
 
 float YsfxParameter::getValueForText(const juce::String &text) const
 {
-    ysfx_slider_range_t range = getSliderRange();
     ysfx_real actualValue{};
 
     bool foundEnum = false;

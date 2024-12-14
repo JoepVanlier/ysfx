@@ -28,6 +28,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <cmath>
 
 struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     YsfxProcessor *m_self = nullptr;
@@ -409,9 +410,7 @@ void YsfxProcessor::cyclePreset(int direction)
     // Look up current preset or default to last (since we consider it new)
     auto currentPreset = m_impl->m_currentPresetInfo->m_lastChosenPreset;
     auto bank = m_impl->m_bank.get();
-    auto max_preset = bank->preset_count;
-
-    if (max_preset < 1) return;
+    if (bank->preset_count < 1) return;
     
     uint32_t preset_index;
     if (currentPreset.isEmpty()) {
@@ -423,14 +422,15 @@ void YsfxProcessor::cyclePreset(int direction)
         }
     }
     
+    int preset_count = static_cast<int>(bank->preset_count);
     int next_preset = static_cast<int>(preset_index) + direction;
     if (next_preset < 0) {
-        next_preset = bank->preset_count - 1;
-    } else if (next_preset >= static_cast<int>(bank->preset_count)) {
+        next_preset = preset_count - 1;
+    } else if (next_preset >= preset_count) {
         next_preset = 0;
     }
 
-    loadJsfxPreset(m_impl->m_info, m_impl->m_bank, next_preset, PresetLoadMode::load, true);
+    loadJsfxPreset(m_impl->m_info, m_impl->m_bank, static_cast<uint32_t>(next_preset), PresetLoadMode::load, true);
 }
 
 YsfxInfo::Ptr YsfxProcessor::getCurrentInfo()
@@ -728,7 +728,7 @@ void YsfxProcessor::Impl::processSliderChanges()
         YsfxParameter *param = m_self->getYsfxParameter(i);
         if (param->existsAsSlider()) {
             float normValue = param->convertFromYsfxValue(ysfx_slider_get_value(fx, (uint32_t)i));
-            if (param->getValue() != normValue) {
+            if (std::abs(param->getValue() - normValue) > 1e-9) {
                 param->setValueNoNotify(normValue);  // This should not trigger @slider
             }
         }

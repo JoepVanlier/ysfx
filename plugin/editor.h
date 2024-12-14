@@ -38,3 +38,5 @@ private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };
+
+void writeThemeFile(juce::File file, std::map<std::string, std::array<uint8_t, 3>> colors, std::map<std::string, float> params);

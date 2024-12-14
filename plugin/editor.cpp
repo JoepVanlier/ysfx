@@ -34,6 +34,8 @@
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "json.hpp"
+#include <iostream>
+#include <cmath>
 
 struct YsfxEditor::Impl {
     YsfxEditor *m_self = nullptr;
@@ -188,8 +190,8 @@ void YsfxEditor::readTheme()
             setColors(getLookAndFeel(), getDefaultColors());
             setParams(getLookAndFeel(), getDefaultParams());
             m_impl->m_ideView->setColourScheme(getDefaultColors());
-        } catch (nlohmann::json::exception e) {
-            // Log: std::cout << "Failed to write theme: " << e.what() << std::endl;
+        } catch (const nlohmann::json::exception& e) {
+            std::cerr << "Failed to write theme: " << e.what() << std::endl;
         }
     } else {
         juce::FileInputStream stream(file);
@@ -218,8 +220,8 @@ void YsfxEditor::readTheme()
             setParams(getLookAndFeel(), readParams);
             m_impl->m_ideView->setColourScheme(readTheme);
             writeThemeFile(file, readTheme, readParams);
-        } catch (nlohmann::json::exception e) {
-            // Log: std::cout << "Failed to read theme: " << e.what() << std::endl;
+        } catch (const nlohmann::json::exception& e) {
+            std::cerr << "Failed to read theme: " << e.what() << std::endl;
         }
     }
 }
@@ -308,7 +310,7 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     YsfxCurrentPresetInfo::Ptr presetInfo = m_proc->getCurrentPresetInfo();
     ysfx_bank_shared bank = m_proc->getCurrentBank();
 
-    if (m_graphicsView->getTotalScaling() != m_currentScaling) {
+    if (std::abs(m_graphicsView->getTotalScaling() - m_currentScaling) > 1e-6) {
         relayoutUILater();
         m_currentScaling = m_graphicsView->getTotalScaling();
     }
@@ -414,13 +416,13 @@ void YsfxEditor::Impl::updateInfo()
     );
     m_rplView->setLoadPresetCallback(
         [this](std::string preset) {
-            YsfxInfo::Ptr info = m_info;
+            YsfxInfo::Ptr ysfx_info = m_info;
             ysfx_bank_shared bank = m_bank;
             if (!bank) return;
 
             auto index = ysfx_preset_exists(bank.get(), preset.c_str());
             if (index > 0) {
-                m_proc->loadJsfxPreset(info, bank, (uint32_t)(index - 1), PresetLoadMode::load, true);
+                m_proc->loadJsfxPreset(ysfx_info, bank, (uint32_t)(index - 1), PresetLoadMode::load, true);
             }
         }
     );
@@ -430,8 +432,8 @@ void YsfxEditor::Impl::updateInfo()
 
     juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
     m_mustResizeToGfx = true;
+
     loadScaling();
-    
     relayoutUILater();
 }
 
@@ -631,10 +633,10 @@ void YsfxEditor::Impl::popupRecentOpts()
         if (index == 1000) {
             clearRecentFiles();
         } else if (index != 0) {
-            juce::RecentlyOpenedFilesList recent = loadRecentFiles();
-            juce::File file = recent.getFile(index - 100);
-            recent.removeFile(file);
-            saveRecentFiles(recent);
+            juce::RecentlyOpenedFilesList recent_files = loadRecentFiles();
+            juce::File file = recent_files.getFile(index - 100);
+            recent_files.removeFile(file);
+            saveRecentFiles(recent_files);
         }
     });
 }
@@ -1108,7 +1110,8 @@ void YsfxEditor::Impl::relayoutUI()
     if (m_btnSwitchEditor->getToggleState() && (fx && ysfx_has_section(fx, ysfx_section_gfx))) {
         int maxParamArea = m_self->getHeight();
         maxParamArea -= nonParameterSpace;
-        m_divider->setSizes(std::min(parameterHeight, std::max(200, maxParamArea)), 0, m_miniParametersPanel->getRecommendedHeight(0));
+        auto recommended = m_miniParametersPanel->getRecommendedHeight(0);
+        m_divider->setSizes(std::min(parameterHeight, std::max(200, maxParamArea)), recommended > 0 ? 5 : 0, recommended);
 
         const juce::Rectangle<int> paramArea = centerArea.withHeight(m_divider->m_position);
         const juce::Rectangle<int> gfxArea = centerArea.withTrimmedTop(m_divider->m_position);
