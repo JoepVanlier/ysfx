@@ -21,6 +21,24 @@
 #include "tokenizer.h"
 #include <algorithm>
 
+class YSFXCodeEditor : public juce::CodeEditorComponent 
+{
+    public:
+        YSFXCodeEditor(juce::CodeDocument& document, juce::CodeTokeniser* codeTokeniser, std::function<bool(const juce::KeyPress&)> keyPressCallback): CodeEditorComponent(document, codeTokeniser), m_keyPressCallback{keyPressCallback} {};
+        
+        bool keyPressed(const juce::KeyPress &key) override 
+        {
+            if (!m_keyPressCallback(key)) {
+                return juce::CodeEditorComponent::keyPressed(key);
+            } else {
+                return true;
+            };
+        }
+
+    private:
+        std::function<bool(const juce::KeyPress&)> m_keyPressCallback;
+};
+
 struct YsfxIDEView::Impl {
     YsfxIDEView *m_self = nullptr;
     ysfx_u m_fx;
@@ -28,13 +46,14 @@ struct YsfxIDEView::Impl {
     bool m_reloadDialogGuard = false;
     std::unique_ptr<juce::CodeDocument> m_document;
     std::unique_ptr<JSFXTokenizer> m_tokenizer;
-    std::unique_ptr<juce::CodeEditorComponent> m_editor;
+    std::unique_ptr<YSFXCodeEditor> m_editor;
     std::unique_ptr<juce::TextButton> m_btnSave;
     std::unique_ptr<juce::TextButton> m_btnUpdate;
     std::unique_ptr<juce::Label> m_lblVariablesHeading;
     std::unique_ptr<juce::Viewport> m_vpVariables;
     std::unique_ptr<juce::Component> m_compVariables;
     std::unique_ptr<juce::Label> m_lblStatus;
+    std::unique_ptr<juce::TextEditor> m_searchEditor;
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::Timer> m_fileCheckTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
@@ -58,6 +77,7 @@ struct YsfxIDEView::Impl {
     void saveCurrentFile();
     void saveFile(juce::File filename);
     void saveAs();
+    void search(juce::String text, bool reverse);
     void checkFileForModifications();
 
     //==========================================================================
@@ -328,9 +348,93 @@ void YsfxIDEView::Impl::checkFileForModifications()
     }
 }
 
+void YsfxIDEView::Impl::search(juce::String text, bool reverse=false)
+{
+    if (text.isNotEmpty())
+    {
+        auto currentPosition = juce::CodeDocument::Position(*m_document, m_editor->getCaretPosition());
+        
+        auto chunk = [this, currentPosition](bool before) {
+            if (before) {
+                return m_document->getTextBetween(juce::CodeDocument::Position(*m_document, 0), currentPosition.movedBy(-1));
+            } else {
+                return m_document->getTextBetween(currentPosition, juce::CodeDocument::Position(*m_document, m_document->getNumCharacters()));
+            }
+        };
+
+        int position = reverse ? chunk(true).lastIndexOfIgnoreCase(text) : chunk(false).indexOfIgnoreCase(text);
+        juce::CodeDocument::Position searchPosition;
+        if (position == -1) {
+            // We didn't find it! Start from the other end!
+            position = reverse ? chunk(false).lastIndexOfIgnoreCase(text) : chunk(true).indexOfIgnoreCase(text);
+
+            if (position == -1) {
+                // Not found at all -> stop
+                if (text.compare(m_document->getTextBetween(currentPosition.movedBy(- text.length()), currentPosition)) != 0) {
+                    m_lblStatus->setText(TRANS("Didn't find search string ") + text, juce::NotificationType::dontSendNotification);
+                } else {
+                    m_lblStatus->setText(TRANS("Didn't find other copies of search string ") + text, juce::NotificationType::dontSendNotification);
+                }
+                m_editor->grabKeyboardFocus();
+                return;
+            }
+            searchPosition = juce::CodeDocument::Position(*m_document, reverse ? currentPosition.getPosition() + position : position);
+        } else {
+            // Found it!
+            searchPosition = juce::CodeDocument::Position(*m_document, reverse ? position : currentPosition.getPosition() + position);
+        }
+
+        auto pos = juce::CodeDocument::Position(*m_document, searchPosition.getPosition());
+        m_editor->grabKeyboardFocus();
+        m_editor->moveCaretTo(pos, false);
+        m_editor->moveCaretTo(pos.movedBy(text.length()), true);
+        m_lblStatus->setText(TRANS("Found ") + text + TRANS(". (SHIFT +) CTRL/CMD + G to repeat search (backwards)."), juce::NotificationType::dontSendNotification);
+    }
+}
+
 void YsfxIDEView::Impl::createUI()
 {
-    m_editor.reset(new juce::CodeEditorComponent(*m_document, m_tokenizer.get()));
+    auto keyPressCallback = [this](const juce::KeyPress& key) -> bool {
+        if (key.getModifiers().isCommandDown()) {
+            if (key.isKeyCurrentlyDown('f')) {
+                m_lblStatus->setText("", juce::NotificationType::dontSendNotification);
+                m_searchEditor->setVisible(true);
+                m_lblStatus->setVisible(false);
+                m_searchEditor->setText("", juce::NotificationType::dontSendNotification);
+                m_searchEditor->setWantsKeyboardFocus(true);
+                m_searchEditor->grabKeyboardFocus();
+                m_searchEditor->setEscapeAndReturnKeysConsumed(true);
+                m_searchEditor->onReturnKey = [this]() {
+                    search(m_searchEditor->getText());
+                    m_searchEditor->setWantsKeyboardFocus(false);
+                    m_searchEditor->setVisible(false);
+                    m_lblStatus->setVisible(true);
+                };
+                m_searchEditor->onFocusLost = [this]() {
+                    m_searchEditor->setWantsKeyboardFocus(false);
+                    m_searchEditor->setVisible(false);
+                    m_lblStatus->setVisible(true);
+                };
+
+                return true;
+            }
+
+            if (key.isKeyCurrentlyDown('s')) {
+                saveCurrentFile();
+                return true;
+            }
+
+            if (key.isKeyCurrentlyDown('g')) {
+                m_lblStatus->setText("", juce::NotificationType::dontSendNotification);
+                search(m_searchEditor->getText(), key.getModifiers().isShiftDown());
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    m_editor.reset(new YSFXCodeEditor(*m_document, m_tokenizer.get(), keyPressCallback));
     m_self->addAndMakeVisible(*m_editor);
     m_btnSave.reset(new juce::TextButton(TRANS("Save")));
     m_btnSave->addShortcut(juce::KeyPress('s', juce::ModifierKeys::ctrlModifier, 0));
@@ -349,7 +453,10 @@ void YsfxIDEView::Impl::createUI()
     m_vpVariables->setViewedComponent(m_compVariables.get(), false);
     m_lblStatus.reset(new juce::Label);
     m_lblStatus->setMinimumHorizontalScale(1.0f);
+    m_searchEditor.reset(new juce::TextEditor);
+    m_self->addAndMakeVisible(*m_searchEditor);
     m_self->addAndMakeVisible(*m_lblStatus);
+    m_searchEditor->setVisible(false);
 }
 
 void YsfxIDEView::Impl::connectUI()
@@ -394,6 +501,7 @@ void YsfxIDEView::Impl::relayoutUI()
     m_compVariables->setSize(m_vpVariables->getWidth(), m_vars.size() * varRowHeight);
 
     m_lblStatus->setBounds(statusArea);
+    m_searchEditor->setBounds(statusArea);
 
     m_editor->setBounds(editArea);
 
