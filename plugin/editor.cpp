@@ -183,8 +183,9 @@ void YsfxEditor::readTheme()
     if (!file.existsAsFile()) {
         try {
             writeThemeFile(file, getDefaultColors(), getDefaultParams());
-            setColors(getLookAndFeel(), {});
-            setParams(getLookAndFeel(), {});
+            setColors(getLookAndFeel(), getDefaultColors());
+            setParams(getLookAndFeel(), getDefaultParams());
+            m_impl->m_ideView->setColourScheme(getDefaultColors());
         } catch (nlohmann::json::exception e) {
             // Log: std::cout << "Failed to write theme: " << e.what() << std::endl;
         }
@@ -197,6 +198,7 @@ void YsfxEditor::readTheme()
             // Fallback for version 1 files (upconvert the file)
             if (!jsonFile.contains("version")) {
                 auto readTheme = jsonFile[0].get<std::map<std::string, std::array<uint8_t, 3>>>();
+                readTheme = fillMissingColors(readTheme);
                 writeThemeFile(file, readTheme, getDefaultParams());
 
                 // Reread it!
@@ -207,8 +209,13 @@ void YsfxEditor::readTheme()
             
             auto readTheme = jsonFile.at("colors")[0].get<std::map<std::string, std::array<uint8_t, 3>>>();
             auto readParams = jsonFile.at("params")[0].get<std::map<std::string, float>>();
+            readTheme = fillMissingColors(readTheme);
+            readParams = fillMissingParams(readParams);
+
             setColors(getLookAndFeel(), readTheme);
             setParams(getLookAndFeel(), readParams);
+            m_impl->m_ideView->setColourScheme(readTheme);
+            writeThemeFile(file, readTheme, readParams);
         } catch (nlohmann::json::exception e) {
             // Log: std::cout << "Failed to read theme: " << e.what() << std::endl;
         }

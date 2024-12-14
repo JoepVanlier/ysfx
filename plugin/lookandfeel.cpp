@@ -29,7 +29,22 @@ std::map<std::string, std::array<uint8_t, 3>> getDefaultColors()
         {"off_fill", std::array<uint8_t, 3>{16, 16, 16}},
         {"selection_fill", std::array<uint8_t, 3>{65, 65, 65}},
         {"font_color", std::array<uint8_t, 3>{189, 189, 189}},
-        {"font_color_light", std::array<uint8_t, 3>{210, 210, 210}}
+        {"font_color_light", std::array<uint8_t, 3>{210, 210, 210}},
+        {"error", std::array<uint8_t, 3>{255, 204, 00}},
+        {"comment", std::array<uint8_t, 3>{96, 128, 192}},
+        {"builtin_variable", std::array<uint8_t, 3>{255, 128, 128}},
+        {"builtin_function", std::array<uint8_t, 3>{255, 255, 48}},
+        {"builtin_core_function", std::array<uint8_t, 3>{0, 192, 255}},
+        {"builtin_section", std::array<uint8_t, 3>{0, 255, 255}},
+        {"operator", std::array<uint8_t, 3>{0, 255, 255}},
+        {"identifier", std::array<uint8_t, 3>{192, 192, 192}},
+        {"integer", std::array<uint8_t, 3>{0, 255, 0}},
+        {"float", std::array<uint8_t, 3>{0, 255, 0}},
+        {"string", std::array<uint8_t, 3>{255, 192, 192}},
+        {"bracket", std::array<uint8_t, 3>{192, 192, 255}},
+        {"punctuation", std::array<uint8_t, 3>{0, 255, 255}},
+        {"preprocessor_text", std::array<uint8_t, 3>{32, 192, 255}},
+        {"string_hash", std::array<uint8_t, 3>{192, 255, 128}}
     };
 }
 
@@ -43,16 +58,11 @@ std::map<std::string, float> getDefaultParams()
 
 void setParams(juce::LookAndFeel& lnf, std::map<std::string, float> params)
 {
-    std::map<std::string, float> currentParams = getDefaultParams();
-    for (auto it = params.begin(); it != params.end(); ++it) {
-        currentParams[it->first] = it->second;
-    }
+    auto get = [params](std::string key) {
+        auto it = params.find(key); 
+        jassert(it != params.end());  // This parameter doesn't have a default!
 
-    auto get = [currentParams](std::string key) {
-        auto it = currentParams.find(key); 
-        jassert(it != currentParams.end());  // This color doesn't have a default!
-
-        if (it != currentParams.end()) {
+        if (it != params.end()) {
             return it->second;
         } else {
             return 1.0f;
@@ -64,22 +74,37 @@ void setParams(juce::LookAndFeel& lnf, std::map<std::string, float> params)
     ysfx_lnf.m_pad = static_cast<int>(get("left_pad"));
 }
 
-void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t, 3>> colormap)
+std::map<std::string, float> fillMissingParams(std::map<std::string, float> params) {
+    std::map<std::string, float> currentParams = getDefaultParams();
+    for (auto it = params.begin(); it != params.end(); ++it) {
+        currentParams[it->first] = it->second;
+    }
+
+    return currentParams;
+}
+
+// Grabs a complete theme from a possibly incomplete theme
+std::map<std::string, std::array<uint8_t, 3>> fillMissingColors(std::map<std::string, std::array<uint8_t, 3>> colormap)
 {
     std::map<std::string, std::array<uint8_t, 3>> currentColorMap = getDefaultColors();
     for (auto it = colormap.begin(); it != colormap.end(); ++it) {
         currentColorMap[it->first] = it->second;
     }
 
-    auto get = [currentColorMap](std::string key) {
-        auto it = currentColorMap.find(key); 
-        jassert(it != currentColorMap.end());  // This color doesn't have a default!
+    return currentColorMap;
+}
 
-        if (it != currentColorMap.end()) {
+void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t, 3>> colormap)
+{
+    auto get = [colormap](std::string key) {
+        auto it = colormap.find(key); 
+        jassert(it != colormap.end());  // This color doesn't have a default!
+
+        if (it != colormap.end()) {
             return juce::Colour(int(it->second[0]), int(it->second[1]), int(it->second[2]));
         } else {
             return juce::Colour(255, 200, 200);
-        }
+        } 
     };
 
     juce::Colour backgroundColour = get("background");

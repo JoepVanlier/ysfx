@@ -1,10 +1,14 @@
+#include <vector>
+#include <array>
+#include <string>
 #include <juce_gui_extra/juce_gui_extra.h>
 
 class JSFXTokenizer : public juce::CPlusPlusCodeTokeniser
 {
     public:
         JSFXTokenizer();
-        juce::CodeEditorComponent::ColourScheme getDefaultColourScheme();
+        void setColours(std::map<std::string, std::array<uint8_t, 3>> colormap);
+        juce::CodeEditorComponent::ColourScheme getDefaultColourScheme() override;
 
         /** The token values returned by this tokeniser. */
         enum TokenType
@@ -28,4 +32,5 @@ class JSFXTokenizer : public juce::CPlusPlusCodeTokeniser
 
     private:
         int readNextToken(juce::CodeDocument::Iterator& source);
+        juce::CodeEditorComponent::ColourScheme m_colourScheme;
 };

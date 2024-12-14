@@ -6,39 +6,21 @@ JSFXTokenizer::JSFXTokenizer() {
 
 }
 
+void JSFXTokenizer::setColours(std::map<std::string, std::array<uint8_t, 3>> colormap)
+{
+    std::vector<std::string> ideColors{
+        "error", "comment", "builtin_variable", "builtin_function", "builtin_core_function",
+        "builtin_section", "operator", "identifier", "integer", "float", "string", "bracket", 
+        "punctuation", "preprocessor_text", "string_hash"
+    };
+
+    for (auto const& key : ideColors)
+        m_colourScheme.set(key, juce::Colour(colormap[key][0], colormap[key][1], colormap[key][2]));
+}
+
 juce::CodeEditorComponent::ColourScheme JSFXTokenizer::getDefaultColourScheme()
 {
-    struct Type
-    {
-        const char* name;
-        juce::uint32 colour;
-    };
-
-    const Type types[] =
-    {
-        { "error",                 0xffffcc00 },
-        { "comment",               0xff6080c0 },
-        { "builtin_variable",      0xffff8080 },
-        { "builtin_function",      0xffffff30 },
-        { "builtin_core_function", 0xff00c0ff },
-        { "builtin_section",       0xff00ffff },
-        { "operator",              0xff00ffff },
-        { "identifier",            0xffc0c0c0 },
-        { "integer",               0xff00ff00 },
-        { "float",                 0xff00ff00 },
-        { "string",                0xffffc0c0 },
-        { "bracket",               0xffc0c0ff },
-        { "punctuation",           0xff00ffff },
-        { "preprocessor_text",     0xff20c0ff },
-        { "string_hash",           0xffc0ff80 }
-    };
-
-    juce::CodeEditorComponent::ColourScheme cs;
-
-    for (auto& t : types)
-        cs.set(t.name, juce::Colour(t.colour));
-
-    return cs;
+    return m_colourScheme;
 }
 
 int JSFXTokenizer::readNextToken (juce::CodeDocument::Iterator& source)

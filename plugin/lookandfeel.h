@@ -23,6 +23,8 @@ void setColors(juce::LookAndFeel& lnf, std::map<std::string, std::array<uint8_t,
 void setParams(juce::LookAndFeel& lnf, std::map<std::string, float> params);
 std::map<std::string, std::array<uint8_t, 3>> getDefaultColors();
 std::map<std::string, float> getDefaultParams();
+std::map<std::string, float> fillMissingParams(std::map<std::string, float> params);
+std::map<std::string, std::array<uint8_t, 3>> fillMissingColors(std::map<std::string, std::array<uint8_t, 3>> colormap);
 
 
 class YsfxLookAndFeel : public juce::LookAndFeel_V4 {
@@ -32,7 +34,7 @@ public:
 
     YsfxLookAndFeel()
     {
-        setColors(*this, {});
+        setColors(*this, getDefaultColors());
     }
 
     void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, const juce::Slider::SliderStyle style, juce::Slider& slider) override

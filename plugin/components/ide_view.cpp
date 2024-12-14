@@ -85,6 +85,12 @@ YsfxIDEView::~YsfxIDEView()
 {
 }
 
+void YsfxIDEView::setColourScheme(std::map<std::string, std::array<uint8_t, 3>> colormap)
+{
+    m_impl->m_tokenizer->setColours(colormap);
+    m_impl->m_editor->setColourScheme(m_impl->m_tokenizer->getDefaultColourScheme());
+}
+
 void YsfxIDEView::setEffect(ysfx_t *fx, juce::Time timeStamp)
 {
     if (m_impl->m_fx.get() == fx)
