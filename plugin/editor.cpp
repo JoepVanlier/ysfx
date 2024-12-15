@@ -988,7 +988,6 @@ void YsfxEditor::Impl::connectUI()
     };
 
     m_ideView->onFileSaved = [this](const juce::File &file) { loadFile(file, true); };
-    m_ideView->onReloadRequested = [this](const juce::File &file) { loadFile(file, true); };
 
     m_infoTimer.reset(FunctionalTimer::create([this]() { grabInfoAndUpdate(); }));
     m_infoTimer->startTimer(100);

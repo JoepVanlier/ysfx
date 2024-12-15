@@ -1,4 +1,5 @@
 // Copyright 2021 Jean Pierre Cimalando
+// Copyright 2024 Joep Vanlier
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Modifications by Joep Vanlier, 2024
+//
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -20,33 +23,15 @@
 #include "utility/functional_timer.h"
 #include "tokenizer.h"
 #include <algorithm>
+#include "ysfx_document.h"
 
-class YSFXCodeEditor : public juce::CodeEditorComponent 
-{
-    public:
-        YSFXCodeEditor(juce::CodeDocument& doc, juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback): CodeEditorComponent(doc, tokenizer), m_keyPressCallback{keyPressCallback} {}
-        
-        bool keyPressed(const juce::KeyPress &key) override 
-        {
-            if (!m_keyPressCallback(key)) {
-                return juce::CodeEditorComponent::keyPressed(key);
-            } else {
-                return true;
-            };
-        }
-
-    private:
-        std::function<bool(const juce::KeyPress&)> m_keyPressCallback;
-};
 
 struct YsfxIDEView::Impl {
     YsfxIDEView *m_self = nullptr;
     ysfx_u m_fx;
-    juce::Time m_changeTime;
-    bool m_reloadDialogGuard = false;
-    std::unique_ptr<juce::CodeDocument> m_document;
+
+    std::vector<std::shared_ptr<YSFXCodeEditor>> m_editors;
     std::unique_ptr<JSFXTokenizer> m_tokenizer;
-    std::unique_ptr<YSFXCodeEditor> m_editor;
     std::unique_ptr<juce::TextButton> m_btnSave;
     std::unique_ptr<juce::TextButton> m_btnUpdate;
     std::unique_ptr<juce::Label> m_lblVariablesHeading;
@@ -57,6 +42,9 @@ struct YsfxIDEView::Impl {
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::Timer> m_fileCheckTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
+
+    std::unique_ptr<YSFXTabbedButtonBar> m_tabs;
+
     bool m_fileChooserActive{false};
 
     struct VariableUI {
@@ -68,17 +56,17 @@ struct YsfxIDEView::Impl {
     juce::Array<VariableUI> m_vars;
     std::unique_ptr<juce::Timer> m_varsUpdateTimer;
 
-    juce::File m_file{};
-
     bool m_forceUpdate{false};
+    int m_currentEditorIndex{0};
 
     //==========================================================================
     void setupNewFx();
     void saveCurrentFile();
-    void saveFile(juce::File filename);
     void saveAs();
-    void search(juce::String text, bool reverse);
-    void checkFileForModifications();
+    std::shared_ptr<YSFXCodeEditor> addEditor();
+    void openDocument(juce::File file);
+    void setCurrentEditor(int idx);
+    std::shared_ptr<YSFXCodeEditor> getCurrentEditor();
 
     //==========================================================================
     void createUI();
@@ -91,8 +79,6 @@ YsfxIDEView::YsfxIDEView()
     : m_impl(new Impl)
 {
     m_impl->m_self = this;
-
-    m_impl->m_document.reset(new juce::CodeDocument);
     m_impl->m_tokenizer.reset(new JSFXTokenizer());
 
     m_impl->createUI();
@@ -110,7 +96,7 @@ YsfxIDEView::~YsfxIDEView()
 void YsfxIDEView::setColourScheme(std::map<std::string, std::array<uint8_t, 3>> colormap)
 {
     m_impl->m_tokenizer->setColours(colormap);
-    m_impl->m_editor->setColourScheme(m_impl->m_tokenizer->getDefaultColourScheme());
+    m_impl->m_editors[0]->setColourScheme(m_impl->m_tokenizer->getDefaultColourScheme());
 }
 
 void YsfxIDEView::setEffect(ysfx_t *fx, juce::Time timeStamp)
@@ -122,7 +108,7 @@ void YsfxIDEView::setEffect(ysfx_t *fx, juce::Time timeStamp)
     if (fx)
         ysfx_add_ref(fx);
 
-    m_impl->m_changeTime = timeStamp;
+    (void) timeStamp;
     m_impl->setupNewFx();
     m_impl->m_btnSave->setEnabled(true);
 }
@@ -143,14 +129,23 @@ void YsfxIDEView::focusOnCodeEditor()
     m_impl->m_forceUpdate = true;
 }
 
+std::shared_ptr<YSFXCodeEditor> YsfxIDEView::Impl::getCurrentEditor()
+{
+    if (m_currentEditorIndex >= m_editors.size()) {
+        setCurrentEditor(0);
+    }
+
+    return m_editors[m_currentEditorIndex];
+}
+
 void YsfxIDEView::focusOfChildComponentChanged(FocusChangeType cause)
 {
     (void)cause;
 
-    juce::Component *focus = getCurrentlyFocusedComponent();
-
-    if (focus == m_impl->m_editor.get()) {
-        juce::Timer *timer = FunctionalTimer::create([this]() { m_impl->checkFileForModifications(); });
+    if (m_impl->getCurrentEditor()->hasFocus()) {
+        juce::Timer *timer = FunctionalTimer::create([this]() { 
+            m_impl->getCurrentEditor()->checkFileForModifications();
+        });
         m_impl->m_fileCheckTimer.reset(timer);
         timer->startTimer(100);
     }
@@ -168,24 +163,12 @@ void YsfxIDEView::Impl::setupNewFx()
 
     if (!fx) {
         //
-        m_document->replaceAllContent(juce::String{});
-        m_editor->setReadOnly(true);
+        getCurrentEditor()->reset();
+        getCurrentEditor()->setReadOnly(true);
     }
     else {
         juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-        if (file != juce::File{}) m_file = file;
-
-        {
-            juce::MemoryBlock memBlock;
-            if (m_file.loadFileAsData(memBlock)) {
-                juce::String newContent = memBlock.toString();
-                memBlock = {};
-                if (newContent != m_document->getAllContent()) {
-                    m_document->replaceAllContent(newContent);
-                    m_editor->moveCaretToTop(false);
-                }
-            }
-        }
+        m_editors[0]->loadFile(file);
 
         m_vars.ensureStorageAllocated(64);
 
@@ -224,7 +207,7 @@ void YsfxIDEView::Impl::setupNewFx()
             m_varsUpdateTimer->startTimer(100);
         }
 
-        m_editor->setReadOnly(false);
+        m_editors[0]->setReadOnly(false);
 
         relayoutUILater();
     }
@@ -233,16 +216,15 @@ void YsfxIDEView::Impl::setupNewFx()
 void YsfxIDEView::Impl::saveAs()
 {
     if (m_fileChooserActive) return;
+    if (m_currentEditorIndex >= m_editors.size()) return;
 
-    juce::File initialPath;
-    if (m_file != juce::File{}) {
-        initialPath = m_file.getParentDirectory();
-    }
+    auto editor = m_editors[m_currentEditorIndex];
+    juce::File initialPath = editor->getPath().getParentDirectory();
 
     m_fileChooser.reset(new juce::FileChooser(TRANS("Choose filename to save JSFX to"), initialPath));
     m_fileChooser->launchAsync(
         juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::canSelectFiles,
-        [this](const juce::FileChooser &chooser) {
+        [this, editor](const juce::FileChooser &chooser) {
             juce::File chosenFile = chooser.getResult();
             if (chosenFile != juce::File()) {
                 if (chosenFile.exists()) {
@@ -254,44 +236,21 @@ void YsfxIDEView::Impl::saveAs()
                         .withButton(TRANS("Yes"))
                         .withButton(TRANS("No"))
                         .withMessage(TRANS("File already exists! Overwrite?")),
-                        [this, chosenFile](int result) {
+                        [this, chosenFile, editor](int result) {
                             if (result == 1) {
-                                this->saveFile(chosenFile);
-                                m_self->onFileSaved(chosenFile);
+                                editor->saveFile(chosenFile);
+                                if (m_self->onFileSaved) m_self->onFileSaved(chosenFile);
                             };
                         }
                     );
                 } else {
-                    saveFile(chosenFile);
-                    m_self->onFileSaved(chosenFile);
+                    m_editors[0]->saveFile(chosenFile);
+                    if (m_self->onFileSaved) m_self->onFileSaved(chosenFile);
                 }
             }
             m_fileChooserActive = false;
         }
     );
-}
-
-void YsfxIDEView::Impl::saveFile(juce::File file)
-{
-    const juce::String content = m_document->getAllContent();
-
-    bool success = file.replaceWithData(content.toRawUTF8(), content.getNumBytesAsUTF8());
-    if (!success) {
-        juce::AlertWindow::showAsync(
-            juce::MessageBoxOptions{}
-            .withParentComponent(m_self)
-            .withIconType(juce::MessageBoxIconType::WarningIcon)
-            .withTitle(TRANS("Error"))
-            .withButton(TRANS("OK"))
-            .withMessage(TRANS("Could not save the JSFX document.")),
-            nullptr);
-        return;
-    }
-
-    m_changeTime = juce::Time::getCurrentTime();
-
-    if (m_self->onFileSaved)
-        m_self->onFileSaved(file);
 }
 
 void YsfxIDEView::Impl::saveCurrentFile()
@@ -300,99 +259,47 @@ void YsfxIDEView::Impl::saveCurrentFile()
     if (!fx)
         return;
 
-    if (m_file.existsAsFile()) {
-        m_btnSave->setEnabled(false);
-        saveFile(m_file);
+    if (m_currentEditorIndex >= m_editors.size()) return;
+
+    if (getCurrentEditor()->getPath().existsAsFile()) {
+        getCurrentEditor()->saveFile();
+        if (m_self->onFileSaved)
+            m_self->onFileSaved(m_editors[0]->getPath());
     } else {
         saveAs();
     }
+    m_btnSave->setEnabled(false);
 }
 
-void YsfxIDEView::Impl::checkFileForModifications()
+void YsfxIDEView::Impl::openDocument(juce::File file)
 {
-    ysfx_t *fx = m_fx.get();
-    if (!fx)
-        return;
-
-    if (m_file == juce::File{})
-        return;
-
-    juce::Time newMtime = m_file.getLastModificationTime();
-    if (newMtime == juce::Time{})
-        return;
-
-    if (m_changeTime == juce::Time{} || newMtime > m_changeTime) {
-        m_changeTime = newMtime;
-
-        if (!m_reloadDialogGuard) {
-            m_reloadDialogGuard = true;
-
-            auto callback = [this](int result) {
-                m_reloadDialogGuard = false;
-                if (result != 0) {
-                    if (m_self->onReloadRequested)
-                        m_self->onReloadRequested(m_file);
-                }
-            };
-
-            juce::AlertWindow::showAsync(
-                juce::MessageBoxOptions{}
-                .withAssociatedComponent(m_self)
-                .withIconType(juce::MessageBoxIconType::QuestionIcon)
-                .withTitle(TRANS("Reload?"))
-                .withButton(TRANS("Yes"))
-                .withButton(TRANS("No"))
-                .withMessage(TRANS("The file has been modified outside this editor. Reload it?")),
-                callback);
-        }
-    }
-}
-
-void YsfxIDEView::Impl::search(juce::String text, bool reverse=false)
-{
-    if (text.isNotEmpty())
-    {
-        auto currentPosition = juce::CodeDocument::Position(*m_document, m_editor->getCaretPosition());
-        
-        auto chunk = [this, currentPosition](bool before) {
-            if (before) {
-                return m_document->getTextBetween(juce::CodeDocument::Position(*m_document, 0), currentPosition.movedBy(-1));
-            } else {
-                return m_document->getTextBetween(currentPosition, juce::CodeDocument::Position(*m_document, m_document->getNumCharacters()));
-            }
+    int idx = 0;
+    auto fn = file.getFileName();
+    for (const auto& editor : m_editors) {
+        if (fn.compareIgnoreCase(editor->getName()) == 0) {
+            setCurrentEditor(idx);
+            return;
         };
-
-        int position = reverse ? chunk(true).lastIndexOfIgnoreCase(text) : chunk(false).indexOfIgnoreCase(text);
-        juce::CodeDocument::Position searchPosition;
-        if (position == -1) {
-            // We didn't find it! Start from the other end!
-            position = reverse ? chunk(false).lastIndexOfIgnoreCase(text) : chunk(true).indexOfIgnoreCase(text);
-
-            if (position == -1) {
-                // Not found at all -> stop
-                if (text.compare(m_document->getTextBetween(currentPosition.movedBy(- text.length()), currentPosition)) != 0) {
-                    m_lblStatus->setText(TRANS("Didn't find search string ") + text, juce::NotificationType::dontSendNotification);
-                } else {
-                    m_lblStatus->setText(TRANS("Didn't find other copies of search string ") + text, juce::NotificationType::dontSendNotification);
-                }
-                m_editor->grabKeyboardFocus();
-                return;
-            }
-            searchPosition = juce::CodeDocument::Position(*m_document, reverse ? currentPosition.getPosition() + position : position);
-        } else {
-            // Found it!
-            searchPosition = juce::CodeDocument::Position(*m_document, reverse ? position : currentPosition.getPosition() + position);
-        }
-
-        auto pos = juce::CodeDocument::Position(*m_document, searchPosition.getPosition());
-        m_editor->grabKeyboardFocus();
-        m_editor->moveCaretTo(pos, false);
-        m_editor->moveCaretTo(pos.movedBy(text.length()), true);
-        m_lblStatus->setText(TRANS("Found ") + text + TRANS(". (SHIFT +) CTRL/CMD + G to repeat search (backwards)."), juce::NotificationType::dontSendNotification);
+        idx += 1;
     }
+
+    auto editor = addEditor();
+    editor->loadFile(file);
+    setCurrentEditor(m_editors.size() - 1);
 }
 
-void YsfxIDEView::Impl::createUI()
+void YsfxIDEView::Impl::setCurrentEditor(int editorIndex)
+{
+    if (editorIndex >= m_editors.size()) return;
+
+    m_editors[m_currentEditorIndex]->setVisible(false);
+    m_currentEditorIndex = editorIndex;
+    m_editors[m_currentEditorIndex]->setVisible(true);
+
+    relayoutUILater();
+}
+
+std::shared_ptr<YSFXCodeEditor> YsfxIDEView::Impl::addEditor()
 {
     auto keyPressCallback = [this](const juce::KeyPress& key) -> bool {
         if (key.getModifiers().isCommandDown()) {
@@ -405,7 +312,14 @@ void YsfxIDEView::Impl::createUI()
                 m_searchEditor->grabKeyboardFocus();
                 m_searchEditor->setEscapeAndReturnKeysConsumed(true);
                 m_searchEditor->onReturnKey = [this]() {
-                    search(m_searchEditor->getText());
+                    auto searchResult = getCurrentEditor()->search(m_searchEditor->getText());
+
+                    if (searchResult) {
+                        m_lblStatus->setText(TRANS("Found ") + m_searchEditor->getText() + TRANS(". (SHIFT +) CTRL/CMD + G to repeat search (backwards)."), juce::NotificationType::dontSendNotification);
+                    } else {
+                        m_lblStatus->setText(TRANS("Didn't find search string ") + m_searchEditor->getText(), juce::NotificationType::dontSendNotification);
+                    }
+
                     m_searchEditor->setWantsKeyboardFocus(false);
                     m_searchEditor->setVisible(false);
                     m_lblStatus->setVisible(true);
@@ -426,7 +340,14 @@ void YsfxIDEView::Impl::createUI()
 
             if (key.isKeyCurrentlyDown('g')) {
                 m_lblStatus->setText("", juce::NotificationType::dontSendNotification);
-                search(m_searchEditor->getText(), key.getModifiers().isShiftDown());
+                int searchResult = getCurrentEditor()->search(m_searchEditor->getText(), key.getModifiers().isShiftDown());
+
+                if (searchResult) {
+                    m_lblStatus->setText(TRANS("Found ") + m_searchEditor->getText() + TRANS(". (SHIFT +) CTRL/CMD + G to repeat search (backwards)."), juce::NotificationType::dontSendNotification);
+                } else {
+                    m_lblStatus->setText(TRANS("Didn't find search string ") + m_searchEditor->getText(), juce::NotificationType::dontSendNotification);
+                }
+
                 return true;
             }
         }
@@ -434,8 +355,34 @@ void YsfxIDEView::Impl::createUI()
         return false;
     };
 
-    m_editor.reset(new YSFXCodeEditor(*m_document, m_tokenizer.get(), keyPressCallback));
-    m_self->addAndMakeVisible(*m_editor);
+    auto dblClickCallback = [this](int x, int y) -> bool {
+        if (m_currentEditorIndex >= m_editors.size()) return false;
+
+        auto line = getCurrentEditor()->getLineAt(x, y);
+        if (line.startsWithIgnoreCase("import ")) {
+            // Import statement!
+            auto potentialFilename = line.substring(7).trimEnd();
+            if (this->m_fx) {
+                char *pathString = ysfx_resolve_path_and_allocate(this->m_fx.get(), potentialFilename.toStdString().c_str(), getCurrentEditor()->getPath().getFullPathName().toStdString().c_str());
+                if (pathString) {
+                    auto path = juce::File(juce::CharPointer_UTF8(pathString));
+                    openDocument(path);
+                    ysfx_free_resolved_path(pathString);
+                    return true;
+                };
+            }
+        }
+        return false;
+    };
+
+    m_editors.push_back(std::make_shared<YSFXCodeEditor>(m_tokenizer.get(), keyPressCallback, dblClickCallback));
+    m_self->addAndMakeVisible(m_editors.back()->getVisibleComponent());
+    return m_editors.back();
+}
+
+void YsfxIDEView::Impl::createUI()
+{
+    addEditor();
     m_btnSave.reset(new juce::TextButton(TRANS("Save")));
     m_btnSave->addShortcut(juce::KeyPress('s', juce::ModifierKeys::ctrlModifier, 0));
     m_self->addAndMakeVisible(*m_btnSave);
@@ -457,6 +404,8 @@ void YsfxIDEView::Impl::createUI()
     m_self->addAndMakeVisible(*m_searchEditor);
     m_self->addAndMakeVisible(*m_lblStatus);
     m_searchEditor->setVisible(false);
+    m_tabs.reset(new YSFXTabbedButtonBar(juce::TabbedButtonBar::Orientation::TabsAtBottom, [this](int newCurrentTabIndex) { setCurrentEditor(newCurrentTabIndex); }));
+    m_self->addAndMakeVisible(*m_tabs);
 }
 
 void YsfxIDEView::Impl::connectUI()
@@ -473,6 +422,20 @@ void YsfxIDEView::Impl::relayoutUI()
     temp = bounds;
     const juce::Rectangle<int> debugArea = temp.removeFromRight(300);
     const juce::Rectangle<int> topRow = temp.removeFromTop(50);
+
+    if (m_editors.size() > 1) {
+        const juce::Rectangle<int> tabRow = temp.removeFromTop(30);
+        m_tabs->setBounds(tabRow);
+        auto updateBlock = ScopedUpdateBlocker(*m_tabs);
+        m_tabs->clearTabs();
+        int idx = 0;
+        for (const auto m : m_editors) {
+            m_tabs->addTab(m->getName(), m_self->getLookAndFeel().findColour(m_btnSave->buttonColourId), idx);
+            ++idx;
+        }
+        m_tabs->setCurrentTabIndex(m_currentEditorIndex, false);
+    }
+
     const juce::Rectangle<int> statusArea = temp.removeFromBottom(20);
     const juce::Rectangle<int> editArea = temp;
 
@@ -503,7 +466,7 @@ void YsfxIDEView::Impl::relayoutUI()
     m_lblStatus->setBounds(statusArea);
     m_searchEditor->setBounds(statusArea);
 
-    m_editor->setBounds(editArea);
+    getCurrentEditor()->setBounds(editArea);
 
     if (m_relayoutTimer)
         m_relayoutTimer->stopTimer();
