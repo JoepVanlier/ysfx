@@ -14,7 +14,13 @@ void YSFXCodeDocument::reset()
 
 void YSFXCodeDocument::loadFile(juce::File file)
 {
-    if (file != juce::File{}) m_file = file;
+    bool clearUndo = false;
+    if (file != juce::File{}) {
+        if (m_file != file) {
+            clearUndo = true;
+            m_file = file;
+        }
+    }
     if (!m_file.existsAsFile()) return;
 
     {
@@ -25,7 +31,10 @@ void YSFXCodeDocument::loadFile(juce::File file)
             memBlock = {};
             if (newContent != getAllContent()) {
                 replaceAllContent(newContent);
-                // m_editor->moveCaretToTop(false);
+                if (clearUndo) {
+                    clearUndoHistory();
+                    setSavePoint();
+                }
             }
         }
     }
