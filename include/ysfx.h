@@ -153,6 +153,11 @@ YSFX_API const char *ysfx_get_output_name(ysfx_t *fx, uint32_t index);
 YSFX_API bool ysfx_wants_meters(ysfx_t *fx);
 // get requested dimensions of the graphics area; 0 means host should decide
 YSFX_API bool ysfx_get_gfx_dim(ysfx_t *fx, uint32_t dim[2]);
+// resolve an import path; note that this returns a char* string that needs to be freed with ysfx_free_resolved_path after use
+YSFX_API char *ysfx_resolve_path_and_allocate(ysfx_t* fx, const char* name, const char* origin);
+// free a path returned by ysfx_resolve_path_and_allocate
+YSFX_API void ysfx_free_resolved_path(char *path);
+
 
 typedef enum ysfx_section_type_e {
     ysfx_section_init = 1,
@@ -245,7 +250,6 @@ YSFX_API ysfx_real ysfx_normalized_to_ysfx_value(ysfx_real value, const ysfx_sli
 
 // convert normalized slider value to ysfx value taking into account curve shape
 YSFX_API ysfx_real ysfx_ysfx_value_to_normalized(ysfx_real value, const ysfx_slider_curve_t *curve);
-
 
 typedef enum ysfx_compile_option_e {
     // skip compiling the @serialize section

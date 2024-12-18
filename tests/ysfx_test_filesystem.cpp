@@ -18,6 +18,7 @@
 #include "ysfx_utils.hpp"
 #include "ysfx_test_utils.hpp"
 #include <catch.hpp>
+#include <filesystem>
 
 TEST_CASE("file system utilities", "[filesystem]")
 {
@@ -82,4 +83,49 @@ TEST_CASE("file system utilities", "[filesystem]")
         // failed resolution
         REQUIRE(ysfx::case_resolve(root.m_path.c_str(), "dir2/", result) == retNotFound);
     }
+
+    SECTION("find location based on name")
+    {
+        scoped_new_dir root("${root}/fs/");
+        
+        const char *main_file =
+            "desc:example" "\n"
+            "out_pin:output" "\n"
+            "import test.jsfx-inc" "\n";
+
+        scoped_new_txt file_main("${root}/fs/main.jsfx", main_file);
+        scoped_new_txt file3("${root}/fs/second_file.jsfx-inc", "");
+
+        scoped_new_dir sub1("${root}/fs/dir1/");
+        scoped_new_txt file2("${root}/fs/dir1/test.jsfx-inc", "import second_file.jsfx-inc");
+        scoped_new_txt file4("${root}/fs/dir1/second_file.jsfx-inc", "");
+
+        // Test that invalid things don't crash stuff
+        {
+            char* test = ysfx_resolve_path_and_allocate(nullptr, "test", "test");
+            REQUIRE(test == nullptr);
+            ysfx_free_resolved_path(test);
+            REQUIRE(test == nullptr);
+        }
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        {
+            char *test = ysfx_resolve_path_and_allocate(fx.get(), "test.jsfx-inc", file_main.m_path.c_str());
+            REQUIRE(std::filesystem::path(test) == std::filesystem::path(root.m_path + "dir1/test.jsfx-inc"));
+            ysfx_free_resolved_path(test);
+        }
+
+        {
+            // Prefer path relative to loaded file
+            char *test = ysfx_resolve_path_and_allocate(fx.get(), "second_file.jsfx-inc", file2.m_path.c_str());
+            REQUIRE(std::filesystem::path(test) == std::filesystem::path(root.m_path + "dir1/second_file.jsfx-inc"));
+            ysfx_free_resolved_path(test);
+        }
+    }    
 }
