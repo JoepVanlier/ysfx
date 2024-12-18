@@ -798,6 +798,7 @@ void YsfxEditor::Impl::openCodeEditor()
 
     m_codeWindow->setVisible(true);
     m_codeWindow->toFront(true);
+    m_codeWindow->setAlwaysOnTop(true);
     m_ideView->focusOnCodeEditor();
 }
 
