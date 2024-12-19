@@ -658,6 +658,29 @@ const char *ysfx_get_file_path(ysfx_t *fx)
     return fx->source.main_file_path.c_str();
 }
 
+char *ysfx_resolve_path_and_allocate(ysfx_t* fx, const char* name, const char* origin)
+{
+    if (!fx) return nullptr;
+    std::string result = ysfx_resolve_import_path(fx, std::string(name), std::string{origin});
+
+    if (result.empty()) return nullptr;
+
+    char* cPath = static_cast<char*>(malloc(result.size() + 1));
+    if (cPath) {
+        strcpy(cPath, result.c_str());
+    } else {
+        return nullptr;
+    }
+
+    return cPath;
+}
+
+void ysfx_free_resolved_path(char *path)
+{
+    free(path);
+    path = nullptr;
+}
+
 const char *ysfx_get_author(ysfx_t *fx)
 {
     ysfx_source_unit_t *main = fx->source.main.get();

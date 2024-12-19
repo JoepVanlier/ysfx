@@ -29,6 +29,8 @@ ysfx_get_input_name
 ysfx_get_output_name
 ysfx_wants_meters
 ysfx_get_gfx_dim
+ysfx_resolve_path_and_allocate
+ysfx_free_resolved_path
 ysfx_has_section
 ysfx_slider_exists
 ysfx_slider_get_name

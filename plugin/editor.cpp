@@ -798,6 +798,7 @@ void YsfxEditor::Impl::openCodeEditor()
 
     m_codeWindow->setVisible(true);
     m_codeWindow->toFront(true);
+    m_codeWindow->setAlwaysOnTop(true);
     m_ideView->focusOnCodeEditor();
 }
 
@@ -988,7 +989,6 @@ void YsfxEditor::Impl::connectUI()
     };
 
     m_ideView->onFileSaved = [this](const juce::File &file) { loadFile(file, true); };
-    m_ideView->onReloadRequested = [this](const juce::File &file) { loadFile(file, true); };
 
     m_infoTimer.reset(FunctionalTimer::create([this]() { grabInfoAndUpdate(); }));
     m_infoTimer->startTimer(100);
