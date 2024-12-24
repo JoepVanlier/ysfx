@@ -369,7 +369,33 @@ std::shared_ptr<YSFXCodeEditor> YsfxIDEView::Impl::addEditor()
                     openDocument(path);
                     ysfx_free_resolved_path(pathString);
                     return true;
-                };
+                } else {
+                    juce::AlertWindow::showAsync(
+                        juce::MessageBoxOptions{}
+                        .withParentComponent(m_self)
+                        .withIconType(juce::MessageBoxIconType::QuestionIcon)
+                        .withTitle(TRANS("Missing import"))
+                        .withButton(TRANS("Yes"))
+                        .withButton(TRANS("No"))
+                        .withMessage(TRANS("File not found on JSFX path! Create?")),
+                        [this, potentialFilename](int result) {
+                            if (result == 1) {
+                                auto targetPath = getCurrentEditor()->getPath().getParentDirectory().getChildFile(potentialFilename);
+
+                                if (!targetPath.exists()) {
+                                    auto editor = addEditor();
+                                    if (editor->saveFile(targetPath)) {;
+                                        setCurrentEditor(m_editors.size() - 1);
+                                        relayoutUILater();
+                                    }
+                                } else {
+                                    // This shouldn't really happen since we should only be considering this when there is no file!
+                                    jassert(false);
+                                }
+                            }
+                        }
+                    );
+                }
             }
         }
         return false;

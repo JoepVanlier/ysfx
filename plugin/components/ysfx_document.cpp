@@ -109,10 +109,19 @@ bool YSFXCodeDocument::saveFile(juce::File path)
         return saveFile(m_file);
     }
 
-    bool success = path.replaceWithData(content.toRawUTF8(), content.getNumBytesAsUTF8());
-    if (!success) {
-        m_alertWindow.reset(show_option_window(TRANS("Error"), TRANS("Could not save ") + path.getFileNameWithoutExtension() + TRANS("."), std::vector<juce::String>{"OK"}, [](int result){ (void) result; }));
-        return false;
+    auto num_bytes = content.getNumBytesAsUTF8();
+    if (num_bytes) {
+        bool success = path.replaceWithData(content.toRawUTF8(), num_bytes);
+        if (!success) {
+            m_alertWindow.reset(show_option_window(TRANS("Error"), TRANS("Could not save ") + path.getFileNameWithoutExtension() + TRANS("."), std::vector<juce::String>{"OK"}, [](int result){ (void) result; }));
+            return false;
+        }
+    } else {
+        auto result = path.create();
+        if (result.failed()) {
+            m_alertWindow.reset(show_option_window(TRANS("Error"), TRANS("Failed to create new file ") + path.getFileNameWithoutExtension() + TRANS("."), std::vector<juce::String>{"OK"}, [](int result){ (void) result; }));
+            return false;
+        }
     }
     m_file = path;
 
