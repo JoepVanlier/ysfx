@@ -124,46 +124,70 @@ class CodeEditor : public juce::CodeEditorComponent
 };
 
 
-class YSFXCodeEditor
+class YSFXCodeEditor : public juce::CodeDocument::Listener
 {
     public:
         YSFXCodeEditor(juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback) {
             m_document = std::make_unique<YSFXCodeDocument>();
+            m_document->addListener(this);
             m_editor = std::make_unique<CodeEditor>(*m_document, tokenizer, keyPressCallback, dblClickCallback);
             m_editor->setVisible(false);
         };
         ~YSFXCodeEditor() {
             // Make sure we kill the editor first since it may be referencing the document!
+            m_document->removeListener(this);
             m_editor.reset();
             m_document.reset();
         }
 
-        void setColourScheme(juce::CodeEditorComponent::ColourScheme colourScheme) { m_editor->setColourScheme(colourScheme); };
-        void checkFileForModifications() { m_document->checkFileForModifications(); };
-        void reset() { m_document->reset(); };
-        void setReadOnly(bool readOnly) { m_editor->setReadOnly(readOnly); };
+        void codeDocumentTextDeleted(int startIndex, int endIndex) override {
+            (void) startIndex;
+            (void) endIndex;
+            m_modified = true;
+        }
+        void codeDocumentTextInserted(const juce::String& newText, int insertIndex) override {
+            (void) newText;
+            (void) insertIndex;
+            m_modified = true;
+        }
 
-        juce::File getPath() { return m_document->getPath(); };
-        juce::String getName() { return m_document->getName(); };
-        void loadFile(juce::File file) { m_document->loadFile(file); };
-        bool saveFile(juce::File file = juce::File{}) { return m_document->saveFile(file); };
-        int search(juce::String text, bool reverse = false) { return m_editor->search(text, reverse); };
+        void setColourScheme(juce::CodeEditorComponent::ColourScheme colourScheme) { m_editor->setColourScheme(colourScheme); }
+        void checkFileForModifications() { m_document->checkFileForModifications(); }
+        void reset() { m_document->reset(); }
+        void setReadOnly(bool readOnly) { m_editor->setReadOnly(readOnly); }
+        bool wasModified() { return m_modified; };
+
+        juce::File getPath() { return m_document->getPath(); }
+        juce::String getName() { return m_document->getName(); }
+        juce::String getDisplayName() { return m_document->getName() + (m_modified ? "*" : ""); }
+        void loadFile(juce::File file) {
+            m_document->loadFile(file);
+            m_modified = false;
+        }
+        bool saveFile(juce::File file = juce::File{}) { 
+            if (m_document->saveFile(file)) {
+                m_modified = false;
+                return true;
+            } else return false;
+        }
+        int search(juce::String text, bool reverse = false) { return m_editor->search(text, reverse); }
 
         bool hasFocus() {
             juce::Component *focus = m_editor->getCurrentlyFocusedComponent();
             return focus == m_editor.get();
         };
 
-        juce::String getLineAt(int x, int y) const { return m_editor->getLineAt(x, y); };
-        CodeEditor* getVisibleComponent() { return m_editor.get(); };
+        juce::String getLineAt(int x, int y) const { return m_editor->getLineAt(x, y); }
+        CodeEditor* getVisibleComponent() { return m_editor.get(); }
 
-        void setVisible(bool visible) { m_editor->setVisible(visible); };
+        void setVisible(bool visible) { m_editor->setVisible(visible); }
         template <typename T>
-        void setBounds(T&& arg) { m_editor->setBounds(std::forward<T>(arg)); };
+        void setBounds(T&& arg) { m_editor->setBounds(std::forward<T>(arg)); }
 
     private:
         std::unique_ptr<CodeEditor> m_editor;
         std::unique_ptr<YSFXCodeDocument> m_document;
+        bool m_modified{false};
 };
 
 

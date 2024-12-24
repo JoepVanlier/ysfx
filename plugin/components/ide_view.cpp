@@ -145,6 +145,12 @@ void YsfxIDEView::focusOfChildComponentChanged(FocusChangeType cause)
     if (m_impl->getCurrentEditor()->hasFocus()) {
         juce::Timer *timer = FunctionalTimer::create([this]() { 
             m_impl->getCurrentEditor()->checkFileForModifications();
+
+            int idx = 0;
+            for (auto& m : m_impl->m_editors) {
+                m_impl->m_tabs->setTabName(idx, m->getDisplayName());
+                ++idx;
+            }
         });
         m_impl->m_fileCheckTimer.reset(timer);
         timer->startTimer(100);
@@ -168,7 +174,9 @@ void YsfxIDEView::Impl::setupNewFx()
     }
     else {
         juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-        m_editors[0]->loadFile(file);
+        if ((m_editors[0]->getPath() != file) || (!m_editors[0]->wasModified())) {
+            m_editors[0]->loadFile(file);
+        };
 
         m_vars.ensureStorageAllocated(64);
 
@@ -285,6 +293,7 @@ void YsfxIDEView::Impl::openDocument(juce::File file)
 
     auto editor = addEditor();
     editor->loadFile(file);
+    
     setCurrentEditor(m_editors.size() - 1);
 }
 
@@ -456,7 +465,7 @@ void YsfxIDEView::Impl::relayoutUI()
         m_tabs->clearTabs();
         int idx = 0;
         for (const auto m : m_editors) {
-            m_tabs->addTab(m->getName(), m_self->getLookAndFeel().findColour(m_btnSave->buttonColourId), idx);
+            m_tabs->addTab(m->getDisplayName(), m_self->getLookAndFeel().findColour(m_btnSave->buttonColourId), idx);
             ++idx;
         }
         m_tabs->setCurrentTabIndex(m_currentEditorIndex, false);
