@@ -29,7 +29,7 @@ public:
     YsfxIDEView();
     ~YsfxIDEView() override;
     void setColourScheme(std::map<std::string, std::array<uint8_t, 3>> colormap);
-    void setEffect(ysfx_t *fx, juce::Time timeStamp);
+    void setEffect(ysfx_t *fx, juce::Time timeStamp, juce::File mainFile);
     void setStatusText(const juce::String &text);
     void focusOnCodeEditor();
 

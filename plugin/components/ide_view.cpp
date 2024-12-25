@@ -99,7 +99,7 @@ void YsfxIDEView::setColourScheme(std::map<std::string, std::array<uint8_t, 3>> 
     m_impl->m_editors[0]->setColourScheme(m_impl->m_tokenizer->getDefaultColourScheme());
 }
 
-void YsfxIDEView::setEffect(ysfx_t *fx, juce::Time timeStamp)
+void YsfxIDEView::setEffect(ysfx_t *fx, juce::Time timeStamp, juce::File mainFile)
 {
     if (m_impl->m_fx.get() == fx)
         return;
@@ -109,6 +109,11 @@ void YsfxIDEView::setEffect(ysfx_t *fx, juce::Time timeStamp)
         ysfx_add_ref(fx);
 
     (void) timeStamp;
+
+    if ((m_impl->m_editors[0]->getPath() != mainFile) || (!m_impl->m_editors[0]->wasModified())) {
+        m_impl->m_editors[0]->loadFile(mainFile);
+    };
+
     m_impl->setupNewFx();
     m_impl->m_btnSave->setEnabled(true);
 }
@@ -173,11 +178,6 @@ void YsfxIDEView::Impl::setupNewFx()
         getCurrentEditor()->setReadOnly(true);
     }
     else {
-        juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-        if ((m_editors[0]->getPath() != file) || (!m_editors[0]->wasModified())) {
-            m_editors[0]->loadFile(file);
-        };
-
         m_vars.ensureStorageAllocated(64);
 
         ysfx_enum_vars(fx, +[](const char *name, ysfx_real *var, void *userdata) -> int {

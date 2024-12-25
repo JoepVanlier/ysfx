@@ -31,6 +31,7 @@ struct YsfxInfo : public std::enable_shared_from_this<YsfxInfo> {
     juce::StringArray errors;
     juce::StringArray warnings;
     juce::String m_name;
+    juce::File mainFile;
 
     using Ptr = std::shared_ptr<YsfxInfo>;
 };

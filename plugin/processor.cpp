@@ -878,7 +878,8 @@ YsfxInfo::Ptr YsfxProcessor::Impl::createNewFx(juce::CharPointer_UTF8 filePath, 
     ysfx_load_file(fx, filePath, loadopts);
     ysfx_compile(fx, compileopts);
 
-    info->m_name = juce::File{filePath}.getFileNameWithoutExtension();
+    info->mainFile = juce::File{filePath};
+    info->m_name = info->mainFile.getFileNameWithoutExtension();
 
     if (initialState)
         ysfx_load_state(fx, initialState);

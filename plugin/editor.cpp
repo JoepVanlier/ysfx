@@ -399,7 +399,7 @@ void YsfxEditor::Impl::updateInfo()
     m_miniParametersPanel->setParametersDisplayed(params2);
     
     m_graphicsView->setEffect(fx);
-    m_ideView->setEffect(fx, info->timeStamp);
+    m_ideView->setEffect(fx, info->timeStamp, info->mainFile);
 
     if (!info->errors.isEmpty())
         m_ideView->setStatusText(info->errors.getReference(0));
