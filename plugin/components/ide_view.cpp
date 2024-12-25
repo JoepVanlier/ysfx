@@ -42,6 +42,7 @@ struct YsfxIDEView::Impl {
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::Timer> m_fileCheckTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
+    std::unique_ptr<juce::PopupMenu> m_tabPopup;
 
     std::unique_ptr<YSFXTabbedButtonBar> m_tabs;
 
@@ -66,6 +67,7 @@ struct YsfxIDEView::Impl {
     std::shared_ptr<YSFXCodeEditor> addEditor();
     void openDocument(juce::File file);
     void setCurrentEditor(int idx);
+    void tabPopup(int idx);
     std::shared_ptr<YSFXCodeEditor> getCurrentEditor();
 
     //==========================================================================
@@ -301,7 +303,7 @@ void YsfxIDEView::Impl::setCurrentEditor(int editorIndex)
 {
     if (editorIndex >= m_editors.size()) return;
 
-    m_editors[m_currentEditorIndex]->setVisible(false);
+    if (m_currentEditorIndex < m_editors.size()) m_editors[m_currentEditorIndex]->setVisible(false);
     m_currentEditorIndex = editorIndex;
     m_editors[m_currentEditorIndex]->setVisible(true);
 
@@ -439,8 +441,45 @@ void YsfxIDEView::Impl::createUI()
     m_self->addAndMakeVisible(*m_searchEditor);
     m_self->addAndMakeVisible(*m_lblStatus);
     m_searchEditor->setVisible(false);
-    m_tabs.reset(new YSFXTabbedButtonBar(juce::TabbedButtonBar::Orientation::TabsAtBottom, [this](int newCurrentTabIndex) { setCurrentEditor(newCurrentTabIndex); }));
+    m_tabs.reset(
+        new YSFXTabbedButtonBar(
+            juce::TabbedButtonBar::Orientation::TabsAtBottom,
+            [this](int newCurrentTabIndex) { setCurrentEditor(newCurrentTabIndex); },
+            [this](int tabIndex) { tabPopup(tabIndex); }
+        )
+    );
     m_self->addAndMakeVisible(*m_tabs);
+}
+
+void YsfxIDEView::Impl::tabPopup(int tabIndex)
+{
+    auto tab = m_tabs->getTabButton(tabIndex);
+    
+    juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
+    .withTargetComponent(*tab);
+
+    m_tabPopup.reset(new juce::PopupMenu);
+
+    // The base tab may not be removed.
+    if (tabIndex != 0) {
+        m_tabPopup->addItem(1, TRANS("Close tab"), true, false);
+        m_tabPopup->addSeparator();
+    }
+
+    m_tabPopup->showMenuAsync(
+        popupOptions, [this, tabIndex](int index) {
+            if (index != 0) {
+                if (m_editors.size() > tabIndex) {
+                    m_editors.erase(m_editors.begin() + tabIndex);
+                    if (m_currentEditorIndex == tabIndex) {
+                        setCurrentEditor(tabIndex - 1);
+                    } else {
+                        relayoutUILater();
+                    }
+                }
+            }
+        }
+    );
 }
 
 void YsfxIDEView::Impl::connectUI()
@@ -469,6 +508,9 @@ void YsfxIDEView::Impl::relayoutUI()
             ++idx;
         }
         m_tabs->setCurrentTabIndex(m_currentEditorIndex, false);
+        m_tabs->setVisible(true);
+    } else {
+        m_tabs->setVisible(false);
     }
 
     const juce::Rectangle<int> statusArea = temp.removeFromBottom(20);

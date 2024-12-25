@@ -194,7 +194,9 @@ class YSFXCodeEditor : public juce::CodeDocument::Listener
 class YSFXTabbedButtonBar : public juce::TabbedButtonBar
 {
     public:
-        YSFXTabbedButtonBar(TabbedButtonBar::Orientation orientation, std::function<void(int idx)> changeCallback): TabbedButtonBar(orientation), m_changeCallback(changeCallback) {};
+        YSFXTabbedButtonBar(
+            TabbedButtonBar::Orientation orientation, std::function<void(int idx)> changeCallback, std::function<void(int idx)> popupCallback
+        ): TabbedButtonBar(orientation), m_changeCallback(changeCallback), m_popupCallback(popupCallback) {};
 
     private:
         void currentTabChanged(int newCurrentTabIndex, const juce::String &newCurrentTabName) override
@@ -203,7 +205,14 @@ class YSFXTabbedButtonBar : public juce::TabbedButtonBar
             if (m_emitChange) m_changeCallback(newCurrentTabIndex);
         }
 
+        void popupMenuClickOnTab(int tabIndex, const juce::String& tabName) override
+        {
+            (void) tabName;
+            if (m_popupCallback) m_popupCallback(tabIndex);
+        }
+
         std::function<void(int idx)> m_changeCallback = [](int idx){ (void) idx; };
+        std::function<void(int idx)> m_popupCallback = [](int idx){ (void) idx; };
         bool m_emitChange{true};
 
         friend class ScopedUpdateBlocker;
