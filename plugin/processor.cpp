@@ -29,6 +29,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <cmath>
+#include <deque>
+#include <algorithm>
 
 struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     YsfxProcessor *m_self = nullptr;
@@ -60,6 +62,11 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     void loadNewPreset(const ysfx_preset_t &preset);
     void resetPresetInfo();
 
+    void pushUndoState();
+    void popUndoState();
+    void redoState();
+    void updateUndoState();
+
     //==========================================================================
     struct LoadRequest : public std::enable_shared_from_this<LoadRequest> {
         juce::String filePath;
@@ -83,10 +90,16 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
 
     LoadRequest::Ptr m_loadRequest;
     PresetRequest::Ptr m_presetRequest;
+    UndoRequest m_undoRequest{UndoRequest::noRequest};
     bool m_wantUndoPoint{false};
     ysfx::sync_bitset64 m_sliderParamsToNotify[ysfx_max_slider_groups];
     ysfx::sync_bitset64 m_sliderParamsTouching[ysfx_max_slider_groups];
     bool m_updateParamNames{false};
+    
+    std::deque<ysfx_state_u> m_undoStack;
+    int m_undoPosition{-1};
+    bool m_hasUndo{false};
+    bool m_hasRedo{false};
 
     //==========================================================================
     class SliderNotificationUpdater : public juce::AsyncUpdater {
@@ -321,13 +334,35 @@ void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, ui
     }
 }
 
+void YsfxProcessor::popUndoState()
+{
+    m_impl->m_undoRequest = UndoRequest::wantUndo;
+    m_impl->m_background->wakeUp();
+}
+
+void YsfxProcessor::redoState()
+{
+    m_impl->m_undoRequest = UndoRequest::wantRedo;
+    m_impl->m_background->wakeUp();
+}
+
+bool YsfxProcessor::canUndo()
+{
+    return m_impl->m_hasUndo;
+}
+
+bool YsfxProcessor::canRedo()
+{
+    return m_impl->m_hasRedo;
+}
+
 bool YsfxProcessor::presetExists(const char* presetName)
 {
     auto sourceBank = m_impl->m_bank;
     return ysfx_preset_exists(sourceBank.get(), presetName) > 0;
 }
 
-void backupPresetFile(juce::File bankLocation)
+static void backupPresetFile(juce::File bankLocation)
 {
     juce::File bankCopy(bankLocation.getFullPathName() + "-bak");
     bankLocation.copyFileTo(bankCopy);
@@ -958,7 +993,17 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info, ysfx_bank_shared bank
     std::atomic_store(&m_bank, bank);
     std::atomic_store(&m_info, info);
 
+    m_undoStack.clear();
+    m_hasUndo = false;
+    m_hasRedo = false;
+
     m_background->wakeUp();
+}
+
+void YsfxProcessor::Impl::updateUndoState()
+{
+    m_hasUndo = m_undoPosition > 0;
+    m_hasRedo = static_cast<size_t>(m_undoPosition + 1) < m_undoStack.size();
 }
 
 void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
@@ -982,6 +1027,65 @@ void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
     }
 
     std::atomic_store(&m_currentPresetInfo, presetInfo);
+    m_background->wakeUp();
+}
+
+void YsfxProcessor::Impl::pushUndoState()
+{
+    ysfx_state_t* state;
+    {
+        AudioProcessorSuspender sus(*m_self);
+        sus.lockCallbacks();
+        ysfx_t *fx = m_fx.get();
+        state = ysfx_save_state(fx);
+    }
+
+    if (!m_currentPresetInfo) return;
+    ysfx_state_u preset;
+    preset.reset(state);
+
+    // We add a new undo state -> Invalidate everything after our current position
+    auto offset = std::min<int>(static_cast<int>(m_undoStack.size()), std::max<int>(1, m_undoPosition + 1));
+    m_undoStack.erase(m_undoStack.begin() + offset, m_undoStack.end());
+
+    m_undoStack.emplace_back(std::move(preset));
+    m_undoPosition = static_cast<int>(m_undoStack.size()) - 1;
+
+    if (m_undoStack.size() > 14) {
+        m_undoStack.pop_front();
+        m_undoPosition -= 1;
+    }
+
+    updateUndoState();
+}
+
+void YsfxProcessor::Impl::popUndoState()
+{
+    AudioProcessorSuspender sus{*m_self};
+    sus.lockCallbacks();
+
+    m_undoPosition = std::max<int>(-1, m_undoPosition - 1);
+    if (m_undoPosition < 0) return;  // Nothing to undo
+
+    ysfx_t *fx = m_fx.get();
+    ysfx_load_serialized_state(fx, m_undoStack[static_cast<size_t>(m_undoPosition)].get());
+    updateUndoState();
+
+    m_background->wakeUp();
+}
+
+void YsfxProcessor::Impl::redoState()
+{
+    AudioProcessorSuspender sus{*m_self};
+    sus.lockCallbacks();
+
+    if ((m_undoPosition + 1) >= static_cast<int>(m_undoStack.size())) return;  // Nothing to redo
+    m_undoPosition += 1;
+    
+    ysfx_t *fx = m_fx.get();
+    ysfx_load_serialized_state(fx, m_undoStack[static_cast<size_t>(m_undoPosition)].get());
+    updateUndoState();
+
     m_background->wakeUp();
 }
 
@@ -1085,8 +1189,19 @@ void YsfxProcessor::Impl::Background::run()
         
         if (m_impl->m_wantUndoPoint) {
             m_impl->m_wantUndoPoint = false;
+            m_impl->pushUndoState();
             Impl::ManualUndoPointUpdater *undoPointUpdater = m_impl->m_manualUndoPointUpdater.get();
             undoPointUpdater->triggerAsyncUpdate();
+        }
+
+        if (m_impl->m_undoRequest == UndoRequest::wantUndo) {
+            m_impl->popUndoState();
+            m_impl->m_undoRequest = UndoRequest::noRequest;
+        }
+
+        if (m_impl->m_undoRequest == UndoRequest::wantRedo) {
+            m_impl->redoState();
+            m_impl->m_undoRequest = UndoRequest::noRequest;
         }
     }
 }

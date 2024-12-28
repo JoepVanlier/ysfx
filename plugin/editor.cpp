@@ -60,6 +60,8 @@ struct YsfxEditor::Impl {
     float m_currentScaling{1.0f};
     uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
     bool m_visibleSlidersChanged{false};
+    bool m_showUndo{false};
+    bool m_showRedo{false};
 
     //==========================================================================
     void updateInfo();
@@ -103,6 +105,8 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::TextButton> m_btnPresetOpts;
     std::unique_ptr<juce::TextButton> m_btnSwitchEditor;
     std::unique_ptr<juce::TextButton> m_btnReload;
+    std::unique_ptr<juce::TextButton> m_btnUndo;
+    std::unique_ptr<juce::TextButton> m_btnRedo;
     std::unique_ptr<juce::TextButton> m_btnGfxScaling;
 
     std::unique_ptr<juce::Label> m_lblFilePath;
@@ -318,6 +322,13 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     if (m_currentPresetInfo != presetInfo) {
         m_currentPresetInfo = presetInfo;
     }
+
+    if ((m_showUndo != m_proc->canUndo()) || (m_showRedo != m_proc->canRedo())) {
+        m_showUndo = m_proc->canUndo();
+        m_showRedo = m_proc->canRedo();
+        relayoutUI();
+    }
+    
     if (m_info != info) {
         m_info = info;
         updateInfo();
@@ -899,6 +910,10 @@ void YsfxEditor::Impl::createUI()
     m_self->addAndMakeVisible(*m_btnRecentFiles);
     m_btnReload.reset(new juce::TextButton(TRANS("Reload")));
     m_self->addAndMakeVisible(*m_btnReload);
+    m_btnUndo.reset(new juce::TextButton(TRANS("U")));
+    m_self->addAndMakeVisible(*m_btnUndo);
+    m_btnRedo.reset(new juce::TextButton(TRANS("R")));
+    m_self->addAndMakeVisible(*m_btnRedo);
     m_btnEditCode.reset(new juce::TextButton(TRANS("Edit")));
     m_self->addAndMakeVisible(*m_btnEditCode);
     m_btnGfxScaling.reset(new juce::TextButton(TRANS("x1")));
@@ -972,6 +987,13 @@ void YsfxEditor::Impl::connectUI()
             this->m_self
         );
     };
+    m_btnUndo->onClick = [this] {
+        this->m_proc->popUndoState();
+    };
+    m_btnRedo->onClick = [this] {
+        this->m_proc->redoState();
+    };
+
     m_btnGfxScaling->onClick = [this] {
         if (m_graphicsView) {
             float newScaling = (m_graphicsView->getScaling() + 0.5f);
@@ -1097,6 +1119,21 @@ void YsfxEditor::Impl::relayoutUI()
         m_btnReload->setBounds(temp.removeFromLeft(buttonWidth));
         temp.removeFromLeft(spacing);
         m_btnReload->setVisible(true);
+
+        if (m_showUndo || m_showRedo) {
+            m_btnUndo->setBounds(temp.removeFromLeft(25));
+            temp.removeFromLeft(spacing);
+            m_btnUndo->setVisible(true);
+            m_btnUndo->setEnabled(m_showUndo);
+
+            m_btnRedo->setBounds(temp.removeFromLeft(25));
+            temp.removeFromLeft(spacing);
+            m_btnRedo->setVisible(true);
+            m_btnRedo->setEnabled(m_showRedo);
+        } else {
+            m_btnUndo->setVisible(false);
+            m_btnRedo->setVisible(false);
+        }
     } else {
         m_btnReload->setVisible(false);
     }

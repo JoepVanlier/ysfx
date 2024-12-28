@@ -25,6 +25,7 @@ using ysfx_state_t = struct ysfx_state_s;
 
 enum RetryState {ok, mustRetry, retrying};
 enum PresetLoadMode {load, noLoad, deleteName};
+enum UndoRequest {noRequest, wantUndo, wantRedo};
 
 class YsfxProcessor : public juce::AudioProcessor {
 public:
@@ -34,6 +35,10 @@ public:
     YsfxParameter *getYsfxParameter(int sliderIndex);
     void loadJsfxFile(const juce::String &filePath, ysfx_state_t *initialState, bool async, bool preserveState);
     void loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, uint32_t index, PresetLoadMode load, bool async);
+    void popUndoState();
+    void redoState();
+    bool canUndo();
+    bool canRedo();
     bool presetExists(const char *preset_name);
     void reloadBank();
     void savePreset(const char* preset_name, ysfx_state_t *preset);
