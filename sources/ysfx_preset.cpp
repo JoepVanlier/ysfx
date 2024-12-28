@@ -33,7 +33,6 @@
 
 #include "WDL/lineparse.h"
 
-static void ysfx_preset_clear(ysfx_preset_t *preset);
 static ysfx_bank_t *ysfx_load_bank_from_rpl_text(const std::string &text);
 static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *name, const std::vector<uint8_t> &data);
 
@@ -75,15 +74,17 @@ void ysfx_bank_free(ysfx_bank_t *bank)
     if (ysfx_preset_t *presets = bank->presets) {
         uint32_t count = bank->preset_count;
         for (uint32_t i = 0; i < count; ++i)
-            ysfx_preset_clear(&presets[i]);
+            ysfx_preset_free(&presets[i]);
         delete[] presets;
     }
 
     delete bank;
 }
 
-static void ysfx_preset_clear(ysfx_preset_t *preset)
+void ysfx_preset_free(ysfx_preset_t *preset)
 {
+    if (!preset) return;
+
     delete[] preset->name;
     preset->name = nullptr;
 
@@ -92,6 +93,15 @@ static void ysfx_preset_clear(ysfx_preset_t *preset)
 
     ysfx_state_free(preset->state);
     preset->state = nullptr;
+}
+
+ysfx_preset_t *ysfx_preset_from_state(const char* value, ysfx_state_t* state) {
+    ysfx_preset_t *preset = new ysfx_preset_t{};
+    preset->name = ysfx::strdup_using_new(value);
+    preset->blob_name = ysfx::strdup_using_new(value);
+    preset->state = state;
+
+    return preset;
 }
 
 static ysfx_bank_t *ysfx_load_bank_from_rpl_text(const std::string &text)
@@ -106,7 +116,7 @@ static ysfx_bank_t *ysfx_load_bank_from_rpl_text(const std::string &text)
 
     auto list_cleanup = ysfx::defer([&preset_list]() {
         for (ysfx_preset_t &pst : preset_list)
-            ysfx_preset_clear(&pst);
+            ysfx_preset_free(&pst);
     });
 
     ///

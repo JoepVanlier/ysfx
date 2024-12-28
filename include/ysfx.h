@@ -377,6 +377,8 @@ YSFX_API ysfx_state_t *ysfx_save_state(ysfx_t *fx);
 YSFX_API void ysfx_state_free(ysfx_state_t *state);
 // duplicate a state object
 YSFX_API ysfx_state_t *ysfx_state_dup(ysfx_state_t *state);
+// load only serialized state
+YSFX_API bool ysfx_load_serialized_state(ysfx_t *fx, ysfx_state_t *state);
 
 typedef struct ysfx_preset_s {
     // name of the preset
@@ -386,6 +388,11 @@ typedef struct ysfx_preset_s {
     // state of the preset
     ysfx_state_t *state;
 } ysfx_preset_t;
+
+// release a preset object
+YSFX_API void ysfx_preset_free(ysfx_preset_t *preset);
+// Create a preset from a state blob and string. Note that the state blob is _not_ copied.
+YSFX_API ysfx_preset_t *ysfx_preset_from_state(const char* value, ysfx_state_t* state);
 
 typedef struct ysfx_bank_s {
     // name of the bank
@@ -612,6 +619,7 @@ YSFX_DEFINE_AUTO_PTR(ysfx_u, ysfx_t, ysfx_free);
 YSFX_DEFINE_AUTO_PTR(ysfx_state_u, ysfx_state_t, ysfx_state_free);
 YSFX_DEFINE_AUTO_PTR(ysfx_bank_u, ysfx_bank_t, ysfx_bank_free);
 YSFX_DEFINE_AUTO_PTR(ysfx_menu_u, ysfx_menu_t, ysfx_menu_free);
+YSFX_DEFINE_AUTO_PTR(ysfx_preset_u, ysfx_preset_t, ysfx_preset_free);
 
 #define YSFX_DEFINE_SHARED_PTR(sptr, styp, freefn)               \
     struct sptr##_deleter {                                      \

@@ -1591,6 +1591,27 @@ bool ysfx_load_state(ysfx_t *fx, ysfx_state_t *state)
     return true;
 }
 
+bool ysfx_load_serialized_state(ysfx_t *fx, ysfx_state_t *state)
+{
+    if (!fx->code.compiled)
+    return false;
+
+    // restore the serialization
+    std::string buffer((char *)state->data, state->data_size);
+
+    // invoke @serialize
+    {
+        std::unique_lock<ysfx::mutex> lock;
+        ysfx_serializer_t *serializer = static_cast<ysfx_serializer_t *>(ysfx_get_file(fx, 0, lock));
+        assert(serializer);
+        serializer->begin(false, buffer);
+        lock.unlock();
+        ysfx_serialize(fx);
+        lock.lock();
+        serializer->end();
+    }
+}
+
 ysfx_state_t *ysfx_save_state(ysfx_t *fx)
 {
     if (!fx->code.compiled)
