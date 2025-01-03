@@ -19,7 +19,7 @@
 //
 
 #pragma once
-#include "modal_textinputbox.h"
+#include "dialogs.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
@@ -27,7 +27,7 @@
 class YSFXCodeDocument : public juce::CodeDocument {
     public:
         YSFXCodeDocument();
-        ~YSFXCodeDocument() {};
+        ~YSFXCodeDocument() {}
         void reset(void);
         void loadFile(juce::File file);
         bool saveFile(juce::File file=juce::File{});
@@ -42,7 +42,6 @@ class YSFXCodeDocument : public juce::CodeDocument {
         juce::Time m_changeTime{0};
         bool m_reloadDialogGuard{false};
 
-        bool m_fileChooserActive{false};
         std::unique_ptr<juce::FileChooser> m_fileChooser;
         std::unique_ptr<juce::AlertWindow> m_alertWindow;
 };
@@ -53,7 +52,7 @@ class CodeEditor : public juce::CodeEditorComponent
     public:
         CodeEditor(
             juce::CodeDocument& doc, juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback
-        ) : CodeEditorComponent(doc, tokenizer), m_keyPressCallback{keyPressCallback}, m_dblClickCallback{dblClickCallback} {};
+        ) : CodeEditorComponent(doc, tokenizer), m_keyPressCallback{keyPressCallback}, m_dblClickCallback{dblClickCallback} {}
         
         bool keyPressed(const juce::KeyPress &key) override 
         {
@@ -78,7 +77,7 @@ class CodeEditor : public juce::CodeEditorComponent
             juce::CodeDocument::Position stop(doc, 0);
             doc.findLineContaining(position, start, stop);
             return doc.getTextBetween(start, stop);
-        };
+        }
 
         int search(juce::String text, bool reverse=false)
         {
@@ -132,8 +131,8 @@ class YSFXCodeEditor : public juce::CodeDocument::Listener
             m_document->addListener(this);
             m_editor = std::make_unique<CodeEditor>(*m_document, tokenizer, keyPressCallback, dblClickCallback);
             m_editor->setVisible(false);
-        };
-        ~YSFXCodeEditor() {
+        }
+        ~YSFXCodeEditor() override {
             // Make sure we kill the editor first since it may be referencing the document!
             m_document->removeListener(this);
             m_editor.reset();
@@ -155,7 +154,7 @@ class YSFXCodeEditor : public juce::CodeDocument::Listener
         void checkFileForModifications() { m_document->checkFileForModifications(); }
         void reset() { m_document->reset(); }
         void setReadOnly(bool readOnly) { m_editor->setReadOnly(readOnly); }
-        bool wasModified() { return m_modified; };
+        bool wasModified() { return m_modified; }
 
         juce::File getPath() { return m_document->getPath(); }
         juce::String getName() { return m_document->getName(); }
@@ -175,7 +174,7 @@ class YSFXCodeEditor : public juce::CodeDocument::Listener
         bool hasFocus() {
             juce::Component *focus = m_editor->getCurrentlyFocusedComponent();
             return focus == m_editor.get();
-        };
+        }
 
         juce::String getLineAt(int x, int y) const { return m_editor->getLineAt(x, y); }
         CodeEditor* getVisibleComponent() { return m_editor.get(); }
@@ -196,7 +195,7 @@ class YSFXTabbedButtonBar : public juce::TabbedButtonBar
     public:
         YSFXTabbedButtonBar(
             TabbedButtonBar::Orientation orientation, std::function<void(int idx)> changeCallback, std::function<void(int idx)> popupCallback
-        ): TabbedButtonBar(orientation), m_changeCallback(changeCallback), m_popupCallback(popupCallback) {};
+        ): TabbedButtonBar(orientation), m_changeCallback(changeCallback), m_popupCallback(popupCallback) {}
 
     private:
         void currentTabChanged(int newCurrentTabIndex, const juce::String &newCurrentTabName) override
@@ -222,8 +221,8 @@ class YSFXTabbedButtonBar : public juce::TabbedButtonBar
 class ScopedUpdateBlocker
 {
     public:
-        ScopedUpdateBlocker(YSFXTabbedButtonBar& buttonBar): m_bar(buttonBar) { m_bar.m_emitChange = false; };
-        ~ScopedUpdateBlocker() { m_bar.m_emitChange = true; };
+        ScopedUpdateBlocker(YSFXTabbedButtonBar& buttonBar): m_bar(buttonBar) { m_bar.m_emitChange = false; }
+        ~ScopedUpdateBlocker() { m_bar.m_emitChange = true; }
     
     private:
         YSFXTabbedButtonBar& m_bar;

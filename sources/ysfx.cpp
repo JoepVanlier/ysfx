@@ -1595,8 +1595,7 @@ bool ysfx_load_state(ysfx_t *fx, ysfx_state_t *state)
 
 bool ysfx_load_serialized_state(ysfx_t *fx, ysfx_state_t *state)
 {
-    if (!fx->code.compiled)
-    return false;
+    if (!fx->code.compiled) return false;
 
     // restore the serialization
     std::string buffer((char *)state->data, state->data_size);
@@ -1612,6 +1611,8 @@ bool ysfx_load_serialized_state(ysfx_t *fx, ysfx_state_t *state)
         lock.lock();
         serializer->end();
     }
+
+    return true;
 }
 
 ysfx_state_t *ysfx_save_state(ysfx_t *fx)

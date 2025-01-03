@@ -28,7 +28,7 @@
 #include "components/ide_view.h"
 #include "components/rpl_view.h"
 #include "components/searchable_popup.h"
-#include "components/modal_textinputbox.h"
+#include "components/dialogs.h"
 #include "components/divider.h"
 #include "utility/functional_timer.h"
 #include "ysfx.h"

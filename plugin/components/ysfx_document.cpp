@@ -19,13 +19,13 @@
 //
 
 #include "ysfx_document.h"
-#include "modal_textinputbox.h"
+#include "dialogs.h"
 
 
 YSFXCodeDocument::YSFXCodeDocument() : CodeDocument()
 {
     reset();
-};
+}
 
 void YSFXCodeDocument::reset()
 {
@@ -119,7 +119,7 @@ bool YSFXCodeDocument::saveFile(juce::File path)
     } else {
         auto result = path.create();
         if (result.failed()) {
-            m_alertWindow.reset(show_option_window(TRANS("Error"), TRANS("Failed to create new file ") + path.getFileNameWithoutExtension() + TRANS("."), std::vector<juce::String>{"OK"}, [](int result){ (void) result; }));
+            m_alertWindow.reset(show_option_window(TRANS("Error"), TRANS("Failed to create new file ") + path.getFileNameWithoutExtension() + TRANS("."), std::vector<juce::String>{"OK"}, [](int result_value){ (void) result_value; }));
             return false;
         }
     }

@@ -22,7 +22,7 @@
 #include "utility/functional_timer.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <algorithm>
-#include "components/modal_textinputbox.h"
+#include "components/dialogs.h"
 
 class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxModel, public juce::DragAndDropTarget
 {

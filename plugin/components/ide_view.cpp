@@ -58,7 +58,7 @@ struct YsfxIDEView::Impl {
     std::unique_ptr<juce::Timer> m_varsUpdateTimer;
 
     bool m_forceUpdate{false};
-    int m_currentEditorIndex{0};
+    size_t m_currentEditorIndex{0};
 
     //==========================================================================
     void setupNewFx();
@@ -295,16 +295,18 @@ void YsfxIDEView::Impl::openDocument(juce::File file)
 
     auto editor = addEditor();
     editor->loadFile(file);
-    
-    setCurrentEditor(m_editors.size() - 1);
+    setCurrentEditor(-1);
 }
 
+// Set current editor, negative indices select from end
 void YsfxIDEView::Impl::setCurrentEditor(int editorIndex)
 {
-    if (editorIndex >= m_editors.size()) return;
+    auto index = editorIndex < 0 ? m_editors.size() - static_cast<size_t>(std::abs(editorIndex)) : static_cast<size_t>(editorIndex);
+
+    if (index >= m_editors.size()) return;
 
     if (m_currentEditorIndex < m_editors.size()) m_editors[m_currentEditorIndex]->setVisible(false);
-    m_currentEditorIndex = editorIndex;
+    m_currentEditorIndex = index;
     m_editors[m_currentEditorIndex]->setVisible(true);
 
     relayoutUILater();
@@ -396,7 +398,7 @@ std::shared_ptr<YSFXCodeEditor> YsfxIDEView::Impl::addEditor()
                                 if (!targetPath.exists()) {
                                     auto editor = addEditor();
                                     if (editor->saveFile(targetPath)) {;
-                                        setCurrentEditor(m_editors.size() - 1);
+                                        setCurrentEditor(-1);
                                         relayoutUILater();
                                     }
                                 } else {
@@ -453,7 +455,9 @@ void YsfxIDEView::Impl::createUI()
 
 void YsfxIDEView::Impl::tabPopup(int tabIndex)
 {
+    if (tabIndex < 0) return;
     auto tab = m_tabs->getTabButton(tabIndex);
+    auto editorIndex = static_cast<size_t>(tabIndex);
     
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
     .withTargetComponent(*tab);
@@ -461,18 +465,18 @@ void YsfxIDEView::Impl::tabPopup(int tabIndex)
     m_tabPopup.reset(new juce::PopupMenu);
 
     // The base tab may not be removed.
-    if (tabIndex != 0) {
+    if (editorIndex != 0) {
         m_tabPopup->addItem(1, TRANS("Close tab"), true, false);
         m_tabPopup->addSeparator();
     }
 
     m_tabPopup->showMenuAsync(
-        popupOptions, [this, tabIndex](int index) {
+        popupOptions, [this, editorIndex](int index) {
             if (index != 0) {
-                if (m_editors.size() > tabIndex) {
-                    m_editors.erase(m_editors.begin() + tabIndex);
-                    if (m_currentEditorIndex == tabIndex) {
-                        setCurrentEditor(tabIndex - 1);
+                if (m_editors.size() > editorIndex) {
+                    m_editors.erase(m_editors.begin() + static_cast<int>(editorIndex));
+                    if (m_currentEditorIndex == editorIndex) {
+                        setCurrentEditor(static_cast<int>(editorIndex - 1));
                     } else {
                         relayoutUILater();
                     }
@@ -503,11 +507,11 @@ void YsfxIDEView::Impl::relayoutUI()
         auto updateBlock = ScopedUpdateBlocker(*m_tabs);
         m_tabs->clearTabs();
         int idx = 0;
-        for (const auto m : m_editors) {
+        for (const auto& m : m_editors) {
             m_tabs->addTab(m->getDisplayName(), m_self->getLookAndFeel().findColour(m_btnSave->buttonColourId), idx);
             ++idx;
         }
-        m_tabs->setCurrentTabIndex(m_currentEditorIndex, false);
+        m_tabs->setCurrentTabIndex(static_cast<int>(m_currentEditorIndex), false);
         m_tabs->setVisible(true);
     } else {
         m_tabs->setVisible(false);
