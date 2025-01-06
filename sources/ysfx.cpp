@@ -54,6 +54,42 @@ void ysfx_set_thread_id(ysfx_thread_id_t id)
     ysfx_thread_id = id;
 }
 
+static void
+fpe_signal_handler( int sig, siginfo_t *sip, void *scp )
+{
+    int fe_code = sip->si_code;
+
+    printf("In signal handler : ");
+
+    if (fe_code == ILL_ILLTRP)
+        printf("Illegal trap detected\n");
+    else
+        printf("Code detected : %d\n",fe_code);
+
+    abort();
+}
+
+#include <fenv.h>    
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+void enable_floating_point_exceptions()
+{
+    fenv_t env;
+    fegetenv(&env);
+
+    env.__fpcr = env.__fpcr | __fpcr_trap_divbyzero | __fpcr_trap_invalid;
+    fesetenv(&env);
+
+    struct sigaction act;
+    act.sa_sigaction = fpe_signal_handler;
+    sigemptyset (&act.sa_mask);
+    act.sa_flags = SA_SIGINFO;
+    sigaction(SIGILL, &act, NULL);
+}
+
 //------------------------------------------------------------------------------
 struct ysfx_api_initializer {
 private:
@@ -1223,6 +1259,8 @@ void ysfx_init(ysfx_t *fx)
 
     *fx->var.samplesblock = (EEL_F)fx->block_size;
     *fx->var.srate = fx->sample_rate;
+
+    enable_floating_point_exceptions();
 
     if (fx->is_freshly_compiled) {
         *fx->var.pdc_delay = 0;
