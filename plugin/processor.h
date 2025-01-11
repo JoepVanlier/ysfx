@@ -36,6 +36,7 @@ public:
     void loadJsfxFile(const juce::String &filePath, ysfx_state_t *initialState, bool async, bool preserveState);
     void loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, uint32_t index, PresetLoadMode load, bool async);
     void popUndoState();
+    void checkForUndoableChanges();
     void redoState();
     bool canUndo();
     bool canRedo();

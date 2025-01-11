@@ -47,6 +47,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::AlertWindow> m_modalAlert;
     std::unique_ptr<juce::Timer> m_infoTimer;
     std::unique_ptr<juce::Timer> m_relayoutTimer;
+    std::unique_ptr<juce::Timer> m_undoTimer;
     std::unique_ptr<juce::FileChooser> m_fileChooser;
     std::unique_ptr<juce::PopupMenu> m_recentFilesPopup;
     std::unique_ptr<juce::PopupMenu> m_recentFilesOptsPopup;
@@ -57,6 +58,7 @@ struct YsfxEditor::Impl {
     bool m_fileChooserActive = false;
     bool m_mustResizeToGfx = true;
     bool m_maintainState = false;
+    int m_keepUndoState{1};
     float m_currentScaling{1.0f};
     uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
     bool m_visibleSlidersChanged{false};
@@ -900,6 +902,22 @@ void YsfxEditor::Impl::initializeProperties()
     #endif
     
     m_pluginProperties.reset(new juce::PropertiesFile{options});
+
+    // Manual undo stack
+    // 1 - default (off in current release, on in the future)
+    // 2 - enabled
+    // 3 - always disabled
+    {
+        juce::ScopedLock lock{m_pluginProperties->getLock()};
+
+        auto key = juce::String("ysfx_maintain_serialization_undo");
+        if (m_pluginProperties->containsKey(key)) {
+            m_keepUndoState = m_pluginProperties->getIntValue(key);
+        } else {
+            m_pluginProperties->setValue(key, 1);
+            m_pluginProperties->setNeedsToBeSaved(true);
+        }
+    }
 }
 
 void YsfxEditor::Impl::createUI()
@@ -1014,6 +1032,15 @@ void YsfxEditor::Impl::connectUI()
 
     m_infoTimer.reset(FunctionalTimer::create([this]() { grabInfoAndUpdate(); }));
     m_infoTimer->startTimer(100);
+    
+    m_undoTimer.reset(
+        FunctionalTimer::create(
+            [this]() {
+                if (m_keepUndoState == 2) m_proc->checkForUndoableChanges();
+            }
+        )
+    );
+    m_undoTimer->startTimer(500);
 }
 
 void YsfxEditor::Impl::relayoutUI()

@@ -42,6 +42,7 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     YsfxCurrentPresetInfo::Ptr m_currentPresetInfo{new YsfxCurrentPresetInfo};
     ysfx_bank_shared m_bank{nullptr};
 
+    int m_maxUndoStack{64};
     double m_sample_rate{44100.0};
     uint32_t m_block_size{256};
 
@@ -331,6 +332,14 @@ void YsfxProcessor::loadJsfxPreset(YsfxInfo::Ptr info, ysfx_bank_shared bank, ui
     if (!async) {
         std::unique_lock<std::mutex> lock(presetRequest->completionMutex);
         presetRequest->completionVariable.wait(lock, [&]() { return presetRequest->completion; });
+    }
+}
+
+void YsfxProcessor::checkForUndoableChanges()
+{
+    if (ysfx_fetch_want_undopoint(m_impl->m_fx.get())) {
+        m_impl->m_wantUndoPoint = true;
+        m_impl->m_background->wakeUp();
     }
 }
 
@@ -794,11 +803,6 @@ void YsfxProcessor::Impl::processSliderChanges()
         notify = automated ? true : notify;
     };
 
-    m_wantUndoPoint = m_wantUndoPoint | ysfx_fetch_want_undopoint(fx);
-    if (m_wantUndoPoint) {
-        notify = true;
-    };
-
     // this will sync parameters later (on message thread)
     if (notify) m_background->wakeUp();
 
@@ -988,14 +992,16 @@ void YsfxProcessor::Impl::installNewFx(YsfxInfo::Ptr info, ysfx_bank_shared bank
     m_updateParamNames = true;
     m_wantUndoPoint = false;
 
+    if (m_info->m_name != info->m_name) {
+        m_undoStack.clear();
+        m_hasUndo = false;
+        m_hasRedo = false;
+    }
+
     YsfxCurrentPresetInfo::Ptr presetInfo{new YsfxCurrentPresetInfo()};
     std::atomic_store(&m_currentPresetInfo, presetInfo);
     std::atomic_store(&m_bank, bank);
     std::atomic_store(&m_info, info);
-
-    m_undoStack.clear();
-    m_hasUndo = false;
-    m_hasRedo = false;
 
     m_background->wakeUp();
 }
@@ -1032,6 +1038,8 @@ void YsfxProcessor::Impl::loadNewPreset(const ysfx_preset_t &preset)
 
 void YsfxProcessor::Impl::pushUndoState()
 {
+    if (!m_currentPresetInfo) return;
+
     ysfx_state_t* state;
     {
         AudioProcessorSuspender sus(*m_self);
@@ -1041,6 +1049,13 @@ void YsfxProcessor::Impl::pushUndoState()
     }
 
     if (!m_currentPresetInfo) return;
+
+    // Verify that we don't already have this exact state
+    if ((m_undoPosition < m_undoStack.size()) && (m_undoPosition >= 0) && ysfx_is_state_equal(state, m_undoStack[m_undoPosition].get())) {
+        ysfx_state_free(state);
+        return;
+    }
+
     ysfx_state_u preset;
     preset.reset(state);
 
@@ -1051,7 +1066,7 @@ void YsfxProcessor::Impl::pushUndoState()
     m_undoStack.emplace_back(std::move(preset));
     m_undoPosition = static_cast<int>(m_undoStack.size()) - 1;
 
-    if (m_undoStack.size() > 14) {
+    if (m_undoStack.size() > m_maxUndoStack) {
         m_undoStack.pop_front();
         m_undoPosition -= 1;
     }
