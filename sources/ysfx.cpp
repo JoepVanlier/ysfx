@@ -1593,6 +1593,27 @@ bool ysfx_load_state(ysfx_t *fx, ysfx_state_t *state)
     return true;
 }
 
+bool ysfx_load_serialized_state(ysfx_t *fx, ysfx_state_t *state)
+{
+    if (!fx->code.compiled)
+    return false;
+
+    // restore the serialization
+    std::string buffer((char *)state->data, state->data_size);
+
+    // invoke @serialize
+    {
+        std::unique_lock<ysfx::mutex> lock;
+        ysfx_serializer_t *serializer = static_cast<ysfx_serializer_t *>(ysfx_get_file(fx, 0, lock));
+        assert(serializer);
+        serializer->begin(false, buffer);
+        lock.unlock();
+        ysfx_serialize(fx);
+        lock.lock();
+        serializer->end();
+    }
+}
+
 ysfx_state_t *ysfx_save_state(ysfx_t *fx)
 {
     if (!fx->code.compiled)
@@ -1665,6 +1686,19 @@ ysfx_state_t *ysfx_state_dup(ysfx_state_t *state_in)
     memcpy(state_out->data, state_in->data, data_size);
 
     return state_out.release();
+}
+
+bool ysfx_is_state_equal(ysfx_state_t *state1, ysfx_state_t *state2)
+{
+    if (!state1 || !state2)
+        return false;
+    
+    if (state1->slider_count != state2->slider_count) return false;
+    if (state1->data_size != state2->data_size) return false;
+    if (memcmp(state1->data, state2->data, state1->data_size) != 0) return false;
+    if (memcmp(state1->sliders, state2->sliders, state1->slider_count * sizeof(ysfx_state_slider_t)) != 0) return false;
+
+    return true;
 }
 
 void ysfx_serialize(ysfx_t *fx)

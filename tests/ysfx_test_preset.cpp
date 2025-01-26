@@ -151,8 +151,10 @@ TEST_CASE("preset handling", "[preset]")
         REQUIRE(new_bank->presets[0].state != bank->presets[0].state);
 
         ysfx_state_t *state3 = ysfx_state_dup(state);
+        REQUIRE(ysfx_is_state_equal(state3, state));
         state3->sliders[0].value = 15.0;
         state3->sliders[1].value = -2.0;
+        REQUIRE(!ysfx_is_state_equal(state3, state));
         ysfx::pack_f32le(60083773.0f, &state3->data[2 * sizeof(float)]);
         ysfx_bank_u new_bank2{ysfx_add_preset_to_bank(new_bank.get(), "preset ' with \"quotes\" in the name", state3)};
 
@@ -166,9 +168,12 @@ TEST_CASE("preset handling", "[preset]")
 
         // We're gonna overwrite a particular state
         ysfx_state_t *state4 = ysfx_state_dup(state);
+        REQUIRE(ysfx_is_state_equal(state4, state));
+        ysfx::pack_f32le(-1.5f, &state4->data[0 * sizeof(float)]);
+        REQUIRE(!ysfx_is_state_equal(state4, state));
+
         state4->sliders[0].value = 3.141592657;
         state4->sliders[1].value = 42;
-        ysfx::pack_f32le(-1.5f, &state4->data[0 * sizeof(float)]);
         ysfx_bank_u new_bank3{ysfx_add_preset_to_bank(new_bank2.get(), "added preset", state4)};
 
         // Verify that we didn't change the old bank

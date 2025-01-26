@@ -377,6 +377,10 @@ YSFX_API ysfx_state_t *ysfx_save_state(ysfx_t *fx);
 YSFX_API void ysfx_state_free(ysfx_state_t *state);
 // duplicate a state object
 YSFX_API ysfx_state_t *ysfx_state_dup(ysfx_state_t *state);
+// compare two state objects; returns true if they are the same
+YSFX_API bool ysfx_is_state_equal(ysfx_state_t *state1, ysfx_state_t *state2);
+// load only serialized state
+YSFX_API bool ysfx_load_serialized_state(ysfx_t *fx, ysfx_state_t *state);
 
 typedef struct ysfx_preset_s {
     // name of the preset

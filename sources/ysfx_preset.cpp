@@ -33,7 +33,6 @@
 
 #include "WDL/lineparse.h"
 
-static void ysfx_preset_clear(ysfx_preset_t *preset);
 static ysfx_bank_t *ysfx_load_bank_from_rpl_text(const std::string &text);
 static void ysfx_parse_preset_from_rpl_blob(ysfx_preset_t *preset, const char *name, const std::vector<uint8_t> &data);
 
@@ -65,6 +64,20 @@ ysfx_bank_t *ysfx_load_bank(const char *path)
     return ysfx_load_bank_from_rpl_text(input);
 }
 
+static void ysfx_preset_clear(ysfx_preset_t *preset)
+{
+    if (!preset) return;
+
+    delete[] preset->name;
+    preset->name = nullptr;
+
+    delete[] preset->blob_name;
+    preset->blob_name = nullptr;
+
+    ysfx_state_free(preset->state);
+    preset->state = nullptr;
+}
+
 void ysfx_bank_free(ysfx_bank_t *bank)
 {
     if (!bank)
@@ -80,18 +93,6 @@ void ysfx_bank_free(ysfx_bank_t *bank)
     }
 
     delete bank;
-}
-
-static void ysfx_preset_clear(ysfx_preset_t *preset)
-{
-    delete[] preset->name;
-    preset->name = nullptr;
-
-    delete[] preset->blob_name;
-    preset->blob_name = nullptr;
-
-    ysfx_state_free(preset->state);
-    preset->state = nullptr;
 }
 
 static ysfx_bank_t *ysfx_load_bank_from_rpl_text(const std::string &text)
