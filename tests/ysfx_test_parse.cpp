@@ -515,6 +515,9 @@ TEST_CASE("slider parsing", "[parse]")
                 "slider10:a1?+!%&<-150%&=/?+!,12!%/&?+=,1=/?+!%&>?+!%&=/",
                 "SLIDER11:shouty=0<-150,12,1>shouty",
                 "SlIdEr12:infantile=0<-150,12,1>hehe",
+                "slider13: compRatio=0<-150,12,1> Ratio [x:1]",
+                "slider14:  compRatio2=0<-150,12,1> Ratio [x:1]",
+                "slider15:  all_the_spaces   = 0 < -150 , 12 , 1    > Ratio [x:1]",
             })
         {
             ysfx_slider_t slider;

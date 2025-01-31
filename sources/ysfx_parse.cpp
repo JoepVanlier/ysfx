@@ -250,6 +250,9 @@ bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)
     // semicolon
     if (*cur++ != ':')
         PARSE_FAIL;
+    
+    // Whitespace before the identifier is ignored
+    while (*cur && ysfx::ascii_isspace(*cur)) ++cur;
 
     // search if there is an '=' sign prior to any '<' or ','
     // if there is, it's a custom variable
