@@ -113,6 +113,7 @@ struct YsfxEditor::Impl {
 
     std::unique_ptr<juce::Label> m_lblFilePath;
     std::unique_ptr<juce::Label> m_lblIO;
+    std::unique_ptr<juce::Label> m_lblError;
     std::unique_ptr<juce::Viewport> m_centerViewPort;
     std::unique_ptr<juce::Viewport> m_topViewPort;
     std::unique_ptr<Divider> m_divider; 
@@ -414,9 +415,14 @@ void YsfxEditor::Impl::updateInfo()
     m_graphicsView->setEffect(fx);
     m_ideView->setEffect(fx, info->timeStamp, info->mainFile);
 
-    if (!info->errors.isEmpty())
+    if (!info->errors.isEmpty()) {
         m_ideView->setStatusText(info->errors.getReference(0));
-    else if (!info->warnings.isEmpty())
+        juce::String errors = juce::String(TRANS("Error(s) parsing JSFX:\n"));
+        for (auto i = 0; i < info->errors.size(); i++) {
+            errors += info->errors.getReference(0);
+        }
+        m_lblError->setText(errors, juce::dontSendNotification);
+    } else if (!info->warnings.isEmpty())
         m_ideView->setStatusText(info->warnings.getReference(0));
     else
         m_ideView->setStatusText(TRANS("Compiled OK"));
@@ -961,6 +967,10 @@ void YsfxEditor::Impl::createUI()
     m_topViewPort.reset(new juce::Viewport);
     m_topViewPort->setScrollBarsShown(true, false);
     m_self->addAndMakeVisible(*m_topViewPort);
+    m_lblError.reset(new juce::Label);
+    m_lblError->setMinimumHorizontalScale(1.0f);
+    m_lblError->setJustificationType(juce::Justification::centred);
+    m_lblError->setText(TRANS(""), juce::dontSendNotification);
 
     m_divider.reset(new Divider(m_self));
     m_topViewPort->addAndMakeVisible(m_divider.get());
@@ -1209,6 +1219,16 @@ void YsfxEditor::Impl::relayoutUI()
         viewed->setSize(centerArea.getWidth(), m_parametersPanel->getRecommendedHeight(centerArea.getHeight()));
         m_centerViewPort->setViewedComponent(viewed, false);
         m_centerViewPort->setBounds(centerArea);
+    }
+
+    // Failure to compile should not show any GFX
+    if (!ysfx_is_compiled(fx)) {
+        m_topViewPort->setVisible(false);
+        m_lblError->setSize(centerArea.getWidth(), centerArea.getHeight());
+        m_centerViewPort->setViewedComponent(m_lblError.get(), false);
+        m_centerViewPort->setBounds(centerArea);
+    } else {
+        m_centerViewPort->setViewedComponent(viewed, false);
     }
 
     if (m_relayoutTimer)
