@@ -23,7 +23,7 @@ class YsfxParameter;
 using ysfx_t = struct ysfx_s;
 using ysfx_state_t = struct ysfx_state_s;
 
-enum RetryState {ok, mustRetry, retrying};
+enum RetryState {ok, mustRetry, retrying, failedRetry};
 enum PresetLoadMode {load, noLoad, deleteName};
 enum UndoRequest {noRequest, wantUndo, wantRedo};
 

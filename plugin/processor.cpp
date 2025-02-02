@@ -304,7 +304,7 @@ void YsfxProcessor::loadJsfxFile(const juce::String &filePath, ysfx_state_t *ini
         }
     }
 
-    if (m_impl->m_failedLoad.load() == RetryState::retrying) {
+    if ((m_impl->m_failedLoad.load() == RetryState::retrying) || ((m_impl->m_failedLoad.load() == RetryState::failedRetry) && preserveState)) {
         {
             const juce::ScopedLock sl(m_impl->m_loadLock);
             loadRequest->initialState.reset(ysfx_state_dup(m_impl->m_failedLoadState.get()));
@@ -1239,9 +1239,9 @@ void YsfxProcessor::Impl::Background::processLoadRequest(LoadRequest &req)
                     m_impl->m_failedLoadState.reset(ysfx_state_dup(req.initialState.get()));
                     m_impl->m_failedLoad.store(RetryState::mustRetry);
                 } else {
-                    // If it is just erroneous, then the state is gonna be useless and we drop it
-                    m_impl->m_failedLoadState.reset(nullptr);
-                    m_impl->m_failedLoad.store(RetryState::ok);
+                    // If it is just erroneous, we give up on forced retries, but keep the state around
+                    m_impl->m_failedLoadState.reset(ysfx_state_dup(req.initialState.get()));
+                    m_impl->m_failedLoad.store(RetryState::failedRetry);
                 }
             }
         } else {
