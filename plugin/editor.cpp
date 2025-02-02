@@ -450,7 +450,7 @@ void YsfxEditor::Impl::updateInfo()
     if (!m_maintainState) switchEditor(true);
 
     juce::File file{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
-    m_mustResizeToGfx = true;
+    m_mustResizeToGfx = !m_maintainState;
 
     loadScaling();
     relayoutUILater();
@@ -1038,7 +1038,10 @@ void YsfxEditor::Impl::connectUI()
         }
     };
 
-    m_ideView->onFileSaved = [this](const juce::File &file) { loadFile(file, true); };
+    m_ideView->onFileSaved = [this](const juce::File &file) { 
+        saveScaling();
+        loadFile(file, true);
+    };
 
     m_infoTimer.reset(FunctionalTimer::create([this]() { grabInfoAndUpdate(); }));
     m_infoTimer->startTimer(100);
