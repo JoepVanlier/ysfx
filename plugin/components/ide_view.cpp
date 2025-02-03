@@ -35,6 +35,7 @@ struct YsfxIDEView::Impl {
     std::unique_ptr<juce::TextButton> m_btnSave;
     std::unique_ptr<juce::TextButton> m_btnUpdate;
     std::unique_ptr<juce::Label> m_lblVariablesHeading;
+    std::unique_ptr<juce::TextEditor> m_searchBox;
     std::unique_ptr<juce::Viewport> m_vpVariables;
     std::unique_ptr<juce::Component> m_compVariables;
     std::unique_ptr<juce::Label> m_lblStatus;
@@ -56,12 +57,14 @@ struct YsfxIDEView::Impl {
     };
     juce::Array<VariableUI> m_vars;
     std::unique_ptr<juce::Timer> m_varsUpdateTimer;
+    juce::String searchString{""};
 
     bool m_forceUpdate{false};
     size_t m_currentEditorIndex{0};
 
     //==========================================================================
     void setupNewFx();
+    void buildVariableList();
     void saveCurrentFile();
     void saveAs();
     std::shared_ptr<YSFXCodeEditor> addEditor();
@@ -167,6 +170,60 @@ void YsfxIDEView::focusOfChildComponentChanged(FocusChangeType cause)
     }
 }
 
+void YsfxIDEView::Impl::buildVariableList()
+{
+    ysfx_t *fx = m_fx.get();
+    m_vars.clear();
+    m_vars.ensureStorageAllocated(256);
+
+    ysfx_enum_vars(fx, +[](const char *name, ysfx_real *var, void *userdata) -> int {
+        Impl &impl = *(Impl *)userdata;
+        Impl::VariableUI ui;
+        ui.m_var = var;
+        ui.m_name = juce::CharPointer_UTF8{name};
+
+        if (impl.searchString.isEmpty() || ui.m_name.containsIgnoreCase(impl.searchString)) {
+            ui.m_lblName.reset(new juce::Label(juce::String{}, ui.m_name));
+            ui.m_lblName->setTooltip(ui.m_name);
+            ui.m_lblName->setMinimumHorizontalScale(1.0f);
+            impl.m_compVariables->addAndMakeVisible(*ui.m_lblName);
+            ui.m_lblValue.reset(new juce::Label(juce::String{}, "0"));
+            ui.m_lblValue->setText(juce::String(*ui.m_var), juce::dontSendNotification);
+            impl.m_compVariables->addAndMakeVisible(*ui.m_lblValue);
+            impl.m_vars.add(std::move(ui));
+        }
+        return 1;
+    }, this);
+
+    std::sort(
+        m_vars.begin(), m_vars.end(),
+        [](const VariableUI &a, const VariableUI &b) -> bool {
+            return a.m_name.compareNatural(b.m_name) < 0;
+        });
+
+    m_varsUpdateTimer.reset(
+        FunctionalTimer::create(
+            [this]() {
+                if (m_self->isShowing() && m_btnUpdate && (m_btnUpdate->getToggleState() || m_forceUpdate)) {
+                    for (int i = 0; i < m_vars.size(); ++i) {
+                        VariableUI &ui = m_vars.getReference(i);
+                        ui.m_lblValue->setText(juce::String(*ui.m_var), juce::dontSendNotification);
+                        m_forceUpdate = false;
+                    }
+                }
+
+                if (this->searchString.compareIgnoreCase(this->m_searchBox->getText()) != 0) {
+                    this->searchString = this->m_searchBox->getText();
+                    buildVariableList();
+                }
+            }
+        )
+    );
+
+    m_varsUpdateTimer->startTimer(100);
+    relayoutUILater();
+}
+
 void YsfxIDEView::Impl::setupNewFx()
 {
     ysfx_t *fx = m_fx.get();
@@ -180,46 +237,8 @@ void YsfxIDEView::Impl::setupNewFx()
         getCurrentEditor()->setReadOnly(true);
     }
     else {
-        m_vars.ensureStorageAllocated(64);
-
-        ysfx_enum_vars(fx, +[](const char *name, ysfx_real *var, void *userdata) -> int {
-            Impl &impl = *(Impl *)userdata;
-            Impl::VariableUI ui;
-            ui.m_var = var;
-            ui.m_name = juce::CharPointer_UTF8{name};
-            ui.m_lblName.reset(new juce::Label(juce::String{}, ui.m_name));
-            ui.m_lblName->setTooltip(ui.m_name);
-            ui.m_lblName->setMinimumHorizontalScale(1.0f);
-            impl.m_compVariables->addAndMakeVisible(*ui.m_lblName);
-            ui.m_lblValue.reset(new juce::Label(juce::String{}, "0"));
-            impl.m_compVariables->addAndMakeVisible(*ui.m_lblValue);
-            impl.m_vars.add(std::move(ui));
-            return 1;
-        }, this);
-
-        if (!m_vars.isEmpty()) {
-            std::sort(
-                m_vars.begin(), m_vars.end(),
-                [](const VariableUI &a, const VariableUI &b) -> bool {
-                    return a.m_name.compareNatural(b.m_name) < 0;
-                });
-
-            m_varsUpdateTimer.reset(FunctionalTimer::create([this]() {
-                if (m_self->isShowing() && m_btnUpdate && (m_btnUpdate->getToggleState() || m_forceUpdate)) {
-                    for (int i = 0; i < m_vars.size(); ++i) {
-                        VariableUI &ui = m_vars.getReference(i);
-                        ui.m_lblValue->setText(juce::String(*ui.m_var), juce::dontSendNotification);
-                        m_forceUpdate = false;
-                    }
-                };
-            }));
-
-            m_varsUpdateTimer->startTimer(100);
-        }
-
+        buildVariableList();
         m_editors[0]->setReadOnly(false);
-
-        relayoutUILater();
     }
 }
 
@@ -432,6 +451,8 @@ void YsfxIDEView::Impl::createUI()
     m_self->addAndMakeVisible(*m_btnUpdate);
     m_lblVariablesHeading.reset(new juce::Label(juce::String{}, TRANS("Variables")));
     m_self->addAndMakeVisible(*m_lblVariablesHeading);
+    m_searchBox.reset(new juce::TextEditor("search field"));
+    m_self->addAndMakeVisible(*m_searchBox);
     m_vpVariables.reset(new juce::Viewport);
     m_vpVariables->setScrollBarsShown(true, false);
     m_self->addAndMakeVisible(*m_vpVariables);
@@ -494,12 +515,14 @@ void YsfxIDEView::Impl::connectUI()
 
 void YsfxIDEView::Impl::relayoutUI()
 {
+    const int statusBarHeight = 20;
+    const int topHeight = 50;
     juce::Rectangle<int> temp;
     const juce::Rectangle<int> bounds = m_self->getLocalBounds();
 
     temp = bounds;
     const juce::Rectangle<int> debugArea = temp.removeFromRight(300);
-    const juce::Rectangle<int> topRow = temp.removeFromTop(50);
+    const juce::Rectangle<int> topRow = temp.removeFromTop(topHeight);
 
     if (m_editors.size() > 1) {
         const juce::Rectangle<int> tabRow = temp.removeFromTop(30);
@@ -517,18 +540,19 @@ void YsfxIDEView::Impl::relayoutUI()
         m_tabs->setVisible(false);
     }
 
-    const juce::Rectangle<int> statusArea = temp.removeFromBottom(20);
+    const juce::Rectangle<int> statusArea = temp.removeFromBottom(statusBarHeight);
     const juce::Rectangle<int> editArea = temp;
 
     ///
     temp = topRow.reduced(10, 10);
     m_btnSave->setBounds(temp.removeFromLeft(100));
     m_btnUpdate->setBounds(temp.removeFromLeft(100));
-    temp.removeFromLeft(10);
-
+    
     ///
     temp = debugArea;
+    temp.removeFromBottom(statusBarHeight);
     m_lblVariablesHeading->setBounds(temp.removeFromTop(50).reduced(10, 10));
+    m_searchBox->setBounds(temp.removeFromBottom(25).reduced(10, 0));
     m_vpVariables->setBounds(temp.reduced(10, 10));
 
     const int varRowHeight = 20;
