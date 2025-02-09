@@ -20,6 +20,8 @@
 #include <system_error>
 #include <algorithm>
 #include <deque>
+#include <cctype>
+#include <string>
 #include <clocale>
 #include <cstring>
 #include <cassert>
