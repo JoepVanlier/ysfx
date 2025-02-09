@@ -14,7 +14,7 @@ namespace JSFXTokenizerFunctions {
         static const char* const keywords4Char[] = { "@gfx", "desc", "tags", nullptr };
         static const char* const keywords5Char[] = { "@init", nullptr };
         static const char* const keywords6Char[] = { "@block", "import", "in_pin", nullptr };
-        static const char* const keywords7Char[] = { "@sample", "@slider", "out_pin", nullptr };
+        static const char* const keywords7Char[] = { "@sample", "@slider", "out_pin", "options", nullptr };
         static const char* const keywords8Char[] = { nullptr };
         static const char* const keywords9Char[] = { nullptr };
         static const char* const keywords10Char[] = { "@serialize", nullptr };

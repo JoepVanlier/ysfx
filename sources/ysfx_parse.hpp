@@ -87,6 +87,7 @@ struct ysfx_options_t {
     int32_t prealloc = 0;
     bool want_all_kb = false;
     bool no_meter = false;
+    uint32_t gfx_hz = 30;
 };
 
 struct ysfx_header_t {

@@ -1395,6 +1395,13 @@ bool ysfx_fetch_want_undopoint(ysfx_t *fx)
     return undo_point;
 }
 
+uint32_t ysfx_get_requested_framerate(ysfx_t *fx)
+{
+    if (!fx || !ysfx_is_compiled(fx)) return 30;
+
+    return fx->source.main->header.options.gfx_hz;
+}
+
 uint64_t ysfx_fetch_slider_touches(ysfx_t *fx, uint8_t slider_group_index)
 {
     return fx->slider.touch_mask[slider_group_index].load();

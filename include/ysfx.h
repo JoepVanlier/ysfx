@@ -473,6 +473,8 @@ YSFX_API void ysfx_gfx_add_key(ysfx_t *fx, uint32_t mods, uint32_t key, bool pre
 YSFX_API void ysfx_gfx_update_mouse(ysfx_t *fx, uint32_t mods, int32_t xpos, int32_t ypos, uint32_t buttons, ysfx_real wheel, ysfx_real hwheel);
 // invoke @gfx to paint the graphics; returns whether the framer buffer is modified
 YSFX_API bool ysfx_gfx_run(ysfx_t *fx);
+// request desired frame rate for UI refresh
+YSFX_API uint32_t ysfx_get_requested_framerate(ysfx_t *fx);
 
 //------------------------------------------------------------------------------
 // YSFX key map

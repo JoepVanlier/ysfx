@@ -240,7 +240,7 @@ void YsfxGraphicsView::setEffect(ysfx_t *fx)
     else {
         m_impl->m_work.start();
         m_impl->m_gfxTimer.reset(FunctionalTimer::create([this]() { m_impl->tickGfx(); }));
-        m_impl->m_gfxTimer->startTimerHz(30);
+        m_impl->m_gfxTimer->startTimerHz(ysfx_get_requested_framerate(fx));
     }
 
     m_impl->m_gfxInputState.reset(new Impl::GfxInputState);

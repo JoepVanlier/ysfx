@@ -163,10 +163,16 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
                     int32_t prealloc = (value.compare("*") == 0) ? -1 : (int32_t) ysfx::dot_atof(value.c_str());
                     header.options.prealloc = prealloc;
                 }
-                else if (name == "want_all_kb")
+                else if (name == "want_all_kb") {
                     header.options.want_all_kb = true;
-                else if (name == "no_meter")
+                } else if (name == "no_meter") {
                     header.options.no_meter = true;
+                } else if (name == "gfx_hz") {
+                    int32_t gfx_hz = (int32_t) ysfx::dot_atof(value.c_str());
+                    if (gfx_hz > 0 && gfx_hz < 2000) {
+                        header.options.gfx_hz = static_cast<uint32_t>(gfx_hz);
+                    }
+                }
             }
         }
         else if (unprefix(linep, &rest, "import") && ysfx::ascii_isspace(rest[0]))
