@@ -809,8 +809,8 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
 
         // multiple @gfx cannot run concurrently on different threads (issue 44)
         // FIXME: this workaround affects performance, actually fix this properly
-        static std::mutex globalGfxRunMutex;
-        std::lock_guard<std::mutex> gfxRunLock{globalGfxRunMutex};
+//        static std::mutex globalGfxRunMutex;
+//        std::lock_guard<std::mutex> gfxRunLock{globalGfxRunMutex};
 
         mustRepaint = ysfx_gfx_run(fx) || msg.m_dirty;
     }

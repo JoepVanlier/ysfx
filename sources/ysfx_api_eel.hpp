@@ -20,6 +20,7 @@
 
 #pragma once
 #include "ysfx.h"
+#include "ysfx_utils.hpp"
 #include <string>
 
 typedef void *NSEEL_VMCTX;
@@ -63,8 +64,16 @@ private:
     ysfx_t *m_fx = nullptr;
 };
 
+static ysfx::mutex font_mutex;
+
+struct ysfx_font_scoped_lock {
+    ysfx_font_scoped_lock(void) { font_mutex.lock(); }
+    ~ysfx_font_scoped_lock() { font_mutex.unlock(); }
+};
+
 #define EEL_STRING_GET_CONTEXT_POINTER(opaque) (((ysfx_t *)(opaque))->string_ctx.get())
 #define EEL_STRING_GET_FOR_INDEX(x, wr) (ysfx_string_access_unlocked((ysfx_t *)(opaque), x, wr, false))
 #define EEL_STRING_GET_FOR_WRITE(x, wr) (ysfx_string_access_unlocked((ysfx_t *)(opaque), x, wr, true))
 #define EEL_STRING_MUTEXLOCK_SCOPE ysfx_string_scoped_lock lock{(ysfx_t *)(opaque)};
 #define EEL_IMG_MUTEXLOCK_SCOPE ysfx_image_scoped_lock lock{(ysfx_t *)(opaque)};
+#define EEL_FONT_MUTEXLOCK_SCOPE ysfx_font_scoped_lock font_lock{};

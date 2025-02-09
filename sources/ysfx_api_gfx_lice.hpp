@@ -937,6 +937,7 @@ void eel_lice_state::gfx_transformblit(EEL_F **parms, int div_w, int div_h, EEL_
 
 EEL_F eel_lice_state::gfx_setfont(void *opaque, int np, EEL_F **parms)
 {
+  EEL_FONT_MUTEXLOCK_SCOPE
   int a = np>0 ? ((int)floor(parms[0][0]))-1 : -1;
 
   if (a>=0 && a < m_gfx_fonts.GetSize())
@@ -1234,6 +1235,7 @@ static int __drawTextWithFont(LICE_IBitmap *dest, const RECT *rect, LICE_IFont *
 {
   if (font && LICE_FUNCTION_VALID(LICE__DrawText))
   {
+    EEL_FONT_MUTEXLOCK_SCOPE
     RECT tr=*rect;
     LICE__SetTextColor(font,fg);
     LICE__SetTextCombineMode(font,mode,alpha);
