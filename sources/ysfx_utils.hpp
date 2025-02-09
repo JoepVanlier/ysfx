@@ -95,6 +95,7 @@ uint32_t latin1_toupper(uint32_t c);
 uint32_t latin1_tolower(uint32_t c);
 char *strdup_using_new(const char *src);
 string_list split_strings_noempty(const char *input, bool(*pred)(char));
+std::string trim_spaces_around_equals(const char* input);
 std::string trim(const char *input, bool(*pred)(char));
 
 //------------------------------------------------------------------------------

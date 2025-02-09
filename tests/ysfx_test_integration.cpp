@@ -169,6 +169,7 @@ TEST_CASE("integration", "[integration]")
         compile_and_check("desc:test" "\noptions:gfx_hz=45334954317053419571340971349057134051345\nout_pin:output\n@init\n", 30);
         compile_and_check("desc:test" "\noptions:gfx_hz=invalid\nout_pin:output\n@init\n", 30);
         compile_and_check("desc:test" "\nout_pin:output\n@init\n", 30);
+        compile_and_check("desc:test" "\nout_pin:output\n@init\n", 30);
     }    
 
     SECTION("pre_alloc none")
@@ -256,4 +257,34 @@ TEST_CASE("integration", "[integration]")
 
         REQUIRE(ysfx_calculate_used_mem(fx.get()) == 13434880);  // Note that this always rounds to the next full block
     };
+
+    SECTION("multi_config")
+    {
+        auto compile_and_check = [](const char *text, uint32_t ref_value, bool want_meter) {
+            scoped_new_dir dir_fx("${root}/Effects");
+            scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+            ysfx_config_u config{ysfx_config_new()};
+            ysfx_u fx{ysfx_new(config.get())};
+
+            REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+            REQUIRE(ysfx_compile(fx.get(), 0));
+
+            REQUIRE(ysfx_get_requested_framerate(fx.get()) == ref_value);
+            REQUIRE(ysfx_wants_meters(fx.get()) == want_meter);
+        };
+
+        compile_and_check("desc:test" "\noptions:gfx_hz=60 no_meter\nout_pin:output\n@init\n", 60, false);
+        compile_and_check("desc:test" "\noptions:no_meter gfx_hz=60\nout_pin:output\n@init\n", 60, false);
+        compile_and_check("desc:test" "\noptions:no_meter gfx_hz  =  60\nout_pin:output\n@init\n", 60, false);
+        compile_and_check("desc:test" "\noptions:no_meter gfx_hz=  60\nout_pin:output\n@init\n", 60, false);
+        compile_and_check("desc:test" "\noptions:no_meter gfx_hz  =60\nout_pin:output\n@init\n", 60, false);
+        compile_and_check("desc:test" "\noptions:=\nout_pin:output\n@init\n", 30, true);
+        compile_and_check("desc:test" "\noptions:= = = = =\nout_pin:output\n@init\n", 30, true);
+        compile_and_check("desc:test" "\noptions:= = = = =", 30, true);
+        compile_and_check("desc:test" "\noptions:", 30, true);
+        compile_and_check("desc:test" "\noptions:\nout_pin:output\n@init\n", 30, true);
+        compile_and_check("desc:test" "\noptions:gfx_hz=60\nout_pin:output\n@init\n", 60, true);
+        compile_and_check("desc:test" "\noptions:gfx_hz=60\noptions:no_meter\nout_pin:output\n@init\n", 60, false);
+    }  
 }

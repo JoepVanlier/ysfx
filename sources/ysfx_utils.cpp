@@ -259,6 +259,20 @@ char *strdup_using_new(const char *src)
     return dst;
 }
 
+std::string trim_spaces_around_equals(const char* input) {
+    auto output = std::string(input);
+    for (size_t i = 0; (i = output.find('=', i)) != std::string::npos; ) {
+        size_t start = i;
+        while (start > 0 && std::isspace(output[start - 1])) --start;
+        size_t end = i + 1;
+        while (end < output.size() && std::isspace(output[end])) ++end;
+        output.replace(start, end - start, "=");
+        i = start + 1;
+    }
+
+    return output;
+}
+
 string_list split_strings_noempty(const char *input, bool(*pred)(char))
 {
     string_list list;

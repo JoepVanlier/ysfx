@@ -149,7 +149,8 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
             header.out_pins.push_back(ysfx::trim(rest, &ysfx::ascii_isspace));
         }
         else if (unprefix(linep, &rest, "options:")) {
-            for (const std::string &opt : ysfx::split_strings_noempty(rest, &ysfx::ascii_isspace)) {
+            auto option_line = ysfx::trim_spaces_around_equals(rest);
+            for (const std::string &opt : ysfx::split_strings_noempty(option_line.c_str(), &ysfx::ascii_isspace)) {
                 size_t pos = opt.find('=');
                 std::string name = (pos == opt.npos) ? opt : opt.substr(0, pos);
                 std::string value = (pos == opt.npos) ? std::string{} : opt.substr(pos + 1);
