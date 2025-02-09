@@ -116,13 +116,16 @@ cmake --build .
 
 ## JSFX resources
 
-There are many wonderful JSFX out there!
+There are many JSFX out there!
 
 - Saike (my own): https://github.com/JoepVanlier/JSFX
 - Geraint Luff: https://github.com/geraintluff/jsfx
-- Justin Johnson: https://github.com/Justin-Johnson/ReJJ
+- tilr JSFX: https://github.com/tiagolr/tilr_jsfx
 - Mawi JSFX: https://github.com/mawi-design/JSFX
-- Jozmac: https://github.com/jozmac/reapack-jm
+- Justin Johnson: https://github.com/Justin-Johnson/ReJJ
 - Tukan Studios: https://github.com/TukanStudios/TUKAN_STUDIOS_PLUGINS
+- Jozmac: https://github.com/jozmac/reapack-jm
+- JClones: https://github.com/JClones/JSFXClones
+- Sonic Anomaly: https://github.com/Sonic-Anomaly/Sonic-Anomaly-JSFX
 
 For a list with many more, please see: https://www.keithhaydon.com/Reaper/JSFX2.pdf
