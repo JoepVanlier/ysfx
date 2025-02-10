@@ -235,17 +235,10 @@ void YsfxEditor::readTheme()
 
 void YsfxEditor::paint (juce::Graphics& g)
 {
-    // Redraw only parts that aren't covered already.
     const juce::Rectangle<int> bounds = getLocalBounds();
-    g.setOpacity(1.0f);
-    g.setColour(juce::Colour(0, 0, 0));
-    g.fillRect(juce::Rectangle<int>(0, 0, m_headerSize, bounds.getHeight() - m_headerSize));
-    g.fillRect(juce::Rectangle<int>(bounds.getWidth() - 20, m_headerSize, 20, bounds.getHeight() - m_headerSize));
-    g.fillRect(juce::Rectangle<int>(0, bounds.getHeight() - 20, bounds.getWidth(), 20));
-
-    g.setColour(juce::Colour(32, 32, 32));
+    g.fillAll(juce::Colours::black);
     g.setColour(this->findColour(juce::DocumentWindow::backgroundColourId));
-    g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), m_headerSize));
+    g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), m_headerSize + 1));
 }
 
 YsfxEditor::~YsfxEditor()
@@ -971,6 +964,8 @@ void YsfxEditor::Impl::createUI()
     m_lblError->setMinimumHorizontalScale(1.0f);
     m_lblError->setJustificationType(juce::Justification::centred);
     m_lblError->setText(TRANS(""), juce::dontSendNotification);
+    m_lblError->setOpaque(true);
+    m_lblError->setColour(juce::TextEditor::backgroundColourId, juce::Colours::black);
 
     m_divider.reset(new Divider(m_self));
     m_topViewPort->addAndMakeVisible(m_divider.get());
