@@ -59,6 +59,7 @@ struct YsfxEditor::Impl {
     bool m_mustResizeToGfx = true;
     bool m_maintainState = false;
     int m_keepUndoState{1};
+    int m_softwareRenderer{0};
     float m_currentScaling{1.0f};
     uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
     bool m_visibleSlidersChanged{false};
@@ -162,6 +163,16 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->updateInfo();
 
     readTheme();
+}
+
+void YsfxEditor::parentHierarchyChanged()
+{
+    if (m_impl->m_softwareRenderer) {
+        if (auto peer = getPeer())
+        {
+            peer->setCurrentRenderingEngine(0);
+        }
+    }
 }
 
 void writeThemeFile(juce::File file, std::map<std::string, std::array<uint8_t, 3>> colors, std::map<std::string, float> params)
@@ -914,6 +925,14 @@ void YsfxEditor::Impl::initializeProperties()
             m_keepUndoState = m_pluginProperties->getIntValue(key);
         } else {
             m_pluginProperties->setValue(key, 1);
+            m_pluginProperties->setNeedsToBeSaved(true);
+        }
+
+        auto sw_key = juce::String("ysfx_force_software_rendering");
+        if (m_pluginProperties->containsKey(sw_key)) {
+            m_softwareRenderer = m_pluginProperties->getIntValue(sw_key);
+        } else {
+            m_pluginProperties->setValue(sw_key, 0);
             m_pluginProperties->setNeedsToBeSaved(true);
         }
     }
