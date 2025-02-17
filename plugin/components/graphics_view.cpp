@@ -294,7 +294,7 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     }
 
     g.setOpacity(1.0f);
-    g.drawImageTransformed(image, juce::AffineTransform::translation(0.0f, 0.0f).scaled(m_outputScalingFactor.load() / m_pixelFactor.load()), false);
+    g.drawImageTransformed(image, juce::AffineTransform::scale(m_outputScalingFactor.load() / m_pixelFactor.load()).translated(0.5f, 0.5f), false);
 }
 
 void YsfxGraphicsView::resized()
