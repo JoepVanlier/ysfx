@@ -47,6 +47,7 @@ protected:
 private:
     std::atomic<float> m_pixelFactor{1.0f};
     std::atomic<float> m_outputScalingFactor{1.0f};
+    bool fullPixelScaling{true};
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

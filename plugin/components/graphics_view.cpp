@@ -58,7 +58,7 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
         int m_gfxWidth = 0;
         int m_gfxHeight = 0;
         bool m_wantRetina = false;
-        juce::Image m_renderBitmap{juce::Image::ARGB, 1, 1, false};
+        juce::Image m_renderBitmap{juce::Image::ARGB, 1, 1, false, juce::SoftwareImageType{}};
         double m_bitmapScale = 1;
         using Ptr = std::shared_ptr<GfxTarget>;
     };
@@ -116,7 +116,7 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
         // whether the bitmap contains changes
         bool m_hasBitmapChanged = false;
         // a double-buffer of the render bitmap, copied after a finished rendering
-        juce::Image m_bitmap{juce::Image::ARGB, 1, 1, false};
+        juce::Image m_bitmap{juce::Image::ARGB, 1, 1, false, juce::SoftwareImageType{}};
         std::mutex m_mutex;
     };
 
@@ -259,6 +259,7 @@ void YsfxGraphicsView::setEffect(ysfx_t *fx)
 void YsfxGraphicsView::setScaling(float new_scaling)
 {
     m_outputScalingFactor.store(new_scaling);
+    fullPixelScaling = static_cast<bool>(std::abs(std::round(new_scaling) - new_scaling) <= 0.0000001f);
 }
 
 float YsfxGraphicsView::getScaling()
@@ -283,18 +284,17 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     m_pixelFactor = juce::jmax(1.0f, g.getInternalContext().getPhysicalPixelScaleFactor());
 
     ///
-    g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
+    if (fullPixelScaling) {
+        g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
+    } else {
+        g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
+    }
     std::lock_guard<std::mutex> lock{m_impl->m_asyncRepainter->m_mutex};
     juce::Image &image = m_impl->m_asyncRepainter->m_bitmap;
 
-    if (image.getWidth() != target->m_renderBitmap.getWidth() ||
-        image.getHeight() != target->m_renderBitmap.getHeight() )
-    {
-        g.fillAll(juce::Colours::black);
-    }
-
     g.setOpacity(1.0f);
-    g.drawImageTransformed(image, juce::AffineTransform::translation(0.0f, 0.0f).scaled(m_outputScalingFactor.load() / m_pixelFactor.load()), false);
+    auto trafo = juce::AffineTransform::scale(m_outputScalingFactor.load() / m_pixelFactor.load()).translated(0.5f, 0.5f);
+    g.drawImageTransformed(image, trafo, false);
 }
 
 void YsfxGraphicsView::resized()
@@ -564,7 +564,7 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
         target->m_gfxWidth = internal_width;
         target->m_gfxHeight = internal_height;
         target->m_wantRetina = (bool)newRetina;
-        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width), juce::jmax(1, internal_height), true);
+        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width - 2), juce::jmax(1, internal_height - 2), true, juce::SoftwareImageType{});
         target->m_bitmapScale = pixel_factor;
     }
 
@@ -829,7 +829,7 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
         int h = imgsrc.getHeight();
 
         if (w != imgdst.getWidth() || h != imgdst.getHeight())
-            imgdst = juce::Image{juce::Image::ARGB, w, h, false};
+            imgdst = juce::Image{juce::Image::ARGB, w, h, false, juce::SoftwareImageType{}};
 
         juce::Image::BitmapData src{imgsrc, juce::Image::BitmapData::readOnly};
         juce::Image::BitmapData dst{imgdst, juce::Image::BitmapData::writeOnly};
