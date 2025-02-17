@@ -59,6 +59,7 @@ struct YsfxEditor::Impl {
     bool m_mustResizeToGfx = true;
     bool m_maintainState = false;
     int m_keepUndoState{1};
+    int m_softwareRenderer{0};
     float m_currentScaling{1.0f};
     uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
     bool m_visibleSlidersChanged{false};
@@ -164,6 +165,16 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     readTheme();
 }
 
+void YsfxEditor::parentHierarchyChanged()
+{
+    if (m_impl->m_softwareRenderer) {
+        if (auto peer = getPeer())
+        {
+            peer->setCurrentRenderingEngine(0);
+        }
+    }
+}
+
 void writeThemeFile(juce::File file, std::map<std::string, std::array<uint8_t, 3>> colors, std::map<std::string, float> params)
 {
     juce::FileOutputStream stream(file);
@@ -235,17 +246,10 @@ void YsfxEditor::readTheme()
 
 void YsfxEditor::paint (juce::Graphics& g)
 {
-    // Redraw only parts that aren't covered already.
     const juce::Rectangle<int> bounds = getLocalBounds();
-    g.setOpacity(1.0f);
-    g.setColour(juce::Colour(0, 0, 0));
-    g.fillRect(juce::Rectangle<int>(0, 0, m_headerSize, bounds.getHeight() - m_headerSize));
-    g.fillRect(juce::Rectangle<int>(bounds.getWidth() - 20, m_headerSize, 20, bounds.getHeight() - m_headerSize));
-    g.fillRect(juce::Rectangle<int>(0, bounds.getHeight() - 20, bounds.getWidth(), 20));
-
-    g.setColour(juce::Colour(32, 32, 32));
+    g.fillAll(juce::Colours::black);
     g.setColour(this->findColour(juce::DocumentWindow::backgroundColourId));
-    g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), m_headerSize));
+    g.fillRect(juce::Rectangle<int>(0, 0, bounds.getWidth(), m_headerSize + 1));
 }
 
 YsfxEditor::~YsfxEditor()
@@ -923,6 +927,14 @@ void YsfxEditor::Impl::initializeProperties()
             m_pluginProperties->setValue(key, 1);
             m_pluginProperties->setNeedsToBeSaved(true);
         }
+
+        auto sw_key = juce::String("ysfx_force_software_rendering");
+        if (m_pluginProperties->containsKey(sw_key)) {
+            m_softwareRenderer = m_pluginProperties->getIntValue(sw_key);
+        } else {
+            m_pluginProperties->setValue(sw_key, 0);
+            m_pluginProperties->setNeedsToBeSaved(true);
+        }
     }
 }
 
@@ -971,6 +983,8 @@ void YsfxEditor::Impl::createUI()
     m_lblError->setMinimumHorizontalScale(1.0f);
     m_lblError->setJustificationType(juce::Justification::centred);
     m_lblError->setText(TRANS(""), juce::dontSendNotification);
+    m_lblError->setOpaque(true);
+    m_lblError->setColour(juce::TextEditor::backgroundColourId, juce::Colours::black);
 
     m_divider.reset(new Divider(m_self));
     m_topViewPort->addAndMakeVisible(m_divider.get());

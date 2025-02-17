@@ -28,6 +28,7 @@ public:
 protected:
     void resized() override;
     void paint (juce::Graphics& g) override;
+    void parentHierarchyChanged() override;
     bool isInterestedInFileDrag(const juce::StringArray &files) override;
     void filesDropped(const juce::StringArray &files, int x, int y) override;
 
