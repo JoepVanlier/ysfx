@@ -31,6 +31,7 @@
 #include "components/dialogs.h"
 #include "components/divider.h"
 #include "utility/functional_timer.h"
+#include "utility/platform_windows.h"
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "json.hpp"
@@ -94,6 +95,29 @@ struct YsfxEditor::Impl {
     class SubWindow : public juce::DocumentWindow {
     public:
         using juce::DocumentWindow::DocumentWindow;
+        SubWindow(const juce::String& name, juce::Colour backgroundColour, int requiredButtons, bool addToDesktop = true): DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop)
+        {
+            juce::Timer *timer = FunctionalTimer::create(
+                [this]() {
+                    if (juce::Process::isForegroundProcess()) {
+                        if (isVisible() && !isAlwaysOnTop()) {
+                            setAlwaysOnTop(true);
+                        }
+                    } else {
+                        if (isAlwaysOnTop()) {
+                            setAlwaysOnTop(false);
+
+                            forceWindowDown(getWindowHandle());
+                        }
+                    }
+                }
+            );
+            m_stayOnTopTimer.reset(timer);
+            m_stayOnTopTimer->startTimer(50);
+        }
+
+    private:
+        std::unique_ptr<juce::Timer> m_stayOnTopTimer;
 
     protected:
         void closeButtonPressed() override { setVisible(false); }
@@ -821,7 +845,6 @@ void YsfxEditor::Impl::openCodeEditor()
 
     m_codeWindow->setVisible(true);
     m_codeWindow->toFront(true);
-    m_codeWindow->setAlwaysOnTop(true);
     m_ideView->focusOnCodeEditor();
 }
 
