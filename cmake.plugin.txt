@@ -111,6 +111,7 @@ function(add_new_target target_name is_synth)
             "plugin/utility/async_updater.h"
             "plugin/utility/rt_semaphore.cpp"
             "plugin/utility/rt_semaphore.h"
+            "plugin/utility/subwindow.h"
             "plugin/utility/sync_bitset.hpp")
 
     target_compile_definitions("${target_name}"

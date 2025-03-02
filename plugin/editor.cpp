@@ -31,6 +31,7 @@
 #include "components/dialogs.h"
 #include "components/divider.h"
 #include "utility/functional_timer.h"
+#include "utility/subwindow.h"
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "json.hpp"
@@ -91,15 +92,6 @@ struct YsfxEditor::Impl {
     juce::String getJsfxName();
 
     //==========================================================================
-    class SubWindow : public juce::DocumentWindow {
-    public:
-        using juce::DocumentWindow::DocumentWindow;
-
-    protected:
-        void closeButtonPressed() override { setVisible(false); }
-    };
-
-    //==========================================================================
     std::unique_ptr<juce::TextButton> m_btnLoadFile;
     std::unique_ptr<juce::TextButton> m_btnRecentFiles;
     std::unique_ptr<juce::TextButton> m_btnRecentFilesOpts;
@@ -122,10 +114,11 @@ struct YsfxEditor::Impl {
     std::unique_ptr<YsfxParametersPanel> m_miniParametersPanel;
     std::unique_ptr<YsfxGraphicsView> m_graphicsView;
     std::unique_ptr<YsfxIDEView> m_ideView;
-    std::unique_ptr<SubWindow> m_codeWindow;
     std::unique_ptr<YsfxRPLView> m_rplView;
-    std::unique_ptr<SubWindow> m_presetWindow;
     std::unique_ptr<juce::TooltipWindow> m_tooltipWindow;
+
+    // Sub-windows
+    std::unique_ptr<SubWindowMgr> m_subWindows;
 
     //==========================================================================
     void createUI();
@@ -148,6 +141,8 @@ YsfxEditor::YsfxEditor(YsfxProcessor &proc)
     m_impl->m_info = proc.getCurrentInfo();
     m_impl->m_currentPresetInfo = proc.getCurrentPresetInfo();
     m_impl->m_bank = proc.getCurrentBank();
+
+    m_impl->m_subWindows.reset(new SubWindowMgr(this));
 
     static YsfxLookAndFeel lnf;
     setLookAndFeel(&lnf);
@@ -813,28 +808,13 @@ void YsfxEditor::Impl::switchEditor(bool showGfx)
 
 void YsfxEditor::Impl::openCodeEditor()
 {
-    if (!m_codeWindow) {
-        m_codeWindow.reset(new SubWindow(TRANS("Edit"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
-        m_codeWindow->setResizable(true, false);
-        m_codeWindow->setContentNonOwned(m_ideView.get(), true);
-    }
-
-    m_codeWindow->setVisible(true);
-    m_codeWindow->toFront(true);
-    m_codeWindow->setAlwaysOnTop(true);
+    m_subWindows->createOrBringForward(TRANS("Edit"), m_ideView.get(), m_self->findColour(juce::DocumentWindow::backgroundColourId));
     m_ideView->focusOnCodeEditor();
 }
 
 void YsfxEditor::Impl::openPresetWindow()
 {
-    if (!m_presetWindow) {
-        m_presetWindow.reset(new SubWindow(TRANS("Preset Manager"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
-        m_presetWindow->setResizable(true, false);
-        m_presetWindow->setContentNonOwned(m_rplView.get(), true);
-    }
-
-    m_presetWindow->setVisible(true);
-    m_presetWindow->toFront(true);
+    m_subWindows->createOrBringForward(TRANS("Preset Manager"), m_rplView.get(), m_self->findColour(juce::DocumentWindow::backgroundColourId));
 }
 
 juce::RecentlyOpenedFilesList YsfxEditor::Impl::loadRecentFiles()
