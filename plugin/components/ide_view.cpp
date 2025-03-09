@@ -154,13 +154,14 @@ void YsfxIDEView::focusOfChildComponentChanged(FocusChangeType cause)
 
     if (m_impl->getCurrentEditor()->hasFocus()) {
         juce::Timer *timer = FunctionalTimer::create([this]() { 
-            m_impl->getCurrentEditor()->checkFileForModifications();
-
             int idx = 0;
-            for (auto& m : m_impl->m_editors) {
+            for (const auto& m : m_impl->m_editors) {
                 m_impl->m_tabs->setTabName(idx, m->getDisplayName());
                 ++idx;
             }
+
+            // Triggers a timer reset due to focus change, so must be last!
+            m_impl->getCurrentEditor()->checkFileForModifications();
         });
         m_impl->m_fileCheckTimer.reset(timer);
         timer->startTimer(100);
