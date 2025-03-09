@@ -6,13 +6,35 @@
 class SubWindow : public juce::DocumentWindow {
     public:
         using juce::DocumentWindow::DocumentWindow;
-        SubWindow(const juce::String& name, juce::Colour backgroundColour, int requiredButtons, bool addToDesktop=true, std::function<void()> frontCallback=[](){}): DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop), m_frontCallback(frontCallback) {}
+        SubWindow(const juce::String& name, juce::Colour backgroundColour, int requiredButtons, bool addToDesktop=true, std::function<void()> frontCallback=[](){}): DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop), m_frontCallback(frontCallback)
+        {
+            #ifdef JUCE_MAC
+                juce::Timer *timer = FunctionalTimer::create(
+                    [this]() {
+                        if (juce::Process::isForegroundProcess()) {
+                            if (isVisible() && !isAlwaysOnTop()) {
+                                setAlwaysOnTop(true);
+                            }
+                        } else {
+                            if (isAlwaysOnTop()) {
+                                setAlwaysOnTop(false);
+                            }
+                        }
+                    }
+                );
+                m_stayOnTopTimer.reset(timer);
+                m_stayOnTopTimer->startTimer(50);
+            #endif
+        }
 
     private:
         void broughtToFront() override {
             m_frontCallback();
         }
         std::function<void()> m_frontCallback;
+        #ifdef JUCE_MAC
+            std::unique_ptr<juce::Timer> m_stayOnTopTimer;
+        #endif
 
     protected:
         void closeButtonPressed() override { setVisible(false); }
