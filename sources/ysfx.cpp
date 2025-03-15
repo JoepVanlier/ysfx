@@ -23,6 +23,7 @@
 #include "ysfx_eel_utils.hpp"
 #include "ysfx_api_eel.hpp"
 #include "ysfx_preprocess.hpp"
+#include "ysfx_api_host_interaction_dummy.hpp"
 #include <type_traits>
 #include <algorithm>
 #include <functional>
@@ -72,6 +73,7 @@ ysfx_api_initializer::ysfx_api_initializer()
     ysfx_api_init_reaper();
     ysfx_api_init_file();
     ysfx_api_init_gfx();
+    ysfx_api_init_host_interaction();
 }
 
 ysfx_api_initializer::~ysfx_api_initializer()
