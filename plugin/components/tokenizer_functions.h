@@ -43,7 +43,7 @@ namespace JSFXTokenizerFunctions {
         }
 
         for (int i = 0; k[i] != nullptr; ++i)
-            if (token.compare(juce::CharPointer_ASCII(k[i])) == 0)
+            if (token.compareIgnoreCase(juce::CharPointer_ASCII(k[i])) == 0)
                 return true;
 
         return false;
@@ -81,7 +81,7 @@ namespace JSFXTokenizerFunctions {
         }
 
         for (int i = 0; k[i] != nullptr; ++i)
-            if (token.compare(juce::CharPointer_ASCII(k[i])) == 0)
+            if (token.compareIgnoreCase(juce::CharPointer_ASCII(k[i])) == 0)
                 return true;
 
         return false;
@@ -93,7 +93,7 @@ namespace JSFXTokenizerFunctions {
         static const char* const unsupported[] = {"export_buffer_to_project", "get_host_numchan", "set_host_numchan", "get_pin_mapping", "set_pin_mapping", "get_pinmapper_flags", "set_pinmapper_flags", "get_host_placement"};
         
         for (int i = 0; unsupported[i] != nullptr; ++i)
-            if (token.compare(juce::CharPointer_ASCII(unsupported[i])) == 0)
+            if (token.compareIgnoreCase(juce::CharPointer_ASCII(unsupported[i])) == 0)
                 return true;
         
         return false;
@@ -134,7 +134,7 @@ namespace JSFXTokenizerFunctions {
         }
 
         for (int i = 0; k[i] != nullptr; ++i)
-            if (token.compare(juce::CharPointer_ASCII(k[i])) == 0)
+            if (token.compareIgnoreCase(juce::CharPointer_ASCII(k[i])) == 0)
                 return true;
 
         return false;
@@ -175,7 +175,7 @@ namespace JSFXTokenizerFunctions {
         }
 
         for (int i = 0; k[i] != nullptr; ++i)
-            if (token.compare(juce::CharPointer_ASCII(k[i])) == 0)
+            if (token.compareIgnoreCase(juce::CharPointer_ASCII(k[i])) == 0)
                 return true;
 
         return false;
