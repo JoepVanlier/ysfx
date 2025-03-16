@@ -11,7 +11,7 @@ void JSFXTokenizer::setColours(std::map<std::string, std::array<uint8_t, 3>> col
     std::vector<std::string> ideColors{
         "error", "comment", "builtin_variable", "builtin_function", "builtin_core_function",
         "builtin_section", "operator", "identifier", "integer", "float", "string", "bracket", 
-        "punctuation", "preprocessor_text", "string_hash"
+        "punctuation", "preprocessor_text", "string_hash", "not_supported"
     };
 
     for (auto const& key : ideColors)

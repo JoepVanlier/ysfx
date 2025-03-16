@@ -44,7 +44,8 @@ std::map<std::string, std::array<uint8_t, 3>> getDefaultColors()
         {"bracket", std::array<uint8_t, 3>{192, 192, 255}},
         {"punctuation", std::array<uint8_t, 3>{0, 255, 255}},
         {"preprocessor_text", std::array<uint8_t, 3>{32, 192, 255}},
-        {"string_hash", std::array<uint8_t, 3>{192, 255, 128}}
+        {"string_hash", std::array<uint8_t, 3>{192, 255, 128}},
+        {"not_supported", std::array<uint8_t, 3>{255, 62, 62}}
     };
 }
 

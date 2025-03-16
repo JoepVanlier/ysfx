@@ -87,6 +87,18 @@ namespace JSFXTokenizerFunctions {
         return false;
     }
 
+    static bool isNotSupported(juce::String::CharPointerType token, const int tokenLength) noexcept
+    {
+        (void) tokenLength;
+        static const char* const unsupported[] = {"export_buffer_to_project", "get_host_numchan", "set_host_numchan", "get_pin_mapping", "set_pin_mapping", "get_pinmapper_flags", "set_pinmapper_flags", "get_host_placement"};
+        
+        for (int i = 0; unsupported[i] != nullptr; ++i)
+            if (token.compare(juce::CharPointer_ASCII(unsupported[i])) == 0)
+                return true;
+        
+        return false;
+    }
+
     static bool isBuiltinFunction(juce::String::CharPointerType token, const int tokenLength) noexcept
     {
         static const char* const keywords2Char[] = { nullptr };
@@ -187,7 +199,7 @@ namespace JSFXTokenizerFunctions {
             ++tokenLength;
         }
 
-        if (tokenLength > 1 && tokenLength <= 16)
+        if (tokenLength > 1 && tokenLength <= 25)
         {
             possible.writeNull();
 
@@ -202,6 +214,9 @@ namespace JSFXTokenizerFunctions {
 
             if (JSFXTokenizerFunctions::isBuiltinFunction(juce::String::CharPointerType(possibleIdentifier), tokenLength))
                 return JSFXTokenizer::tokenType_builtin_function;
+
+            if (JSFXTokenizerFunctions::isNotSupported(juce::String::CharPointerType(possibleIdentifier), tokenLength))
+                return JSFXTokenizer::tokenType_not_supported;
         }
 
         return JSFXTokenizer::tokenType_identifier;

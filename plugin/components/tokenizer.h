@@ -28,6 +28,7 @@ class JSFXTokenizer : public juce::CPlusPlusCodeTokeniser
             tokenType_punctuation,
             tokenType_preprocessor,
             tokenType_string_hash,
+            tokenType_not_supported,
         };
 
     private:
