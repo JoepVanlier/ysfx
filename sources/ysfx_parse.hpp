@@ -90,6 +90,14 @@ struct ysfx_options_t {
     uint32_t gfx_hz = 30;
 };
 
+struct ysfx_config_item {
+    std::string identifier;
+    std::string name;
+    ysfx_real default_value{0};
+    ysfx::string_list var_names{};
+    std::vector<ysfx_real> var_values{};
+};
+
 struct ysfx_header_t {
     std::string desc;
     std::string author;
@@ -101,6 +109,7 @@ struct ysfx_header_t {
     ysfx::string_list filenames;
     ysfx_options_t options;
     ysfx_slider_t sliders[ysfx_max_sliders];
+    std::vector<ysfx_config_item> config_items;
 };
 
 struct ysfx_parsed_filename_t {
@@ -108,7 +117,9 @@ struct ysfx_parsed_filename_t {
     std::string filename;
 };
 
-bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, ysfx_parse_error *error);
+bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, ysfx_parse_error *error, bool onlyHeader);
 bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider);
 bool ysfx_parse_filename(const char *line, ysfx_parsed_filename_t &filename);
 void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header);
+ysfx_config_item ysfx_parse_config_line(const char *rest);
+bool ysfx_config_item_is_valid(const ysfx_config_item& item);

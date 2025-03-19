@@ -23,6 +23,8 @@
 #include "ysfx_parse.hpp"
 #include "ysfx_test_utils.hpp"
 #include <catch.hpp>
+#include <map>
+#include <string>
 
 TEST_CASE("preprocessor", "[basic]")
 {
@@ -38,8 +40,9 @@ TEST_CASE("preprocessor", "[basic]")
 
         ysfx_parse_error err;
         std::string processed_str;
-        REQUIRE(ysfx_preprocess(raw_reader, &err, processed_str));
         
+        std::map<std::string, ysfx_real> preprocessor_values;
+        REQUIRE(ysfx_preprocess(raw_reader, &err, processed_str, preprocessor_values));
         ysfx::string_text_reader processed_reader = ysfx::string_text_reader(processed_str.c_str());
         REQUIRE(!err);
 
@@ -66,11 +69,41 @@ TEST_CASE("preprocessor", "[basic]")
 
         ysfx_parse_error err;
         std::string processed_str;
-        bool success = ysfx_preprocess(raw_reader, &err, processed_str);
+        std::map<std::string, ysfx_real> preprocessor_values;
+        bool success = ysfx_preprocess(raw_reader, &err, processed_str, preprocessor_values);
         
         REQUIRE(!success);
         ysfx::string_text_reader processed_reader = ysfx::string_text_reader(processed_str.c_str());
         REQUIRE(err.message == "Invalid section: 3: preprocessor: syntax error: 'c = 1 <!> a2; c += 1; printf(\"c = %d;\", c);'");
+    }
+
+    SECTION("preprocessor with variable")
+    {
+        const char *text =
+            "// the header" "\n"
+            "@init" "\n"
+            "<?printf(\"c = %d;\", preproc_value);?>" "\n"
+            "@block" "\n";
+        
+        ysfx::string_text_reader raw_reader(text);
+
+        ysfx_parse_error err;
+        std::string processed_str;
+        
+        std::map<std::string, ysfx_real> preprocessor_values{std::make_pair("preproc_value", 42)};
+        REQUIRE(ysfx_preprocess(raw_reader, &err, processed_str, preprocessor_values));
+        ysfx::string_text_reader processed_reader = ysfx::string_text_reader(processed_str.c_str());
+        REQUIRE(!err);
+
+        std::string line;
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "// the header");
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "@init");
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "c = 42;");
+        processed_reader.read_next_line(line);
+        REQUIRE(line == "@block");
     }
 }
 
@@ -91,7 +124,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.header);
@@ -126,7 +159,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.header);
@@ -154,7 +187,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         // toplevel always has a header, empty or not
@@ -178,7 +211,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(!ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(!ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(bool(err));
     }
 
@@ -189,7 +222,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.init);
@@ -202,7 +235,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.gfx);
@@ -217,7 +250,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.gfx);
@@ -232,7 +265,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.gfx);
@@ -247,7 +280,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.gfx);
@@ -276,7 +309,7 @@ TEST_CASE("section splitting", "[parse]")
 
         ysfx_parse_error err;
         ysfx_toplevel_t toplevel;
-        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err));
+        REQUIRE(ysfx_parse_toplevel(reader, toplevel, &err, false));
         REQUIRE(!err);
 
         REQUIRE(toplevel.header);
@@ -527,8 +560,186 @@ TEST_CASE("slider parsing", "[parse]")
     }
 }
 
+static void validate_config_item(const char* line, const std::string id, const std::string name, const ysfx::string_list var_names, const std::vector<ysfx_real> var_values, const ysfx_real default_value) {
+    ysfx_config_item item = ysfx_parse_config_line(line);
+    
+    REQUIRE(item.identifier == id);
+    REQUIRE(item.name == name);
+
+    for (auto ix = 0; ix < var_names.size(); ++ix) WARN(var_names[ix]);
+    for (auto ix = 0; ix < item.var_names.size(); ++ix) WARN(item.var_names[ix]);
+    REQUIRE(item.var_names.size() == var_names.size());
+    REQUIRE(item.var_values.size() == var_values.size());
+    REQUIRE(item.default_value == default_value);
+
+    for (auto ix = 0; ix < var_names.size(); ++ix)
+    {
+        REQUIRE(item.var_names[ix] == var_names[ix]);
+    }
+
+    for (auto ix = 0; ix < var_values.size(); ++ix)
+    {
+        REQUIRE(item.var_values[ix] == var_values[ix]);
+    }
+
+    REQUIRE(ysfx_config_item_is_valid(item) == true);
+}
+
+static void check_invalid_config_line(const char* line) {
+    ysfx_config_item item = ysfx_parse_config_line(line);
+    REQUIRE(ysfx_config_item_is_valid(item) == false);
+}
+
 TEST_CASE("header parsing", "[parse]")
 {
+    SECTION("config", "config")
+    {
+        validate_config_item(
+            " nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8='8 (namesake)' 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "'8 (namesake)'", "12", "16", "24", "32", "48"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8='8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "'8 (namesake)\" 12 16 24 32 48"},
+            {1, 2, 4, 8},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8='8 (name\"sake)' 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "'8 (name\"sake)'", "12", "16", "24", "32", "48"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8 =   \"8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48=",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48='blip'",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "'blip'"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48= blip",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "blip"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 24 8=\"8 (namesake)\" 12 416 24 32 48=blip",
+            "nch",
+            "Channels",
+            {"1", "2", "24", "8 (namesake)", "12", "416", "24", "32", "blip"},
+            {1, 2, 24, 8, 12, 416, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48=\"blip",
+            "nch",
+            "Channels",
+            {"1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "blip"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2=test 4 8=\"8 (namesake)\" 12 16 24 32 48='blip",
+            "nch",
+            "Channels",
+            {"1", "test", "4", "8 (namesake)", "12", "16", "24", "32", "'blip"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch Channels 8 1 2 = test    4 8  =   \"8 (namesake)\"    12 16 24   32 48  = 'blip",
+            "nch",
+            "Channels",
+            {"1", "test", "4", "8 (namesake)", "12", "16", "24", "32", "'blip"},
+            {1, 2, 4, 8, 12, 16, 24, 32, 48},
+            8
+        );
+
+        validate_config_item(
+            "nch Channels 100 1 2 = test    4 8  =   \"8 (namesake)\"    12 14 24   32 48  = 'blip",
+            "nch",
+            "Channels",
+            {"1", "test", "4", "8 (namesake)", "12", "14", "24", "32", "'blip"},
+            {1, 2, 4, 8, 12, 14, 24, 32, 48},
+            100
+        );
+
+        validate_config_item(
+            "nch Channels 3 1 =5 2=",
+            "nch",
+            "Channels",
+            {"5", "2"},
+            {1, 2},
+            3
+        );
+
+        check_invalid_config_line("nch Channels");
+        check_invalid_config_line("nch ");
+        check_invalid_config_line("");
+        check_invalid_config_line("nch Channels 8");
+        check_invalid_config_line("nch Channels ");
+        check_invalid_config_line("nch Channels 8 1");  // At least two options are mandated by REAPER
+        check_invalid_config_line("nch Channels 8 1 ");
+        check_invalid_config_line("nch Channels 8 1 =5");
+        check_invalid_config_line("nch Channels 8=\"test\" 1 2 3");   
+    }
+
     SECTION("ordinary header", "[parse]")
     {
         const char *text =
