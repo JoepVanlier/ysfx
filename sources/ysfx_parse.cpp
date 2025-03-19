@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#include <vector>
 
 ysfx_section_t* new_or_append(ysfx_section_u &section, uint32_t line_no)
 {
@@ -94,6 +95,78 @@ bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, y
     return true;
 }
 
+ysfx_config_item ysfx_parse_config_line(const char *rest)
+{
+    ysfx_config_item item;
+
+    // Whitespace before the identifier is ignored
+    auto cur = rest;
+    while (*cur && ysfx::ascii_isspace(*cur)) ++cur;
+
+    // Identifier
+    auto pos = cur;
+    while (*pos && !ysfx::ascii_isspace(*pos)) ++pos;
+    item.identifier = std::string(cur, pos - cur);
+    
+    // Skip whitespace
+    while (*pos && ysfx::ascii_isspace(*pos)) ++pos;
+    if (!*pos) return item;
+    cur = pos;
+    
+    auto closing_item = ((*pos == '"') || (*pos == '\'')) ? *pos : ' ';
+    pos += 1;
+    if (!*pos) return item;
+    
+    while (*pos && *pos != closing_item) ++pos;
+    if (closing_item == '"') {
+        item.name = std::string(cur + 1, pos - cur - 1);
+    } else {
+        item.name = std::string(cur, pos - cur);
+    }
+    
+    cur = pos + 1;
+    while (*cur) {
+        while (*cur && ysfx::ascii_isspace(*cur)) ++cur;  // Skip whitespace
+        
+        // Read double
+        ysfx_real value = (ysfx_real)ysfx::dot_strtod(cur, (char **)&pos);
+        if (cur == pos) return item;  // TODO: emit error
+
+        auto key = std::string(cur, pos - cur);
+        cur = pos;
+
+        while (*cur && ysfx::ascii_isspace(*cur)) ++cur;  // Skip whitespace
+
+        if (*cur == '=') {
+            cur++;
+            while (*cur && ysfx::ascii_isspace(*cur)) ++cur;  // Skip whitespace
+
+            if (*cur) {
+                closing_item = ((*cur == '"') || (*cur == '\'')) ? *cur : ' ';
+                pos = cur + 1;
+                while (*pos && (*pos != closing_item)) ++pos;
+                switch(closing_item)
+                {
+                    case '"':
+                        key = std::string(cur + 1, pos - cur - 1);
+                        break;
+                    case ' ':
+                        key = std::string(cur, pos - cur);
+                        break;
+                    default:
+                        key = std::string(cur, pos - cur + (*pos ? 1 : 0));  // blegh
+                }
+                cur = pos + 1;
+            }
+        }
+        
+        item.var_names.push_back(key);
+        item.var_values.push_back(value);
+    }
+
+    return item;
+}
+
 void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
 {
     header = ysfx_header_t{};
@@ -147,6 +220,9 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
         else if (unprefix(linep, &rest, "out_pin:")) {
             header.explicit_pins = true;
             header.out_pins.push_back(ysfx::trim(rest, &ysfx::ascii_isspace));
+        }
+        else if (unprefix(linep, &rest, "config:")) {
+            ysfx_parse_config_line(rest);
         }
         else if (unprefix(linep, &rest, "options:")) {
             auto option_line = ysfx::trim_spaces_around_equals(rest);

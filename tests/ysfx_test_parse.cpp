@@ -527,8 +527,150 @@ TEST_CASE("slider parsing", "[parse]")
     }
 }
 
+static void validate_config_item(const char* line, std::string id, std::string name, std::vector<std::string> var_names, std::vector<double> var_values) {
+    ysfx_config_item item = ysfx_parse_config_line(line);
+    
+    REQUIRE(item.identifier == id);
+    REQUIRE(item.name == name);
+    REQUIRE(item.var_names.size() == var_names.size());
+    REQUIRE(item.var_values.size() == var_values.size());
+
+    for (auto ix = 0; ix < var_names.size(); ++ix)
+    {
+        REQUIRE(item.var_names[ix] == var_names[ix]);
+    }
+
+    for (auto ix = 0; ix < var_values.size(); ++ix)
+    {
+        REQUIRE(item.var_values[ix] == var_values[ix]);
+    }
+}
+
 TEST_CASE("header parsing", "[parse]")
 {
+    SECTION("config", "config")
+    {
+        validate_config_item(
+            " nch \"Channels\" 8",
+            "nch",
+            "Channels",
+            {"8"},
+            {8}
+        );
+
+        validate_config_item(
+            " nch \"Channels\" 8 1",
+            "nch",
+            "Channels",
+            {"8", "1"},
+            {8, 1}
+        );
+
+        validate_config_item(
+            " nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8='8 (namesake)' 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "'8 (namesake)'", "12", "16", "24", "32", "48"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8='8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "'8 (namesake)\" 12 16 24 32 48"},
+            {8, 1, 2, 4, 8}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8='8 (name\"sake)' 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "'8 (name\"sake)'", "12", "16", "24", "32", "48"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8 =   \"8 (namesake)\" 12 16 24 32 48",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48=",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "48"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48='blip'",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "'blip'"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48= blip",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "blip"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 24 8=\"8 (namesake)\" 12 416 24 32 48=blip",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "24", "8 (namesake)", "12", "416", "24", "32", "blip"},
+            {8, 1, 2, 24, 8, 12, 416, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2 4 8=\"8 (namesake)\" 12 16 24 32 48=\"blip",
+            "nch",
+            "Channels",
+            {"8", "1", "2", "4", "8 (namesake)", "12", "16", "24", "32", "blip"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch \"Channels\" 8 1 2=test 4 8=\"8 (namesake)\" 12 16 24 32 48=\'blip",
+            "nch",
+            "Channels",
+            {"8", "1", "test", "4", "8 (namesake)", "12", "16", "24", "32", "'blip"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+
+        validate_config_item(
+            "nch Channels 8 1 2 = test    4 8  =   \"8 (namesake)\"    12 16 24   32 48  = \'blip",
+            "nch",
+            "Channels",
+            {"8", "1", "test", "4", "8 (namesake)", "12", "16", "24", "32", "'blip"},
+            {8, 1, 2, 4, 8, 12, 16, 24, 32, 48}
+        );
+    }
+
     SECTION("ordinary header", "[parse]")
     {
         const char *text =
