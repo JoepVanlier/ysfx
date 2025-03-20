@@ -17,6 +17,7 @@
 
 #include "ysfx.hpp"
 #include "ysfx_utils.hpp"
+#include <map>
 
 #include "WDL/ptrlist.h"
 #include "WDL/assocarray.h"
@@ -26,7 +27,7 @@
 #include "WDL/eel2/eel_pproc.h"
 
 
-bool ysfx_preprocess(ysfx::text_reader &reader, ysfx_parse_error *error, std::string& in_str)
+bool ysfx_preprocess(ysfx::text_reader &reader, ysfx_parse_error *error, std::string& in_str, std::map<std::string, ysfx_real> preprocessor_values)
 {
     std::string line;
     line.reserve(256);
@@ -39,6 +40,11 @@ bool ysfx_preprocess(ysfx::text_reader &reader, ysfx_parse_error *error, std::st
     }
 
     EEL2_PreProcessor pproc;
+
+    for (auto it = preprocessor_values.begin(); it != preprocessor_values.end(); ++it) {
+        pproc.define(it->first.c_str(), it->second);
+    }
+
     const char *err = pproc.preprocess(file_str.Get(), &pp_str);
     if (err) {
         error->line = 0;

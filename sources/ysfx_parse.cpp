@@ -36,7 +36,7 @@ ysfx_section_t* new_or_append(ysfx_section_u &section, uint32_t line_no)
     return section.get();
 }
 
-bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, ysfx_parse_error *error)
+bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, ysfx_parse_error *error, bool onlyHeader=false)
 {
     toplevel = ysfx_toplevel_t{};
 
@@ -52,6 +52,8 @@ bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, y
         const char *linep = line.c_str();
 
         if (linep[0] == '@') {
+            if (onlyHeader) return true;
+
             // a new section starts
             ysfx::string_list tokens = ysfx::split_strings_noempty(linep, &ysfx::ascii_isspace);
 
@@ -167,6 +169,19 @@ ysfx_config_item ysfx_parse_config_line(const char *rest)
     return item;
 }
 
+bool ysfx_config_item_is_valid(const ysfx_config_item& item) {
+    if (item.identifier.empty()) return false;
+    if (item.name.empty()) return false;
+    if (item.var_names.empty()) return false;
+    if (item.var_values.empty()) return false;
+
+    for (auto v : item.var_names) {
+        if (v.empty()) return false;
+    }
+
+    return true;
+}
+
 void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
 {
     header = ysfx_header_t{};
@@ -222,7 +237,10 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
             header.out_pins.push_back(ysfx::trim(rest, &ysfx::ascii_isspace));
         }
         else if (unprefix(linep, &rest, "config:")) {
-            ysfx_parse_config_line(rest);
+            auto item = ysfx_parse_config_line(rest);
+            if (ysfx_config_item_is_valid(item)) {
+                header.config_items.push_back(item);
+            }
         }
         else if (unprefix(linep, &rest, "options:")) {
             auto option_line = ysfx::trim_spaces_around_equals(rest);
