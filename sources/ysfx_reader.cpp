@@ -65,6 +65,11 @@ char string_text_reader::peek_next_char()
     return *ptr;
 }
 
+void string_text_reader::rewind()
+{
+    m_char_ptr = m_char_start;
+}
+
 //------------------------------------------------------------------------------
 char stdio_text_reader::read_next_char()
 {
@@ -93,6 +98,13 @@ char stdio_text_reader::peek_next_char()
 
     ungetc(next, stream);
     return (unsigned char)next;
+}
+
+void stdio_text_reader::rewind()
+{
+    FILE *stream = m_stream;
+
+    fseek(stream, 0, SEEK_SET);
 }
 
 } // namespace ysfx
