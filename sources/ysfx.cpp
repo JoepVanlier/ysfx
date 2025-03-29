@@ -1244,7 +1244,26 @@ void ysfx_set_midi_capacity(ysfx_t *fx, uint32_t capacity, bool extensible)
     ysfx_midi_reserve(fx->midi.out.get(), capacity, extensible);
 }
 
-void ysfx_init(ysfx_t *fx)
+static void _erase_vars(ysfx_t *fx)
+{
+    // Wipe all variables
+    ysfx_state_t* state;
+    if (fx->has_serialize) {
+        state = ysfx_save_state(fx);
+    }
+    ysfx_reinitialize_vars(fx);  // Wipe sliders
+    NSEEL_VM_freeRAM(fx->vm.get());  // Wipe RAM
+    
+    // Make sure the initialized variables are there (otherwise deserialization 
+    // may fail if the user specifies memory buffer locations there)
+    ysfx_init(fx);
+    if (fx->has_serialize) {
+        ysfx_load_serialized_state(fx, state);
+        ysfx_state_free(state);
+    }
+}
+
+static void _ysfx_init(ysfx_t *fx, bool reset)
 {
     if (!fx->code.compiled)
         return;
@@ -1261,9 +1280,17 @@ void ysfx_init(ysfx_t *fx)
 
         fx->is_freshly_compiled = false;
     } else {
-        // This matches the reaper behavior
         if (!fx->has_serialize) {
-            ysfx_reinitialize_vars(fx);
+            if (reset) {
+                _erase_vars(fx);
+            } else {
+                // This matches the reaper behavior
+                ysfx_reinitialize_vars(fx);
+            }
+        } else {
+            if (reset) {
+                _erase_vars(fx);
+            }
         }
     }
 
@@ -1284,6 +1311,16 @@ void ysfx_init(ysfx_t *fx)
     fx->gfx.wants_retina = *fx->var.gfx_ext_retina > 0;
     fx->gfx.must_init.store(true, std::memory_order_release);
 #endif
+}
+
+void ysfx_init(ysfx_t *fx)
+{
+    _ysfx_init(fx, false);
+}
+
+void ysfx_reset_internal_state(ysfx_t *fx)
+{
+    _ysfx_init(fx, true);
 }
 
 void ysfx_first_init(ysfx_t *fx)
@@ -1800,6 +1837,19 @@ ysfx_real ysfx_read_vmem_single(ysfx_t *fx, uint32_t addr)
     uint32_t avail;
     EEL_F* flt_addr = NSEEL_VM_getramptr_noalloc(fx->vm.get(), addr, (int32_t *)&avail);
     return flt_addr ? *flt_addr : 0;
+}
+
+void ysfx_write_vmem_single(ysfx_t *fx, uint32_t addr, ysfx_real value)
+{
+    uint32_t avail;
+    EEL_F* flt_addr = NSEEL_VM_getramptr(fx->vm.get(), addr, (int32_t *)&avail);
+    if (flt_addr) *flt_addr = value;
+}
+
+void ysfx_set_variable(ysfx_t *fx, const char *name, ysfx_real value)
+{
+    EEL_F* var = NSEEL_VM_regvar(fx->vm.get(), name);
+    if (var) *var = value;
 }
 
 int ysfx_calculate_used_mem(ysfx_t *fx)

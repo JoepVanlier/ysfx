@@ -359,5 +359,133 @@ TEST_CASE("integration", "[integration]")
         compile_and_check("desc:test" "\noptions:\nout_pin:output\n@init\n", 30, true);
         compile_and_check("desc:test" "\noptions:gfx_hz=60\nout_pin:output\n@init\n", 60, true);
         compile_and_check("desc:test" "\noptions:gfx_hz=60\noptions:no_meter\nout_pin:output\n@init\n", 60, false);
-    }  
+    }
+
+    SECTION("erase_variables w/serialize")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "slider1:foo=1<1,3,0.1>the slider 1" "\n"
+            "slider2:bar=2<1,3,0.1>the slider 2" "\n"
+            "@init" "\n"
+            "myarray = 3;" "\n"
+            "15[0] = 1500;" "\n"
+            "@serialize" "\n"
+            "file_var(0, serialized_variable);" "\n"
+            "file_mem(0, myarray, 3);" "\n"
+            ;
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_read_var(fx.get(), "myarray") == 3);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 15) == 1500);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 16) == 0);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 3) == 0);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 4) == 0);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 5) == 0);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 6) == 0);
+
+        ysfx_set_variable(fx.get(), "serialized_variable", 156);
+        REQUIRE(ysfx_read_var(fx.get(), "serialized_variable") == 156);
+
+        ysfx_set_variable(fx.get(), "non_serialized_variable", 156);
+        REQUIRE(ysfx_read_var(fx.get(), "non_serialized_variable") == 156);
+
+        ysfx_set_variable(fx.get(), "slider1", 1.5);
+        REQUIRE(ysfx_read_var(fx.get(), "slider1") == 1.5);
+
+        ysfx_write_vmem_single(fx.get(), 15, 1501);
+        ysfx_write_vmem_single(fx.get(), 16, 1337);
+        ysfx_write_vmem_single(fx.get(), 3, 3);
+        ysfx_write_vmem_single(fx.get(), 4, 4);
+        ysfx_write_vmem_single(fx.get(), 5, 5);
+        ysfx_write_vmem_single(fx.get(), 6, 6);
+
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 15) == 1501);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 16) == 1337);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 3) == 3);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 4) == 4);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 5) == 5);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 6) == 6);
+
+        ysfx_reset_internal_state(fx.get());
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 15) == 1500);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 16) == 0);
+
+        // These were explicitly serialized and should remain
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 3) == 3);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 4) == 4);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 5) == 5);
+        REQUIRE(ysfx_read_var(fx.get(), "serialized_variable") == 156);
+        REQUIRE(ysfx_read_var(fx.get(), "slider1") == 1.5);
+
+        // This one should be blank again
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 6) == 0);
+        REQUIRE(ysfx_read_var(fx.get(), "non_serialized_variable") == 0);
+
+        // This one is initialized in the initializer
+        REQUIRE(ysfx_read_var(fx.get(), "myarray") == 3);
+    };
+
+    SECTION("erase_variables w/o serialize")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "slider1:foo=1<1,3,0.1>the slider 1" "\n"
+            "slider2:bar=2<1,3,0.1>the slider 2" "\n"
+            "@init" "\n"
+            "myarray = 3;" "\n"
+            "15[0] = 1500;" "\n"
+            ;
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_read_var(fx.get(), "myarray") == 3);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 15) == 1500);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 16) == 0);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 3) == 0);
+
+        ysfx_set_variable(fx.get(), "non_serialized_variable", 156);
+        REQUIRE(ysfx_read_var(fx.get(), "non_serialized_variable") == 156);
+
+        ysfx_set_variable(fx.get(), "slider1", 1.5);
+        REQUIRE(ysfx_read_var(fx.get(), "slider1") == 1.5);
+
+        ysfx_write_vmem_single(fx.get(), 15, 1501);
+        ysfx_write_vmem_single(fx.get(), 16, 1337);
+        ysfx_write_vmem_single(fx.get(), 3, 3);
+
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 15) == 1501);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 16) == 1337);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 3) == 3);
+
+        ysfx_reset_internal_state(fx.get());
+
+        // This one should be blank again
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 16) == 0);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 3) == 0);
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 6) == 0);
+        REQUIRE(ysfx_read_var(fx.get(), "non_serialized_variable") == 0);
+        REQUIRE(ysfx_read_var(fx.get(), "slider1") == 1.5);
+
+        // This one is initialized in the initializer
+        REQUIRE(ysfx_read_vmem_single(fx.get(), 15) == 1500);
+        REQUIRE(ysfx_read_var(fx.get(), "myarray") == 3);
+    };
 }

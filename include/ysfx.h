@@ -278,6 +278,9 @@ YSFX_API void ysfx_set_midi_capacity(ysfx_t *fx, uint32_t capacity, bool extensi
 // activate and invoke @init
 YSFX_API void ysfx_init(ysfx_t *fx);
 
+// reset internal state of ysfx
+YSFX_API void ysfx_reset_internal_state(ysfx_t *fx);
+
 // get the output latency
 YSFX_API ysfx_real ysfx_get_pdc_delay(ysfx_t *fx);
 // get the range of channels where output latency applies (end not included)
@@ -431,6 +434,10 @@ YSFX_API ysfx_real ysfx_read_var(ysfx_t *fx, const char *name);
 YSFX_API void ysfx_read_vmem(ysfx_t *fx, uint32_t addr, ysfx_real *dest, uint32_t count);
 // read single value from VM RAM
 YSFX_API ysfx_real ysfx_read_vmem_single(ysfx_t *fx, uint32_t addr);
+// write single value to VM RAM
+YSFX_API void ysfx_write_vmem_single(ysfx_t *fx, uint32_t addr, ysfx_real value);
+// set a variable (optionally creating it if it doesn't exist)
+YSFX_API void ysfx_set_variable(ysfx_t *fx, const char *name, ysfx_real value);
 // read how many memory slots are in use
 YSFX_API int ysfx_calculate_used_mem(ysfx_t *fx);
 
