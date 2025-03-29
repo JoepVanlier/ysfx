@@ -423,7 +423,7 @@ void YsfxEditor::Impl::updateInfo()
         m_ideView->setStatusText(info->errors.getReference(0));
         juce::String errors = juce::String(TRANS("Error(s) parsing JSFX:\n"));
         for (auto i = 0; i < info->errors.size(); i++) {
-            errors += info->errors.getReference(0);
+            errors += info->errors.getReference(0) + std::string("\n");
         }
         m_lblError->setText(errors, juce::dontSendNotification);
     } else if (!info->warnings.isEmpty())

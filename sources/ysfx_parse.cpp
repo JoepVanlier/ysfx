@@ -21,6 +21,9 @@
 #include <cstring>
 #include <algorithm>
 #include <vector>
+#include <cctype>
+#include <unordered_set>
+
 
 ysfx_section_t* new_or_append(ysfx_section_u &section, uint32_t line_no)
 {
@@ -193,14 +196,14 @@ bool ysfx_config_item_is_valid(const ysfx_config_item& item) {
     return true;
 }
 
-void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
+bool ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header, ysfx_parse_error *error)
 {
     header = ysfx_header_t{};
 
     ysfx::string_text_reader reader(section->text.c_str());
 
     std::string line;
-    //uint32_t lineno = section->line_offset;
+    uint32_t lineno = section->line_offset;
 
     line.reserve(256);
 
@@ -217,6 +220,7 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
     //--------------------------------------------------------------------------
     // pass 1: regular metadata
 
+    std::unordered_set<std::string> config_identifiers{};
     while (reader.read_next_line(line)) {
         const char *linep = line.c_str();
         const char *rest = nullptr;
@@ -250,6 +254,17 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
         else if (unprefix(linep, &rest, "config:")) {
             auto item = ysfx_parse_config_line(rest);
             if (ysfx_config_item_is_valid(item)) {
+                std::string identifier{item.identifier};
+                std::transform(identifier.begin(), identifier.end(), identifier.begin(), ysfx::ascii_tolower);
+
+                if (config_identifiers.find(identifier) != config_identifiers.end()) {
+                    if (error) {
+                        error->line = lineno;
+                        error->message = std::string("Duplicate config variable: ") + item.identifier;
+                    }
+                    return false;
+                }
+                config_identifiers.insert(identifier);
                 header.config_items.push_back(item);
             }
         }
@@ -295,7 +310,7 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
             header.filenames.push_back(std::move(filename.filename));
         }
 
-        //++lineno;
+        ++lineno;
     }
 
     //--------------------------------------------------------------------------
@@ -332,6 +347,8 @@ void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header)
         header.in_pins.resize(ysfx_max_channels);
     if (header.out_pins.size() > ysfx_max_channels)
         header.out_pins.resize(ysfx_max_channels);
+
+    return true;
 }
 
 bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider)

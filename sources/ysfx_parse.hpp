@@ -120,6 +120,6 @@ struct ysfx_parsed_filename_t {
 bool ysfx_parse_toplevel(ysfx::text_reader &reader, ysfx_toplevel_t &toplevel, ysfx_parse_error *error, bool onlyHeader);
 bool ysfx_parse_slider(const char *line, ysfx_slider_t &slider);
 bool ysfx_parse_filename(const char *line, ysfx_parsed_filename_t &filename);
-void ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header);
+bool ysfx_parse_header(ysfx_section_t *section, ysfx_header_t &header, ysfx_parse_error *error);
 ysfx_config_item ysfx_parse_config_line(const char *rest);
 bool ysfx_config_item_is_valid(const ysfx_config_item& item);

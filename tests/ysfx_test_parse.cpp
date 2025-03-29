@@ -756,7 +756,7 @@ TEST_CASE("header parsing", "[parse]")
         section.text.assign(text);
 
         ysfx_header_t header;
-        ysfx_parse_header(&section, header);
+        ysfx_parse_header(&section, header, nullptr);
         REQUIRE(header.desc == "The desc");
         REQUIRE(header.in_pins.size() == 2);
         REQUIRE(header.in_pins[0] == "The input 1");
@@ -780,7 +780,7 @@ TEST_CASE("header parsing", "[parse]")
         section.text.assign(text);
 
         ysfx_header_t header;
-        ysfx_parse_header(&section, header);
+        ysfx_parse_header(&section, header, nullptr);
         REQUIRE(header.in_pins.empty());
         REQUIRE(header.out_pins.empty());
     }
@@ -796,7 +796,7 @@ TEST_CASE("header parsing", "[parse]")
         section.text.assign(text);
 
         ysfx_header_t header;
-        ysfx_parse_header(&section, header);
+        ysfx_parse_header(&section, header, nullptr);
         REQUIRE(header.in_pins.empty());
         REQUIRE(header.out_pins.empty());
     }
@@ -814,7 +814,7 @@ TEST_CASE("header parsing", "[parse]")
         section.text.assign(text);
 
         ysfx_header_t header;
-        ysfx_parse_header(&section, header);
+        ysfx_parse_header(&section, header, nullptr);
         REQUIRE(header.in_pins.size() == 2);
         REQUIRE(header.in_pins[0] == "none");
         REQUIRE(header.in_pins[1] == "Input");
@@ -875,7 +875,7 @@ TEST_CASE("header parsing", "[parse]")
         section.text.assign(text);
 
         ysfx_header_t header;
-        ysfx_parse_header(&section, header);
+        ysfx_parse_header(&section, header, nullptr);
         REQUIRE(header.filenames.size() == 3);
         REQUIRE(header.filenames[0] == "toto");
         REQUIRE(header.filenames[1] == "titi");
@@ -894,7 +894,7 @@ TEST_CASE("header parsing", "[parse]")
         section.text.assign(text);
 
         ysfx_header_t header;
-        ysfx_parse_header(&section, header);
+        ysfx_parse_header(&section, header, nullptr);
         REQUIRE(header.filenames.size() == 2);
         REQUIRE(header.filenames[0] == "toto");
         REQUIRE(header.filenames[1] == "titi");

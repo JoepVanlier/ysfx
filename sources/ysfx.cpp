@@ -37,6 +37,7 @@
 #include <cassert>
 #include <cmath>
 
+
 static_assert(std::is_same<EEL_F, ysfx_real>::value,
               "ysfx_real is incorrectly defined");
 
@@ -253,7 +254,10 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
                 ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
                 return false;
             }
-            ysfx_parse_header(main->toplevel.header.get(), main->header);
+            if (!ysfx_parse_header(main->toplevel.header.get(), main->header, &error)) {
+                ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
+                return false;
+            };
 
             for (auto config_item : main->header.config_items) {
                 preprocessor_values[config_item.identifier] = config_item.default_value;  // Load preprocessor defaults
@@ -373,7 +377,10 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
                 ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(imported_path.c_str()).c_str(), error.line + 1, error.message.c_str());
                 return false;
             }
-            ysfx_parse_header(unit->toplevel.header.get(), unit->header);
+            if (!ysfx_parse_header(unit->toplevel.header.get(), unit->header, &error)) {
+                ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(imported_path.c_str()).c_str(), error.line + 1, error.message.c_str());
+                return false;
+            }
 
             // process the imported dependencies, *first*
             for (const std::string &name : unit->header.imports) {

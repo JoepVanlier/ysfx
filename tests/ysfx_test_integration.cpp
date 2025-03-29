@@ -180,6 +180,23 @@ TEST_CASE("integration", "[integration]")
         REQUIRE(ysfx_read_var(fx.get(), "x3") == 8);
     };
 
+    SECTION("preprocessor config duplicate variable")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "config:test1 \"test\" 8 1=test 2" "\n"
+            "config: tESt1 \"test2\" 3 1 2" "\n"
+            "@init";
+        
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0) == false);
+    };    
+
     SECTION("gfx_hz")
     {
         auto compile_and_check = [](const char *text, uint32_t ref_value) {
