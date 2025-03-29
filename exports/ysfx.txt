@@ -63,6 +63,7 @@ ysfx_set_block_size
 ysfx_set_sample_rate
 ysfx_set_midi_capacity
 ysfx_init
+ysfx_reset_internal_state
 ysfx_get_pdc_delay
 ysfx_get_pdc_channels
 ysfx_get_pdc_midi
@@ -100,6 +101,8 @@ ysfx_find_var
 ysfx_read_var
 ysfx_read_vmem
 ysfx_read_vmem_single
+ysfx_write_vmem_single
+ysfx_set_variable
 ysfx_calculate_used_mem
 ysfx_gfx_setup
 ysfx_gfx_wants_retina
