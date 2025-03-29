@@ -30,6 +30,8 @@
 #include <deque>
 #include <set>
 #include <new>
+#include <map>
+#include <string>
 #include <stdexcept>
 #include <cstring>
 #include <cassert>
@@ -126,7 +128,7 @@ ysfx_t *ysfx_new(ysfx_config_t *config)
 
         /* Not very efficient */
         std::string lower_name{name};
-        std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), [](unsigned char c){ return std::tolower(c); });
+        std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), ysfx::ascii_tolower);
 
         auto it = fx->source.slider_alias.find(lower_name);
         if (it != fx->source.slider_alias.end())
@@ -230,6 +232,7 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
     // load the main file
 
     ysfx::file_uid main_uid;
+    std::map<std::string, ysfx_real> preprocessor_values;
 
     {
         ysfx_source_unit_u main{new ysfx_source_unit_t};
@@ -240,21 +243,36 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
             return false;
         }
 
+        ysfx_parse_error error;
         ysfx::stdio_text_reader raw_reader(stream.get());
 
-        ysfx_parse_error error;
+        //--------------------------------------------------------------------------
+        // Read the preprocessor configuration (which involves reading only the header) as we need the information to compile the rest
+        {
+            if (!ysfx_parse_toplevel(raw_reader, main->toplevel, &error, true)) {
+                ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
+                return false;
+            }
+            ysfx_parse_header(main->toplevel.header.get(), main->header);
+
+            for (auto config_item : main->header.config_items) {
+                preprocessor_values[config_item.identifier] = config_item.default_value;  // Load preprocessor defaults
+            }
+
+            raw_reader.rewind();
+        }
+
         std::string preprocessed;
-        if (!ysfx_preprocess(raw_reader, &error, preprocessed)) {
+        if (!ysfx_preprocess(raw_reader, &error, preprocessed, preprocessor_values)) {
             ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
             return false;
         }
         ysfx::string_text_reader reader = ysfx::string_text_reader(preprocessed.c_str());
 
-        if (!ysfx_parse_toplevel(reader, main->toplevel, &error)) {
+        if (!ysfx_parse_toplevel(reader, main->toplevel, &error, false)) {
             ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
             return false;
         }
-        ysfx_parse_header(main->toplevel.header.get(), main->header);
 
         // validity check
         if (main->header.desc.empty()) {
@@ -279,7 +297,7 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
                 if (!main->header.sliders[i].var.empty())
                 {
                     std::string data = main->header.sliders[i].var;
-                    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c){ return std::tolower(c); });
+                    std::transform(data.begin(), data.end(), data.begin(), ysfx::ascii_tolower);
                     fx->source.slider_alias.insert({data, i});
                 }
             }
@@ -313,7 +331,7 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
     std::set<ysfx::file_uid> seen;
 
     std::function<bool(const std::string &, const std::string &, uint32_t)> do_next_import =
-        [fx, &seen, &do_next_import]
+        [fx, &seen, &do_next_import, &preprocessor_values]
         (const std::string &name, const std::string &origin, uint32_t level) -> bool
         {
             if (level >= max_import_level) {
@@ -344,14 +362,14 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
             // run the preprocessor first
             ysfx_parse_error error;
             std::string preprocessed;
-            if (!ysfx_preprocess(raw_reader, &error, preprocessed)) {
+            if (!ysfx_preprocess(raw_reader, &error, preprocessed, preprocessor_values)) {
                 ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(imported_path.c_str()).c_str(), error.line + 1, error.message.c_str());
                 return false;
             }
             ysfx::string_text_reader reader = ysfx::string_text_reader(preprocessed.c_str());
 
             // then parse it
-            if (!ysfx_parse_toplevel(reader, unit->toplevel, &error)) {
+            if (!ysfx_parse_toplevel(reader, unit->toplevel, &error, false)) {
                 ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(imported_path.c_str()).c_str(), error.line + 1, error.message.c_str());
                 return false;
             }

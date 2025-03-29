@@ -147,6 +147,39 @@ TEST_CASE("integration", "[integration]")
         REQUIRE(ysfx_read_vmem_single(fx.get(), 33554432) == 6);
     };
 
+    SECTION("preprocessor config")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "config: test1 \"test\" 8 1=test 2" "\n"
+            "config: test2 \"test2\" 3 1 2" "\n"
+            "config: invalid" "\n"
+            "config:" "\n"
+            "import include.jsfx-inc" "\n"
+            "@init" "\n"
+            "x1 = <?printf(\"%d\", test1)?>;" "\n"
+            "x2 = <?printf(\"%d\", test2)?>;" "\n";
+        
+        const char *include_text =
+            "@init" "\n"
+            "x3 = <?printf(\"%d\", test1)?>;" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+        scoped_new_txt file("${root}/Effects/include.jsfx-inc", include_text);
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_read_var(fx.get(), "x1") == 8);
+        REQUIRE(ysfx_read_var(fx.get(), "x2") == 3);
+        REQUIRE(ysfx_read_var(fx.get(), "x3") == 8);
+    };
+
     SECTION("gfx_hz")
     {
         auto compile_and_check = [](const char *text, uint32_t ref_value) {

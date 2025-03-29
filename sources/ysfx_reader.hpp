@@ -28,6 +28,7 @@ public:
     virtual ~text_reader() = default;
     virtual char read_next_char() = 0;
     virtual char peek_next_char() = 0;
+    virtual void rewind() = 0;
     bool read_next_line(std::string &line);
 };
 
@@ -35,11 +36,13 @@ public:
 class string_text_reader : public text_reader
 {
 public:
-    explicit string_text_reader(const char *text) : m_char_ptr(text) {}
+    explicit string_text_reader(const char *text) : m_char_ptr(text), m_char_start(text) {}
     char read_next_char() override;
     char peek_next_char() override;
+    void rewind() override;
 private:
     const char *m_char_ptr = nullptr;
+    const char *m_char_start = nullptr;
 };
 
 //------------------------------------------------------------------------------
@@ -49,6 +52,7 @@ public:
     explicit stdio_text_reader(FILE *stream) : m_stream(stream) {}
     char read_next_char() override;
     char peek_next_char() override;
+    void rewind() override;
 private:
     FILE *m_stream = nullptr;
 };
