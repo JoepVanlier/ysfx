@@ -543,8 +543,8 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
 
     // newWidth is set when the JSFX initializes
     float scaling_factor = 1.0f / (output_scaling > 1.1f ? pixel_factor : 1.0f);
-    newWidth = (newWidth == -1) ? m_self->getWidth() : (int) (newWidth * scaling_factor);
-    newHeight = (newHeight == -1) ? m_self->getHeight() : (int) (newHeight * scaling_factor);
+    newWidth = (newWidth == -1) ? m_self->getWidth() - 1 : (int) (newWidth * scaling_factor);
+    newHeight = (newHeight == -1) ? m_self->getHeight() - 1 : (int) (newHeight * scaling_factor);
     newRetina = (newRetina == -1) ? target->m_wantRetina : newRetina;
 
     // Set internal JSFX texture size
@@ -564,7 +564,7 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
         target->m_gfxWidth = internal_width;
         target->m_gfxHeight = internal_height;
         target->m_wantRetina = (bool)newRetina;
-        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width - 2), juce::jmax(1, internal_height - 2), true, juce::SoftwareImageType{});
+        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width), juce::jmax(1, internal_height), true, juce::SoftwareImageType{});
         target->m_bitmapScale = pixel_factor;
     }
 
