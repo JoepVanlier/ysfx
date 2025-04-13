@@ -60,6 +60,7 @@ struct YsfxEditor::Impl {
     bool m_maintainState = false;
     int m_keepUndoState{1};
     int m_softwareRenderer{0};
+    WindowBehaviour m_windowBehaviour{WindowBehaviour::alwaysOnTop};
     float m_currentScaling{1.0f};
     uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
     bool m_visibleSlidersChanged{false};
@@ -94,28 +95,42 @@ struct YsfxEditor::Impl {
     class SubWindow : public juce::DocumentWindow {
     public:
         using juce::DocumentWindow::DocumentWindow;
-        SubWindow(const juce::String& name, juce::Colour backgroundColour, int requiredButtons, bool addToDesktop = true): DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop)
+        SubWindow(const juce::String& name, juce::Colour backgroundColour, int buttons, bool addToDesktop = true, WindowBehaviour windowBehaviour = WindowBehaviour::alwaysOnTop): DocumentWindow (name, backgroundColour, buttons, addToDesktop)
         {
-            juce::Timer *timer = FunctionalTimer::create(
-                [this]() {
-                    if (juce::Process::isForegroundProcess()) {
-                        if (isVisible() && !isAlwaysOnTop()) {
-                            setAlwaysOnTop(true);
-                        }
-                    } else {
-                        if (isAlwaysOnTop()) {
-                            setAlwaysOnTop(false);
-
-                            // Questionable windows fix
-                            auto oldFlags = this->getPeer()->getStyleFlags();
-                            removeFromDesktop();
-                            this->addToDesktop(oldFlags);
-                        }
-                    }
-                }
-            );
-            m_stayOnTopTimer.reset(timer);
-            m_stayOnTopTimer->startTimer(50);
+            switch(windowBehaviour)
+            {
+                case WindowBehaviour::alwaysOnTop:
+                    setAlwaysOnTop(true);
+                    break;
+                case WindowBehaviour::normal:
+                    break;
+                case WindowBehaviour::dynamicOnTop:
+                    m_stayOnTopTimer.reset(
+                        FunctionalTimer::create(
+                            [this]() {
+                                if (juce::Process::isForegroundProcess()) {
+                                    if (isVisible() && !isAlwaysOnTop()) {
+                                        setAlwaysOnTop(true);
+                                    }
+                                } else {
+                                    if (isAlwaysOnTop()) {
+                                        setAlwaysOnTop(false);
+            
+                                        // Questionable windows fix
+                                        auto oldFlags = this->getPeer()->getStyleFlags();
+                                        removeFromDesktop();
+                                        this->addToDesktop(oldFlags);
+                                    }
+                                }
+                            }
+                        )
+                    );
+                    m_stayOnTopTimer->startTimer(50);                
+                    break;
+                default:
+                    jassertfalse;
+                    break;
+            }
         }
 
     private:
@@ -840,7 +855,7 @@ void YsfxEditor::Impl::switchEditor(bool showGfx)
 void YsfxEditor::Impl::openCodeEditor()
 {
     if (!m_codeWindow) {
-        m_codeWindow.reset(new SubWindow(TRANS("Edit"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
+        m_codeWindow.reset(new SubWindow(TRANS("Edit"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons, true, m_windowBehaviour));
         m_codeWindow->setResizable(true, false);
         m_codeWindow->setContentNonOwned(m_ideView.get(), true);
     }
@@ -853,7 +868,7 @@ void YsfxEditor::Impl::openCodeEditor()
 void YsfxEditor::Impl::openPresetWindow()
 {
     if (!m_presetWindow) {
-        m_presetWindow.reset(new SubWindow(TRANS("Preset Manager"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons));
+        m_presetWindow.reset(new SubWindow(TRANS("Preset Manager"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons, true, m_windowBehaviour));
         m_presetWindow->setResizable(true, false);
         m_presetWindow->setContentNonOwned(m_rplView.get(), true);
     }
@@ -957,7 +972,15 @@ void YsfxEditor::Impl::initializeProperties()
         if (m_pluginProperties->containsKey(sw_key)) {
             m_softwareRenderer = m_pluginProperties->getIntValue(sw_key);
         } else {
-            m_pluginProperties->setValue(sw_key, 0);
+            m_pluginProperties->setValue(sw_key, juce::var{0});
+            m_pluginProperties->setNeedsToBeSaved(true);
+        }
+
+        auto windowBehaviour = juce::String("ysfx_sub_window_stay_on_top");
+        if (m_pluginProperties->containsKey(windowBehaviour)) {
+            m_windowBehaviour = static_cast<WindowBehaviour>(m_pluginProperties->getIntValue(windowBehaviour));
+        } else {
+            m_pluginProperties->setValue(windowBehaviour, juce::var{0});
             m_pluginProperties->setNeedsToBeSaved(true);
         }
     }
