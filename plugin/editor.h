@@ -20,6 +20,8 @@
 #include <memory>
 class YsfxProcessor;
 
+enum WindowBehaviour {alwaysOnTop = 0, normal = 1, dynamicOnTop = 2};
+
 class YsfxEditor : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget {
 public:
     explicit YsfxEditor(YsfxProcessor &proc);
