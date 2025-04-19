@@ -4,6 +4,7 @@
 //
 //------------------------------------------------------------------------------
 //
+// Copyright (C) 2025 and later Joep Vanlier
 // Copyright (C) 2021 and later Jean Pierre Cimalando
 // Copyright (C) 2005 and later Cockos Incorporated
 //
@@ -44,11 +45,20 @@
 #   include "ysfx_api_gfx.cpp"
 #endif
 
-#define EEL_LICE_GET_CONTEXT(opaque) ((opaque) ? ((ysfx_t *)(opaque))->gfx.state->lice.get() : nullptr)
+#define EEL_LICE_GET_CONTEXT(opaque) ((opaque) ? ysfx_get_lice_context((ysfx_t *)(opaque)) : nullptr)
 
 //------------------------------------------------------------------------------
 
 #define LICE_FUNCTION_VALID(x) (sizeof(int) > 0)
+
+static eel_lice_state *ysfx_get_lice_context(ysfx_t *fx)
+{
+    auto gfx_state = ysfx_gfx_get_context(fx);  /* Returns null if not @gfx thread */
+    if (!gfx_state)
+        return nullptr;
+
+    return gfx_state->lice.get();
+}
 
 static HDC LICE__GetDC(LICE_IBitmap *bm)
 {
