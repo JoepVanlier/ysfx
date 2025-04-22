@@ -277,6 +277,7 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
             ysfx_logf(*fx->config, ysfx_log_error, "%s:%u: %s", ysfx::path_file_name(filepath).c_str(), error.line + 1, error.message.c_str());
             return false;
         }
+        ysfx_parse_header(main->toplevel.header.get(), main->header, &error);
 
         // validity check
         if (main->header.desc.empty()) {

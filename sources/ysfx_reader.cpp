@@ -102,9 +102,7 @@ char stdio_text_reader::peek_next_char()
 
 void stdio_text_reader::rewind()
 {
-    FILE *stream = m_stream;
-
-    fseek(stream, 0, SEEK_SET);
+    fseek(m_stream, 0, SEEK_SET);
 }
 
 } // namespace ysfx

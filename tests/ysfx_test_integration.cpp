@@ -180,6 +180,29 @@ TEST_CASE("integration", "[integration]")
         REQUIRE(ysfx_read_var(fx.get(), "x3") == 8);
     };
 
+    SECTION("preprocessor ensure rewind")
+    {
+        const char *text =
+            "desc:test" "\n"
+            "<?printf(\"slider1:0<0,1,0.1>the slider 1\");?>" "\n"
+            "@init" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", text);
+
+        ysfx_config_u config{ysfx_config_new()};
+        ysfx_u fx{ysfx_new(config.get())};
+
+        REQUIRE(ysfx_load_file(fx.get(), file_main.m_path.c_str(), 0));
+        REQUIRE(ysfx_compile(fx.get(), 0));
+        ysfx_init(fx.get());
+
+        REQUIRE(ysfx_slider_exists(fx.get(), 0));
+
+        std::string name = "the slider 1";
+        REQUIRE(name == ysfx_slider_get_name(fx.get(), 0));
+    };    
+
     SECTION("preprocessor config duplicate variable")
     {
         const char *text =
