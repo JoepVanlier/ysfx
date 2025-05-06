@@ -180,7 +180,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{matrix.artifacts == 'yes'}} && {{matrix.os-type != 'MinGW'}}
         with:
-          name: ${{matrix.display-name}} VST3
+          name: YSFX ${{matrix.display-name}} VST3
           path: |
             ${{runner.workspace}}/VST3/*
             ${{runner.workspace}}/LICENSE
@@ -188,7 +188,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{matrix.artifacts == 'yes'}} && {{matrix.os-type != 'MinGW'}}
         with:
-          name: ${{matrix.display-name}} CLAP
+          name: YSFX ${{matrix.display-name}} CLAP
           path: |
             ${{runner.workspace}}/CLAP/*
             ${{runner.workspace}}/LICENSE
@@ -196,7 +196,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{matrix.os-type == 'macOS' && matrix.artifacts == 'yes'}}
         with:
-          name: ${{matrix.display-name}} AU
+          name: YSFX ${{matrix.display-name}} AU
           path: |
             ${{runner.workspace}}/AU/*
             ${{runner.workspace}}/LICENSE
