@@ -90,7 +90,7 @@ namespace JSFXTokenizerFunctions {
     static bool isNotSupported(juce::String::CharPointerType token, const int tokenLength) noexcept
     {
         (void) tokenLength;
-        static const char* const unsupported[] = {"export_buffer_to_project", "get_host_numchan", "set_host_numchan", "get_pin_mapping", "set_pin_mapping", "get_pinmapper_flags", "set_pinmapper_flags", "get_host_placement"};
+        static const char* const unsupported[] = {"export_buffer_to_project", "get_host_numchan", "set_host_numchan", "get_pin_mapping", "set_pin_mapping", "get_pinmapper_flags", "set_pinmapper_flags", "get_host_placement", nullptr};
         
         for (int i = 0; unsupported[i] != nullptr; ++i)
             if (token.compareIgnoreCase(juce::CharPointer_ASCII(unsupported[i])) == 0)
