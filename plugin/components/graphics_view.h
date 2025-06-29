@@ -28,6 +28,7 @@ public:
     void setScaling(float new_scaling);
     float getScaling();
     float getTotalScaling();
+    void setAccessibilityShortcuts(bool accessibilityShortcuts);
 
 protected:
     void paint(juce::Graphics &g) override;
@@ -48,6 +49,7 @@ private:
     std::atomic<float> m_pixelFactor{1.0f};
     std::atomic<float> m_outputScalingFactor{1.0f};
     bool fullPixelScaling{true};
+    bool m_accessibilityShortcuts{false};
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

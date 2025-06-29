@@ -66,6 +66,7 @@ struct YsfxEditor::Impl {
     bool m_visibleSlidersChanged{false};
     bool m_showUndo{false};
     bool m_showRedo{false};
+    bool m_accessibilityShortcuts{false};
 
     //==========================================================================
     void updateInfo();
@@ -86,6 +87,7 @@ struct YsfxEditor::Impl {
     void saveRecentFiles(const juce::RecentlyOpenedFilesList &recent);
     void clearRecentFiles();
     void setScale(float newScaling);
+    void toggleShortcuts();
     void loadScaling();
     void saveScaling();
     void resetScaling(const juce::File &jsfxFilePath);
@@ -705,6 +707,19 @@ void YsfxEditor::Impl::popupRecentOpts()
     });
 }
 
+void YsfxEditor::Impl::toggleShortcuts()
+{
+    m_accessibilityShortcuts = !m_accessibilityShortcuts;
+    if (m_graphicsView) m_graphicsView->setAccessibilityShortcuts(m_accessibilityShortcuts);
+    {
+        juce::ScopedLock lock{m_pluginProperties->getLock()};
+        auto accessibility = juce::String("ysfx_shortcuts");
+        m_pluginProperties->setValue(accessibility, juce::var{m_accessibilityShortcuts});
+        m_pluginProperties->setNeedsToBeSaved(true);
+        m_pluginProperties->save();
+    }
+}
+
 void YsfxEditor::Impl::popupPresetOptions()
 {
     m_presetsOptsPopup.reset(new juce::PopupMenu);
@@ -717,12 +732,20 @@ void YsfxEditor::Impl::popupPresetOptions()
         m_presetsOptsPopup->addItem(1, "Save preset", true, false);
         m_presetsOptsPopup->addItem(2, "Rename preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
         m_presetsOptsPopup->addSeparator();
-        m_presetsOptsPopup->addItem(3, "Next preset", true, false);
-        m_presetsOptsPopup->addItem(4, "Previous preset", true, false);
+        auto nextLabel = juce::String("Next preset");
+        auto prevLabel = juce::String("Previous preset");
+        if (m_accessibilityShortcuts) {
+            prevLabel += " (Alt + P)";
+            nextLabel += " (Alt + N)";
+        }
+        m_presetsOptsPopup->addItem(3, nextLabel, true, false);
+        m_presetsOptsPopup->addItem(4, prevLabel, true, false);
         m_presetsOptsPopup->addSeparator();        
         m_presetsOptsPopup->addItem(5, "Delete preset", presetInfo->m_lastChosenPreset.isNotEmpty(), false);
         m_presetsOptsPopup->addSeparator();
         m_presetsOptsPopup->addItem(6, "Preset manager", true, false);
+        m_presetsOptsPopup->addSeparator();
+        m_presetsOptsPopup->addItem(7, "Enable shortcuts", true, m_accessibilityShortcuts);
     }
 
     juce::PopupMenu::Options popupOptions = juce::PopupMenu::Options{}
@@ -808,6 +831,9 @@ void YsfxEditor::Impl::popupPresetOptions()
                     break;
                 case 6:
                     this->openPresetWindow();
+                    break;
+                case 7:
+                    toggleShortcuts();
                     break;
                 default:
                     break;
@@ -976,6 +1002,15 @@ void YsfxEditor::Impl::initializeProperties()
             m_pluginProperties->setNeedsToBeSaved(true);
         }
 
+        auto accessibility = juce::String("ysfx_shortcuts");
+        if (m_pluginProperties->containsKey(accessibility)) {
+            m_accessibilityShortcuts = m_pluginProperties->getIntValue(accessibility);
+            if (m_graphicsView) m_graphicsView->setAccessibilityShortcuts(m_accessibilityShortcuts);
+        } else {
+            m_pluginProperties->setValue(accessibility, juce::var{0});
+            m_pluginProperties->setNeedsToBeSaved(true);
+        }
+
         auto windowBehaviour = juce::String("ysfx_sub_window_stay_on_top");
         if (m_pluginProperties->containsKey(windowBehaviour)) {
             m_windowBehaviour = static_cast<WindowBehaviour>(m_pluginProperties->getIntValue(windowBehaviour));
@@ -984,6 +1019,24 @@ void YsfxEditor::Impl::initializeProperties()
             m_pluginProperties->setNeedsToBeSaved(true);
         }
     }
+}
+
+bool YsfxEditor::keyPressed(const juce::KeyPress& k)
+{
+    if (m_impl->m_accessibilityShortcuts) {
+        if (k.getModifiers().isAltDown()) {
+            if (k.getKeyCode() == 'n' || k.getKeyCode() == 'N') {
+                m_impl->m_proc->cyclePreset(1);
+                return true;
+            }
+
+            if (k.getKeyCode() == 'p' || k.getKeyCode() == 'P') {
+                m_impl->m_proc->cyclePreset(-1);
+                return true;
+            }
+        }
+    }
+	return false;
 }
 
 void YsfxEditor::Impl::createUI()
@@ -1124,6 +1177,7 @@ void YsfxEditor::Impl::relayoutUI()
     uint32_t gfxDim[2] = {};
     ysfx_get_gfx_dim(fx, gfxDim);
 
+    if (m_graphicsView) m_graphicsView->setAccessibilityShortcuts(m_accessibilityShortcuts);
     int parameterHeight = m_miniParametersPanel->getRecommendedHeight(0);
     int sideTrim{0};
     int bottomTrim{0};
