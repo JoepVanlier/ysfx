@@ -130,6 +130,8 @@
                     {
                         if (new_e.popup_menu_item != e.popup_menu_item || m_highlighted != new_highlighted)
                         {
+                            setAccessible(true);
+                            setTitle(new_e.label);
                             this->e = new_e;
                             this->m_highlighted = new_highlighted;
                             repaint();
