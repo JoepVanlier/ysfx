@@ -396,6 +396,9 @@ public:
     {
         parameterName.setText(parameter.getSliderName(), juce::dontSendNotification);
         parameterName.setJustificationType(juce::Justification::centredRight);
+        // Helps accessibility users because the name of the parameter is read out when
+        // tabbing over it.
+        parameterName.setWantsKeyboardFocus(true);
         addAndMakeVisible(parameterName);
         addAndMakeVisible(*(parameterComp = createParameterComp()));
 
