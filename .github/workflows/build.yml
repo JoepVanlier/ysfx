@@ -19,19 +19,19 @@ jobs:
         include:
           - name: win32
             display-name: Windows 32-bit
-            runs-on: windows-2019
+            runs-on: windows-2025
             platform: x86
             release-arch: Win32
-            cmake-generator: Visual Studio 16 2019
+            cmake-generator: Visual Studio 17 2022
             os-type: Windows
             shell: pwsh
             artifacts: yes
           - name: win64
             display-name: Windows 64-bit
-            runs-on: windows-2019
+            runs-on: windows-2025
             platform: x64
             release-arch: x64
-            cmake-generator: Visual Studio 16 2019
+            cmake-generator: Visual Studio 17 2022
             os-type: Windows
             shell: pwsh
             artifacts: yes
@@ -51,7 +51,7 @@ jobs:
             artifacts: yes
           - name: mingw32
             display-name: MSYS MinGW 32-bit
-            runs-on: windows-2019
+            runs-on: windows-2025
             platform: i686
             msystem: MINGW32
             os-type: MinGW
@@ -59,7 +59,7 @@ jobs:
             artifacts: yes
           - name: mingw64
             display-name: MSYS MinGW 64-bit
-            runs-on: windows-2019
+            runs-on: windows-2025
             platform: x86_64
             msystem: MINGW64
             os-type: MinGW
