@@ -47,7 +47,7 @@ void YSFXCodeDocument::loadFile(juce::File file)
         m_changeTime = m_file.getLastModificationTime();
         juce::MemoryBlock memBlock;
         if (m_file.loadFileAsData(memBlock)) {
-            juce::String newContent = memBlock.toString();
+            juce::String newContent = juce::String::createStringFromData(memBlock.getData(), (int) memBlock.getSize());
             memBlock = {};
             if (newContent != getAllContent()) {
                 replaceAllContent(newContent);
