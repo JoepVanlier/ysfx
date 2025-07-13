@@ -32,6 +32,7 @@ public:
         : parameter(param)
     {
         parameter.addListener(this);
+        m_lastValue = parameter.getValue();
 
         startTimer(100);
     }
@@ -62,17 +63,22 @@ private:
     //==============================================================================
     void timerCallback() override
     {
-        if (parameterValueHasChanged.compareAndSetBool(0, 1)) {
+        // We update the parameter both when we get a trigger through the APVTS, but also when
+        // we see it is different. The reason is that in some cases, we wish to make an update
+        // without triggering the full APVTS update system. For example when a jsfx changes
+        // a slider value in response to another slider.
+        if (parameterValueHasChanged.compareAndSetBool(0, 1) || !juce::approximatelyEqual(getParameter().getValue(), m_lastValue)) {
+            m_lastValue = getParameter().getValue();
             handleNewParameterValue();
             startTimerHz(50);
-        }
-        else {
+        } else {
             startTimer(juce::jmin(250, getTimerInterval() + 10));
         }
     }
 
     YsfxParameter &parameter;
     juce::Atomic<int> parameterValueHasChanged{0};
+    float m_lastValue{0.0};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(YsfxParameterListener)
 };
