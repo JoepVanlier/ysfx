@@ -170,6 +170,8 @@ struct YsfxEditor::Impl {
     std::unique_ptr<SubWindow> m_presetWindow;
     std::unique_ptr<juce::TooltipWindow> m_tooltipWindow;
 
+    juce::String m_lastReadPreset{""};
+
     //==========================================================================
     void createUI();
     void connectUI();
@@ -405,6 +407,11 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     
     m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
     
+    if (m_lastReadPreset.compare(m_currentPresetInfo->m_lastChosenPreset)) {
+        m_lastReadPreset = m_currentPresetInfo->m_lastChosenPreset;
+        juce::AccessibilityHandler::postAnnouncement(m_lastReadPreset, juce::AccessibilityHandler::AnnouncementPriority::medium);
+    }
+
     if ((m_proc->retryLoad() == RetryState::mustRetry) && !m_fileChooserActive) {
         chooseFileAndLoad();
         m_btnLoadFile->setButtonText(TRANS("Locate"));
