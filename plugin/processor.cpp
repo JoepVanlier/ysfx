@@ -31,6 +31,10 @@
 #include <cmath>
 #include <deque>
 #include <algorithm>
+#if defined(_WIN32)
+    #include "utility/crash_handler.h"
+#endif
+
 
 struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     YsfxProcessor *m_self = nullptr;
@@ -214,6 +218,10 @@ YsfxProcessor::YsfxProcessor()
                      
     m_impl(new Impl)
 {
+    #if defined(_WIN32)
+        installCrashHook();
+    #endif
+
     m_impl->m_self = this;
 
     ysfx_config_u config{ysfx_config_new()};

@@ -67,8 +67,9 @@ private:
         // we see it is different. The reason is that in some cases, we wish to make an update
         // without triggering the full APVTS update system. For example when a jsfx changes
         // a slider value in response to another slider.
-        if (parameterValueHasChanged.compareAndSetBool(0, 1) || !juce::approximatelyEqual(getParameter().getValue(), m_lastValue)) {
-            m_lastValue = getParameter().getValue();
+        float currentValue = getParameter().getValue();
+        if (parameterValueHasChanged.compareAndSetBool(0, 1) || !juce::approximatelyEqual(currentValue, m_lastValue)) {
+            m_lastValue = currentValue;
             handleNewParameterValue();
             startTimerHz(50);
         } else {
