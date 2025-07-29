@@ -284,10 +284,35 @@ public:
     {
         ysfx_slider_range_t range = getParameter().getSliderRange();
 
-        if (range.inc != 0 && range.min != range.max)
-            slider.setRange(0.0, 1.0, std::abs(range.inc / (range.max - range.min)));
-        else
+        if (range.inc != 0 && range.min != range.max) {
+            auto curve = getParameter().getSliderCurve();
+            if (curve.shape == 0) {
+                slider.setRange(0.0, 1.0, std::abs(range.inc / (range.max - range.min)));
+            } else {
+                slider.setNormalisableRange(
+                    juce::NormalisableRange<double>(
+                        0.0,
+                        1.0,
+                        [](float start, float end, float normalised) { return start + (end - start) * normalised; },
+                        [](float start, float end, float value) { return (value - start) / (end - start); },
+                        [curve](float start, float end, float value){
+                            float flat_value = ysfx_normalized_to_ysfx_value(value, &curve);
+                            float rounded_value = std::round(value / curve.inc) * curve.inc;
+                            return ysfx_ysfx_value_to_normalized(rounded_value, &curve);
+                        }
+                    )
+                );
+            }
+                
+		//ValueType 	rangeEnd,
+		//ValueRemapFunction 	convertFrom0To1Func,
+		//ValueRemapFunction 	convertTo0To1Func,
+		//ValueRemapFunction 	snapToLegalValueFunc = {} )
+//
+//            }
+        } else {
             slider.setRange(0.0, 1.0);
+        }
 
         slider.setDoubleClickReturnValue(true, param.convertFromYsfxValue(range.def));
 
