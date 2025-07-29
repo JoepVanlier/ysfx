@@ -293,7 +293,7 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
     juce::Image &image = m_impl->m_asyncRepainter->m_bitmap;
 
     g.setOpacity(1.0f);
-    auto trafo = juce::AffineTransform::scale(m_outputScalingFactor.load() / m_pixelFactor.load()).translated(0.5f, 0.5f);
+    auto trafo = juce::AffineTransform::scale(m_outputScalingFactor.load() / m_pixelFactor.load());
     g.drawImageTransformed(image, trafo, false);
 }
 
@@ -564,7 +564,7 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
         target->m_gfxWidth = internal_width;
         target->m_gfxHeight = internal_height;
         target->m_wantRetina = (bool)newRetina;
-        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width - 2), juce::jmax(1, internal_height - 2), true, juce::SoftwareImageType{});
+        target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width), juce::jmax(1, internal_height), true, juce::SoftwareImageType{});
         target->m_bitmapScale = pixel_factor;
     }
 
