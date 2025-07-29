@@ -19,6 +19,7 @@
 //
 
 #include <cmath>
+#include <algorithm>
 #include "lookandfeel.h"
 #include "parameters_panel.h"
 #include "../parameter.h"
@@ -284,10 +285,32 @@ public:
     {
         ysfx_slider_range_t range = getParameter().getSliderRange();
 
-        if (range.inc != 0 && range.min != range.max)
-            slider.setRange(0.0, 1.0, std::abs(range.inc / (range.max - range.min)));
-        else
+        if (range.inc != 0 && range.min != range.max) {
+            auto curve = getParameter().getSliderCurve();
+            if (curve.shape == 0) {
+                slider.setRange(0.0, 1.0, std::abs(range.inc / (range.max - range.min)));
+            } else {
+                // TODO: investigate handling the entire transform over NormalisableRange
+                slider.setNormalisableRange(
+                    juce::NormalisableRange<double>(
+                        0.0,
+                        1.0,
+                        [](float start, float end, float normalised) { return start + (end - start) * normalised; },
+                        [](float start, float end, float value) { return (value - start) / (end - start); },
+                        [curve](float start, float end, float value) {
+                            (void) start;
+                            (void) end;
+                            ysfx_real flat_value = ysfx_normalized_to_ysfx_value(static_cast<ysfx_real>(value), &curve);
+                            ysfx_real rounded_value = std::round(flat_value / curve.inc) * curve.inc;
+                            ysfx_real normalized = ysfx_ysfx_value_to_normalized(rounded_value, &curve);
+                            return std::max(std::min(normalized, 1.0), 0.0);
+                        }
+                    )
+                );
+            }
+        } else {
             slider.setRange(0.0, 1.0);
+        }
 
         slider.setDoubleClickReturnValue(true, param.convertFromYsfxValue(range.def));
 
