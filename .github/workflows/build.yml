@@ -43,6 +43,14 @@ jobs:
             os-type: Linux
             shell: bash
             artifacts: yes
+          - name: linux32
+            display-name: Linux 32-bit
+            runs-on: ubuntu-22.04
+            platform: i686
+            release-arch: Linux32
+            os-type: Linux32
+            shell: bash
+            artifacts: yes
           - name: macos
             display-name: macOS
             runs-on: macos-latest
@@ -99,6 +107,25 @@ jobs:
             libxss-dev
             g++-10
             gcc-10
+      - name: Install dependencies (Linux 32-bit)
+        if: ${{matrix.os-type == 'Linux32'}}
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get -y update
+          sudo apt-get -y install \
+            gcc-multilib g++-multilib \
+            g++-10-multilib gcc-10-multilib \
+            libc6-dev-i386 \
+            libsndfile1-dev:i386 \
+            libfreetype-dev:i386 \
+            libfontconfig-dev:i386 \
+            libgl-dev:i386 \
+            libx11-dev:i386 \
+            libxext-dev:i386 \
+            libxrandr-dev:i386 \
+            libxinerama-dev:i386 \
+            libxcursor-dev:i386 \
+            libxss-dev:i386
       - uses: ilammy/setup-nasm@v1
         if: ${{matrix.os-type == 'Windows'}}
       - uses: msys2/setup-msys2@v2
@@ -126,10 +153,28 @@ jobs:
       - name: Configure CMake (Linux)
         if: ${{matrix.os-type == 'Linux'}}
         working-directory: ${{runner.workspace}}/build
-        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DYSFX_TESTS=ON
+        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DYSFX_TESTS=ON
         env:
           CC:   gcc-10
           CXX:  g++-10
+      - name: Configure CMake (Linux 32-bit)
+        if: ${{matrix.os-type == 'Linux32'}}
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          cmake "${GITHUB_WORKSPACE}" \
+            -DCMAKE_BUILD_TYPE="${build_type}" \
+            -DYSFX_TESTS=ON \
+            -DCMAKE_C_COMPILER="gcc" \
+            -DCMAKE_CXX_COMPILER="g++" \
+            -DCMAKE_C_FLAGS="-m32" \
+            -DCMAKE_CXX_FLAGS="-m32" \
+            -DCMAKE_EXE_LINKER_FLAGS="-m32" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-m32"
+        env:
+          CC:   gcc-10
+          CXX:  g++-10
+          PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig
+          #CMAKE_LIBRARY_PATH: /usr/lib/i386-linux-gnu
       - name: Configure CMake (MinGW)
         if: ${{matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
@@ -139,7 +184,7 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${Env:build_type}" --target ysfx_tests -j "${Env:num_jobs}"
       - name: Build tests (Linux, macOS and MinGW)
-        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
+        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'Linux32' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${build_type}" --target ysfx_tests -j "${num_jobs}"
       - name: Test
@@ -150,9 +195,13 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${Env:build_type}" -j "${Env:num_jobs}"
       - name: Build all (Linux, macOS and MinGW)
-        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
+        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'Linux32' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${build_type}" -j "${num_jobs}"
+      - name: Check object file architectures (Linux 32-bit)
+        if: ${{matrix.os-type == 'Linux32'}}
+        run: |
+          find build -name '*.o' -exec file {} \; || true
       - name: Reorganize files (windows)
         if: ${{matrix.os-type == 'Windows'}}
         working-directory: ${{runner.workspace}}
@@ -163,7 +212,7 @@ jobs:
           powershell -Command "Copy-Item -Path 'build\*_artefacts\${env:build_type}\CLAP\*.clap' -Destination 'CLAP' -Recurse"
           powershell -Command "Copy-Item -Path '$env:GITHUB_WORKSPACE\plugin_license\*' -Destination '${{runner.workspace}}' -Recurse"
       - name: Reorganize files (linux/mac)
-        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS'}}
+        if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'Linux32' || matrix.os-type == 'macOS'}}
         working-directory: ${{runner.workspace}}
         run: |
           mkdir -p VST3
