@@ -160,9 +160,11 @@ juce::String YsfxParameter::getText(float normalisedValue, int) const
     } else {
         // NOTE: Unfortunately, things have to map to 0-1 so you lose some precision 
         // coming back (and can't rely on integer floats being exact anymore).
-        ysfx_real rounded = juce::roundToInt(actualValue);
+        auto curve = getSliderCurve();
+        auto rounded = std::round((actualValue - curve.min) / curve.inc) * curve.inc + curve.min;
+
         if (std::abs(rounded - actualValue) < 0.00001) {
-            actualValue = rounded > -0.1 ? abs(rounded) : rounded;
+            actualValue = rounded > -curve.inc ? abs(rounded) : rounded;
         }
     }
 
