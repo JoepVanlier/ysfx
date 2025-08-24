@@ -14,6 +14,31 @@ This contains a hosting library, providing a JSFX compiler and runtime.
 In addition, there is an audio plugin which can act as a JSFX host in a digital
 audio workstation.
 
+## Installation
+
+Installation should be as easy as dropping the plugin into your VST3, AU or CLAP
+folder. 
+
+#### Windows
+
+First install the MSVC redistributable.
+
+You can download the 64-bit version here: https://aka.ms/vs/17/release/vc_redist.x64.exe
+And the 32 bit version here: https://aka.ms/vs/17/release/vc_redist.x86.exe
+
+Note that the plugin may crash if you have an outdated version of the MSVC
+redistributable on your system.
+
+#### macOS
+
+Binaries are not signed. That means you have to explicitly allow it to be 
+run (since it is not from an identified developer). Usually it involves invoking:
+
+  `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx-s FX.vst3`
+  `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx-s instrument.vst3`
+
+Where you should fill in the path where the plugin is located on your system.
+
 # Helping out
 
 The best way to help out is by using the plugin and reporting bugs you run into. 
