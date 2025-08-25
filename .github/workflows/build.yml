@@ -153,6 +153,29 @@ jobs:
         if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${build_type}" -j "${num_jobs}"
+      - name: Download VC++ Redistributable
+        if: ${{ matrix.os-type == 'Windows' }}
+        run: |
+          $arch = if ("${{ matrix.release-arch }}" -eq "Win32") { "x86" } else { "x64" }
+          $url = if ($arch -eq "x86") { 
+            "https://aka.ms/vs/17/release/vc_redist.x86.exe" 
+          } else { 
+            "https://aka.ms/vs/17/release/vc_redist.x64.exe" 
+          }
+          Invoke-WebRequest $url -OutFile vc_redist.exe
+      - name: Extract DLLs from VC++ Redistributable
+        if: ${{ matrix.os-type == 'Windows' }}
+        run: |
+          7z x vc_redist.exe -ovc_redist_extracted
+          # The extracted files include vc_redist.msi, which contains the DLLs
+          7z x vc_redist_extracted\vc_redist*.msi -ovc_redist_msi_extracted
+          $dlls = @("VCRUNTIME140.dll", "VCRUNTIME140_1.dll", "MSVCP140.dll")
+          foreach ($dll in $dlls) {
+            Get-ChildItem -Path vc_redist_msi_extracted -Recurse -Filter $dll | ForEach-Object {
+              Copy-Item $_.FullName "$env:GITHUB_WORKSPACE\VST3" -Force
+              Copy-Item $_.FullName "$env:GITHUB_WORKSPACE\CLAP" -Force
+            }
+          }
       - name: Reorganize files (windows)
         if: ${{matrix.os-type == 'Windows'}}
         working-directory: ${{runner.workspace}}

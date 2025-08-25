@@ -130,6 +130,8 @@
                     {
                         if (new_e.popup_menu_item != e.popup_menu_item || m_highlighted != new_highlighted)
                         {
+                            setAccessible(true);
+                            setTitle(new_e.label);
                             this->e = new_e;
                             this->m_highlighted = new_highlighted;
                             repaint();
@@ -428,16 +430,6 @@
                         {
                             best_items[i]->setBounds (0, total_h - (h + separator_height) - (int) (i + 1) * h, item_width, h);
                         }
-                    }
-
-                    if (highlighted_match < nb_visible_matches)
-                    {
-#if JUCE_ACCESSIBILITY_FEATURES
-#ifndef TARGET_WIN32 // ca marche meme qd narrator n'est pas active sous win. J'ai reporte le bug a JUCE
-                        juce::AccessibilityHandler::postAnnouncement(quick_search_items.at (matches.at (highlighted_match)).label,
-                                                                     juce::AccessibilityHandler::AnnouncementPriority::medium);
-#endif
-#endif
                     }
                 }
 
