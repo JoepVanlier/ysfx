@@ -224,11 +224,11 @@
                     editor.setText (initial_string, juce::dontSendNotification);
 
                     editor.addKeyListener (this);
-                    editor.setAccessible (false); // no need to hear voiceover spelling each letter..
+                    editor.setAccessible (true); // no need to hear voiceover spelling each letter..
 
                     // startTimer (100); // will grab the keyboard focus for the texteditor.
 
-                    updateContent();
+                    updateContent(false);
                 }
                 
                 juce::Rectangle<int> getTargetScreenArea() {
@@ -377,7 +377,7 @@
                     }
                 }
 
-                void updateContent()
+                void updateContent(bool textChanged)
                 {
                     updateMatches();
 
@@ -434,12 +434,10 @@
 
                     if (highlighted_match < nb_visible_matches)
                     {
-#if JUCE_ACCESSIBILITY_FEATURES
-#ifndef TARGET_WIN32 // ca marche meme qd narrator n'est pas active sous win. J'ai reporte le bug a JUCE
-                        juce::AccessibilityHandler::postAnnouncement(quick_search_items.at (matches.at (highlighted_match)).label,
-                                                                     juce::AccessibilityHandler::AnnouncementPriority::medium);
-#endif
-#endif
+                        if (!textChanged) {
+                            juce::AccessibilityHandler::postAnnouncement(quick_search_items.at (matches.at (highlighted_match)).label,
+                                                                        juce::AccessibilityHandler::AnnouncementPriority::medium);
+                        }
                     }
                 }
 
@@ -548,7 +546,7 @@
 
                 void textEditorEscapeKeyPressed (juce::TextEditor&) override { m_owner->quickSearchFinished (0); }
 
-                void textEditorTextChanged (juce::TextEditor&) override { updateContent(); }
+                void textEditorTextChanged (juce::TextEditor&) override { updateContent(true); }
 
                 // just to silence a clang warning about the other overriden keyPressed member function
                 bool keyPressed (const juce::KeyPress& key) override { return juce::Component::keyPressed (key); }
@@ -572,7 +570,7 @@
                             --highlighted_match;
                             if (first_displayed_match > highlighted_match)
                                 first_displayed_match = highlighted_match;
-                            updateContent();
+                            updateContent(false);
                         }
                         return true;
                     }
@@ -590,7 +588,7 @@
                             auto& q = quick_search_items.at (matches.at(static_cast<size_t>(highlighted_match)));
                             if (! q.popup_menu_item->isEnabled)
                                 highlighted_match = 0;
-                            updateContent();
+                            updateContent(false);
                         }
                         return true;
                     }
