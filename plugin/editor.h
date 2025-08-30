@@ -36,6 +36,7 @@ protected:
 
 private:
     void readTheme();
+    bool keyPressed(const juce::KeyPress& k) override;
 
     int m_headerSize{45};
     struct Impl;

@@ -304,9 +304,23 @@ void YsfxGraphicsView::resized()
         m_impl->m_gfxDirty = true;
 }
 
+void YsfxGraphicsView::setAccessibilityShortcuts(bool accessibilityShortcuts)
+{
+    m_accessibilityShortcuts = accessibilityShortcuts;
+}
+
 bool YsfxGraphicsView::keyPressed(const juce::KeyPress &key)
 {
     m_impl->updateYsfxKeyModifiers();
+
+    // Special keys must bubble up to the main component immediately
+    if (m_accessibilityShortcuts) {
+        if (key.getModifiers().isAltDown()) {
+            if (key.getKeyCode() == 'n' || key.getKeyCode() == 'N' || key.getKeyCode() == 'p' || key.getKeyCode() == 'P') {
+                return false;
+            }
+        }
+    }
 
     for (const Impl::KeyPressed &kp : m_impl->m_keysPressed) {
         if (kp.jcode == key.getKeyCode())
