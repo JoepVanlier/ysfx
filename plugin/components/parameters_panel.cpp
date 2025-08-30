@@ -278,7 +278,7 @@ private:
 };
 
 //==============================================================================
-class YsfxSliderParameterComponent final : public juce::Component, private YsfxParameterListener {
+class YsfxSliderParameterComponent final : public juce::Component, private YsfxParameterListener, private juce::KeyListener {
 public:
     explicit YsfxSliderParameterComponent(YsfxParameter &param)
         : YsfxParameterListener(param)
@@ -327,6 +327,13 @@ public:
         // Set the initial value.
         handleNewParameterValue();
 
+        slider.addKeyListener(this);
+        slider.setWantsKeyboardFocus(true);
+        slider.textFromValueFunction = [this](double normalized_value) { 
+            auto curve = getParameter().getSliderCurve();
+            auto value = ysfx_normalized_to_ysfx_value(static_cast<ysfx_real>(normalized_value), &curve);
+            return juce::String(value, 3); 
+        };
         slider.onValueChange = [this] { sliderValueChanged(); };
         slider.onDragStart = [this] { sliderStartedDragging(); };
         slider.onDragEnd = [this] { sliderStoppedDragging(); };
@@ -404,9 +411,70 @@ private:
         }
     }
 
+    bool keyStateChanged (bool isKeyDown, juce::Component* c) override
+    {
+        if (c == &slider && isKeyDown)
+        {
+            float modifier = 1.0;
+            if (juce::ModifierKeys::getCurrentModifiers().isShiftDown()) modifier *= 5.0;
+            if (juce::ModifierKeys::getCurrentModifiers().isCtrlDown()) modifier *= 2.0;
+            if (juce::ModifierKeys::getCurrentModifiers().isCommandDown()) modifier *= 2.0;
+
+            if (juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::leftKey)
+                || juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::downKey))
+            {
+                pressed = true;
+                slider.setValue (slider.getValue() - modifier * slider.getInterval());
+            }
+            else if (juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::rightKey)
+                    || juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::upKey))
+            {
+                pressed = true;
+                slider.setValue (slider.getValue() + modifier * slider.getInterval());
+            }
+            else if (juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::pageDownKey))
+            {
+                pressed = true;
+                auto range = slider.getMaximum() - slider.getMinimum();
+                auto rounded_step = juce::roundToInt (0.2 * range / slider.getInterval()) * slider.getInterval();
+                slider.setValue (slider.getValue() - rounded_step);
+            }
+            else if (juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::pageUpKey))
+            {
+                pressed = true;
+                auto range = slider.getMaximum() - slider.getMinimum();
+                auto rounded_step = juce::roundToInt (0.2 * range / slider.getInterval()) * slider.getInterval();
+                slider.setValue (slider.getValue() + rounded_step);
+            }
+            else if (juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::homeKey))
+            {
+                pressed = true;
+                slider.setValue (slider.getMinimum());
+            }
+            else if (juce::KeyPress::isKeyCurrentlyDown (juce::KeyPress::endKey))
+            {
+                pressed = true;
+                slider.setValue (slider.getMaximum());
+            }
+            
+            return pressed;
+        }
+        return false;
+    }
+
+    bool keyPressed (const juce::KeyPress&, juce::Component*) {
+        if (pressed) {
+            return true;
+        } else {
+            pressed = false;
+            return false;
+        }
+    }
+
     juce::Slider slider{juce::Slider::LinearHorizontal, juce::Slider::TextEntryBoxPosition::NoTextBox};
     juce::Label valueLabel;
     bool isDragging = false;
+    bool pressed = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(YsfxSliderParameterComponent)
 };
