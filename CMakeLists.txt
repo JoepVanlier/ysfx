@@ -15,7 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
 project(ysfx VERSION "0.0.0" LANGUAGES C CXX ASM)
 
 # check if we are building from this project, or are imported by another
@@ -33,6 +33,7 @@ option(YSFX_PLUGIN_FORCE_DEBUG "Build debug features in plugin" OFF)
 option(YSFX_PLUGIN_COPY "Copy the plugin after build" ON)
 option(YSFX_PLUGIN_USE_SYSTEM_JUCE "Use preinstalled JUCE on the system" OFF)
 set(YSFX_PLUGIN_VST3_SDK_PATH "" CACHE PATH "Custom path to the VST3 SDK")
+option(YSFX_STATIC_CRT "Use static CRT (Windows only)" OFF)
 option(YSFX_TESTS "Build unit tests" OFF)
 option(YSFX_TOOLS "Build tools" OFF)
 option(YSFX_SKIP_CHECKSUM "Skip the checksum" OFF)
@@ -48,6 +49,13 @@ set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
 set(CMAKE_ASM_VISIBILITY_PRESET "hidden")
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+if(YSFX_STATIC_CRT)
+    if(MSVC)
+        message(STATUS "Static CRT enabled")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+endif()
 
 if(NOT MSVC)
     add_compile_options(
