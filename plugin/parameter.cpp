@@ -163,8 +163,12 @@ juce::String YsfxParameter::getText(float normalisedValue, int) const
         auto curve = getSliderCurve();
         auto rounded = std::round((actualValue - curve.min) / curve.inc) * curve.inc + curve.min;
 
-        if (std::abs(rounded - actualValue) < 0.00001) {
-            actualValue = rounded > -curve.inc ? abs(rounded) : rounded;
+        if (std::abs(actualValue) < 1e-6) {
+            // Value is so low it would look horrible in the box
+            actualValue = 0;
+        } else if (std::abs(rounded - actualValue) < 0.00001) {
+            // Round values that are close enough
+            actualValue = rounded;
         }
     }
 
