@@ -286,7 +286,7 @@ YSFX_API void ysfx_get_pdc_channels(ysfx_t *fx, uint32_t channels[2]);
 YSFX_API bool ysfx_get_pdc_midi(ysfx_t *fx);
 
 typedef enum ysfx_playback_state_e {
-    ysfx_playback_error = 0,
+    ysfx_playback_stopped = 0,
     ysfx_playback_playing = 1,
     ysfx_playback_paused = 2,
     ysfx_playback_recording = 5,
