@@ -97,6 +97,8 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     ysfx::sync_bitset64 m_sliderParamsTouching[ysfx_max_slider_groups];
     bool m_updateParamNames{false};
     
+    int64_t lastTransportPosition{0};
+
     std::deque<ysfx_state_u> m_undoStack;
     int m_undoPosition{-1};
     bool m_hasUndo{false};
@@ -828,12 +830,21 @@ void YsfxProcessor::Impl::updateTimeInfo()
     if (!cpi)
         return;
 
-    if (cpi->getIsRecording())
+    auto position = cpi->getTimeInSamples();
+    if (cpi->getIsRecording()) {
         m_timeInfo.playback_state = ysfx_playback_recording;
-    else if (cpi->getIsPlaying())
+    } else if (cpi->getIsPlaying()) {
         m_timeInfo.playback_state = ysfx_playback_playing;
-    else
-        m_timeInfo.playback_state = ysfx_playback_paused;
+    } else {
+        if (position.hasValue() && *position == lastTransportPosition) {
+            m_timeInfo.playback_state = ysfx_playback_stopped;
+        } else {
+            m_timeInfo.playback_state = ysfx_playback_paused;
+        }
+    }
+    if (position.hasValue()) {
+        lastTransportPosition = *position;
+    }
 
     if (juce::Optional<double> bpm = cpi->getBpm())
         m_timeInfo.tempo = *bpm;
