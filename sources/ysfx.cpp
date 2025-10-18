@@ -24,6 +24,7 @@
 #include "ysfx_api_eel.hpp"
 #include "ysfx_preprocess.hpp"
 #include "ysfx_api_host_interaction_dummy.hpp"
+#include "ysfx_api_gfx.hpp"
 #include <type_traits>
 #include <algorithm>
 #include <functional>
@@ -1361,6 +1362,15 @@ void ysfx_set_time_info(ysfx_t *fx, const ysfx_time_info_t *info)
     *fx->var.beat_position = info->beat_position;
     *fx->var.ts_num = (EEL_F)info->time_signature[0];
     *fx->var.ts_denom = (EEL_F)info->time_signature[1];
+}
+
+void ysfx_gfx_set_window_state(ysfx_t *fx, bool hasFocus, bool windowVisible, bool mouseOver)
+{
+    #if !defined(YSFX_NO_GFX)
+    ysfx_scoped_gfx_t scope{fx, false};
+    auto state = ysfx_gfx_get_context(fx);
+    if (state) ysfx_gfx_state_set_window_state(state, hasFocus, windowVisible, mouseOver);
+    #endif
 }
 
 bool ysfx_send_midi(ysfx_t *fx, const ysfx_midi_event_t *event)
