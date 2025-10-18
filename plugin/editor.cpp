@@ -405,8 +405,9 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
         }
     }
     
-    m_lblFilePath->setText(getLabel(), juce::dontSendNotification);
-    
+    auto label = getLabel();
+    if (label.isNotEmpty()) m_lblFilePath->setText(label, juce::dontSendNotification);
+
     if (m_lastReadPreset.compare(m_currentPresetInfo->m_lastChosenPreset)) {
         m_lastReadPreset = m_currentPresetInfo->m_lastChosenPreset;
         juce::AccessibilityHandler::postAnnouncement(m_lastReadPreset, juce::AccessibilityHandler::AnnouncementPriority::medium);
@@ -419,6 +420,41 @@ void YsfxEditor::Impl::grabInfoAndUpdate()
     }
 }
 
+static juce::String wrapPathForTooltip(const juce::File& file, int maxChunkLength = 30)
+{
+    auto path = file.getFullPathName();
+    juce::String result;
+    int lastBreak = 0;
+
+    for (int i = 0; i < path.length(); ++i)
+    {
+        auto c = path[i];
+        result += c;
+
+        if (c == '/' || c == '\\')
+        {
+            // Look ahead to see how long the next chunk is until the next slash
+            int nextSlash = path.indexOfChar(i + 1, '/');
+            int nextBackslash = path.indexOfChar(i + 1, '\\');
+
+            // If not found, treat as end of string
+            if (nextSlash == -1) nextSlash = path.length();
+            if (nextBackslash == -1) nextBackslash = path.length();
+
+            int nextBreak = juce::jmin(nextSlash, nextBackslash);
+
+            // If the chunk from last break to the next slash is too long, insert newline after this slash
+            if (nextBreak - lastBreak > maxChunkLength)
+            {
+                result += "\n";
+                lastBreak = i + 1;
+            }
+        }
+    }
+
+    return result;
+}
+
 void YsfxEditor::Impl::updateInfo()
 {
     YsfxInfo *info = m_info.get();
@@ -427,11 +463,11 @@ void YsfxEditor::Impl::updateInfo()
     juce::File filePath{juce::CharPointer_UTF8{ysfx_get_file_path(fx)}};
 
     if (filePath != juce::File{}) {
-        m_lblFilePath->setTooltip(filePath.getFullPathName());
+        m_lblFilePath->setTooltip(wrapPathForTooltip(filePath.getFullPathName()) + "\n\n(Loaded with YSFX " + VERSION_STRING + ")");
         m_self->getTopLevelComponent()->setName(juce::String(ysfx_get_name(fx)) + " (ysfx)");
     }
     else {
-        m_lblFilePath->setText(TRANS("No file"), juce::dontSendNotification);
+        m_lblFilePath->setText(TRANS("YSFX ") + VERSION_STRING, juce::dontSendNotification);
         m_lblFilePath->setTooltip(juce::String{});
     }
 
@@ -1050,27 +1086,35 @@ void YsfxEditor::Impl::createUI()
 {
     m_btnLoadFile.reset(new juce::TextButton(TRANS("Load")));
     m_self->addAndMakeVisible(*m_btnLoadFile);
+    m_btnLoadFile->setTooltip(TRANS("Load a JSFX file."));
     m_btnRecentFiles.reset(new juce::TextButton(TRANS("Recent")));
+    m_btnRecentFiles->setTooltip(TRANS("Load a recently used JSFX."));
     m_self->addAndMakeVisible(*m_btnRecentFiles);
     m_btnReload.reset(new juce::TextButton(TRANS("Reload")));
+    m_btnReload->setTooltip(TRANS("Reload current JSFX. Note that this resets the preset as well as the scaling to factory settings."));
     m_self->addAndMakeVisible(*m_btnReload);
     m_btnUndo.reset(new juce::TextButton(TRANS("U")));
     m_self->addAndMakeVisible(*m_btnUndo);
     m_btnRedo.reset(new juce::TextButton(TRANS("R")));
     m_self->addAndMakeVisible(*m_btnRedo);
     m_btnEditCode.reset(new juce::TextButton(TRANS("Edit")));
+    m_btnEditCode->setTooltip(TRANS("Edit the JSFX code for this plugin"));
     m_self->addAndMakeVisible(*m_btnEditCode);
     m_btnGfxScaling.reset(new juce::TextButton(TRANS("x1")));
     m_self->addAndMakeVisible(*m_btnGfxScaling);
-    m_btnGfxScaling->setTooltip("Render JSFX UI at lower resolution and upscale the result. Ths is intended for JSFX that do not implement scaling themselves. For JSFX that do, it is better to simply resize the plugin.");
+    m_btnGfxScaling->setTooltip(TRANS("Render JSFX UI at lower resolution and upscale the result. Ths is intended for JSFX that do not implement scaling themselves. For JSFX that do, it is better to simply resize the plugin."));
     m_btnLoadPreset.reset(new juce::TextButton(TRANS("Preset")));
+    m_btnLoadPreset->setTooltip(TRANS("Open list of supplied presets. Note that you can type to search for a preset by name."));
     m_self->addAndMakeVisible(*m_btnLoadPreset);
     m_btnPresetOpts.reset(new juce::TextButton(TRANS(juce::CharPointer_UTF8("\xe2\x96\xBC"))));
+    m_btnPresetOpts->setTooltip(TRANS("Save, rename or manage presets."));
     m_self->addAndMakeVisible(*m_btnPresetOpts);
     m_btnRecentFilesOpts.reset(new juce::TextButton(TRANS(juce::CharPointer_UTF8("\xe2\x96\xBC"))));
+    m_btnRecentFilesOpts->setTooltip(TRANS("Modify the recently used list."));
     m_self->addAndMakeVisible(*m_btnRecentFilesOpts);
     m_btnSwitchEditor.reset(new juce::TextButton(TRANS("Sliders")));
     m_btnSwitchEditor->setClickingTogglesState(true);
+    m_btnSwitchEditor->setTooltip(TRANS("Switch between graphical user interface (when the JSFX has one) and pure slider view."));
     m_self->addAndMakeVisible(*m_btnSwitchEditor);
     m_lblFilePath.reset(new juce::Label);
     m_lblFilePath->setMinimumHorizontalScale(1.0f);
