@@ -471,6 +471,8 @@ YSFX_API bool ysfx_gfx_wants_retina(ysfx_t *fx);
 YSFX_API void ysfx_gfx_add_key(ysfx_t *fx, uint32_t mods, uint32_t key, bool press);
 // update mouse information; position is relative to canvas; wheel should be in steps normalized to ±1.0
 YSFX_API void ysfx_gfx_update_mouse(ysfx_t *fx, uint32_t mods, int32_t xpos, int32_t ypos, uint32_t buttons, ysfx_real wheel, ysfx_real hwheel);
+// update window state
+YSFX_API void ysfx_gfx_set_window_state(ysfx_t *fx, bool hasFocus, bool windowVisible, bool mouseOver);
 // invoke @gfx to paint the graphics; returns whether the framer buffer is modified
 YSFX_API bool ysfx_gfx_run(ysfx_t *fx);
 // request desired frame rate for UI refresh

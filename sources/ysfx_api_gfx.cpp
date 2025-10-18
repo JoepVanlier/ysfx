@@ -56,6 +56,7 @@ struct ysfx_gfx_state_t {
     int (*show_menu)(void *, const char *, int32_t, int32_t) = nullptr;
     void (*set_cursor)(void *, int32_t) = nullptr;
     const char *(*get_drop_file)(void *user_data, int32_t index) = nullptr;
+    uint32_t window_state = 0;
 };
 
 #endif // !defined(YSFX_NO_GFX)
@@ -134,8 +135,7 @@ static EEL_F NSEEL_CGEN_CALL ysfx_api_gfx_getchar(void *opaque, EEL_F *p)
 
     if (*p >= 1/*2*/) { // NOTE(jpc) this is 2.0 originally, which seems wrong
         if (*p == 65536) {
-            // TODO implement window flags
-            return 0;
+            return state->window_state;
         }
 
         // current key down status
@@ -274,6 +274,10 @@ void ysfx_gfx_state_set_get_drop_file_callback(ysfx_gfx_state_t *state, const ch
 bool ysfx_gfx_state_is_dirty(ysfx_gfx_state_t *state)
 {
     return state->lice->m_framebuffer_dirty;
+}
+
+void ysfx_gfx_state_set_window_state(ysfx_gfx_state_t *state, bool hasFocus, bool windowVisible, bool mouseOver) {
+    state->window_state = static_cast<uint32_t>(1) | static_cast<uint32_t>(hasFocus) << 1 | static_cast<uint32_t>(windowVisible) << 2 | static_cast<uint32_t>(mouseOver) << 3;
 }
 
 void ysfx_gfx_state_add_key(ysfx_gfx_state_t *state, uint32_t mods, uint32_t key, bool press)

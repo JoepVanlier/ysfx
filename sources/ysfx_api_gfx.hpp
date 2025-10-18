@@ -32,6 +32,7 @@ void ysfx_gfx_state_set_get_drop_file_callback(ysfx_gfx_state_t *state, const ch
 bool ysfx_gfx_state_is_dirty(ysfx_gfx_state_t *state);
 void ysfx_gfx_state_add_key(ysfx_gfx_state_t *state, uint32_t mods, uint32_t key, bool press);
 void ysfx_gfx_state_update_mouse(ysfx_gfx_state_t *state, uint32_t mods, int xpos, int ypos, uint32_t buttons, int wheel, int hwheel);
+void ysfx_gfx_state_set_window_state(ysfx_gfx_state_t *state, bool hasFocus, bool windowVisible, bool mouseOver);
 
 //------------------------------------------------------------------------------
 void ysfx_gfx_enter(ysfx_t *fx, bool doinit);
