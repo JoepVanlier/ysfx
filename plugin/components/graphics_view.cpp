@@ -208,6 +208,9 @@ YsfxGraphicsView::YsfxGraphicsView()
     m_impl->m_gfxTarget.reset(new Impl::GfxTarget);
     m_impl->m_gfxInputState.reset(new Impl::GfxInputState);
     m_impl->m_gfxWindowState.reset(new Impl::GfxWindowState);
+    m_impl->m_gfxWindowState->m_hasFocus = this->hasKeyboardFocus(true);
+    m_impl->m_gfxWindowState->m_isVisible = this->isVisible();
+    m_impl->m_gfxWindowState->m_mouseOver = this->isMouseOver();
 
     m_impl->m_asyncRepainter.reset(new Impl::AsyncRepainter);
     m_impl->m_asyncMouseCursor.reset(new Impl::AsyncMouseCursor);
@@ -259,6 +262,9 @@ void YsfxGraphicsView::setEffect(ysfx_t *fx)
 
     m_impl->m_gfxInputState.reset(new Impl::GfxInputState);
     m_impl->m_gfxWindowState.reset(new Impl::GfxWindowState);
+    m_impl->m_gfxWindowState->m_hasFocus = this->hasKeyboardFocus(true);
+    m_impl->m_gfxWindowState->m_isVisible = this->isVisible();
+    m_impl->m_gfxWindowState->m_mouseOver = this->isMouseOver();
 
     m_impl->m_asyncRepainter->cancelPendingUpdate();
     m_impl->m_asyncMouseCursor->cancelPendingUpdate();
