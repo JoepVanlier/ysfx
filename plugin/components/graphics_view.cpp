@@ -45,6 +45,9 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
     void updateYsfxKeyModifiers();
     void updateYsfxMousePosition(const juce::MouseEvent &event);
     void updateYsfxMouseButtons(const juce::MouseEvent &event);
+    void updateYsfxMouseOver(bool isOver);
+    void updateYsfxVisible(bool visible);
+    void updateYsfxHasFocus(bool hasFocus);
     static int showYsfxMenu(void *userdata, const char *desc, int32_t xpos, int32_t ypos);
     static void setYsfxCursor(void *userdata, int32_t cursor);
     static const char *getYsfxDropFile(void *userdata, int32_t index);
@@ -75,8 +78,17 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
         using Ptr = std::shared_ptr<GfxInputState>;
     };
 
+    struct GfxWindowState : public std::enable_shared_from_this<GfxWindowState> {
+        double m_hasFocus = false;
+        double m_isVisible = false;
+        double m_mouseOver = false;
+
+        using Ptr = std::shared_ptr<GfxWindowState>;
+    };
+
     GfxTarget::Ptr m_gfxTarget;
     GfxInputState::Ptr m_gfxInputState;
+    GfxWindowState::Ptr m_gfxWindowState;
 
     // whether the next @gfx is required to repaint the screen in full
     bool m_gfxDirty = true;
@@ -163,6 +175,7 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
             GfxTarget::Ptr m_target;
             bool m_dirty = false;
             GfxInputState m_input;
+            GfxWindowState m_windowState;
             AsyncRepainter *m_asyncRepainter = nullptr;
             void *m_userData = nullptr;
         };
@@ -194,6 +207,7 @@ YsfxGraphicsView::YsfxGraphicsView()
 
     m_impl->m_gfxTarget.reset(new Impl::GfxTarget);
     m_impl->m_gfxInputState.reset(new Impl::GfxInputState);
+    m_impl->m_gfxWindowState.reset(new Impl::GfxWindowState);
 
     m_impl->m_asyncRepainter.reset(new Impl::AsyncRepainter);
     m_impl->m_asyncMouseCursor.reset(new Impl::AsyncMouseCursor);
@@ -244,6 +258,7 @@ void YsfxGraphicsView::setEffect(ysfx_t *fx)
     }
 
     m_impl->m_gfxInputState.reset(new Impl::GfxInputState);
+    m_impl->m_gfxWindowState.reset(new Impl::GfxWindowState);
 
     m_impl->m_asyncRepainter->cancelPendingUpdate();
     m_impl->m_asyncMouseCursor->cancelPendingUpdate();
@@ -383,6 +398,35 @@ void YsfxGraphicsView::mouseMove(const juce::MouseEvent &event)
 {
     m_impl->updateYsfxKeyModifiers();
     m_impl->updateYsfxMousePosition(event);
+}
+
+void YsfxGraphicsView::mouseEnter(const juce::MouseEvent &event)
+{
+    (void) event;
+    m_impl->updateYsfxMouseOver(true);
+}
+
+void YsfxGraphicsView::mouseExit(const juce::MouseEvent &event)
+{
+    (void) event;
+    m_impl->updateYsfxMouseOver(false);
+}
+
+void YsfxGraphicsView::focusGained(juce::Component::FocusChangeType cause)
+{
+    (void) cause;
+    m_impl->updateYsfxHasFocus(true);
+}
+
+void YsfxGraphicsView::focusLost(juce::Component::FocusChangeType cause)
+{
+    (void) cause;
+    m_impl->updateYsfxHasFocus(false);
+}
+
+void YsfxGraphicsView::visibilityChanged()
+{
+    m_impl->updateYsfxVisible(isVisible());
 }
 
 void YsfxGraphicsView::mouseDown(const juce::MouseEvent &event)
@@ -543,6 +587,10 @@ void YsfxGraphicsView::Impl::tickGfx()
     m_gfxInputState->m_ysfxWheel = 0;
     m_gfxInputState->m_ysfxHWheel = 0;
 
+    msg->m_windowState.m_hasFocus = m_gfxWindowState->m_hasFocus;
+    msg->m_windowState.m_isVisible = m_gfxWindowState->m_isVisible;
+    msg->m_windowState.m_mouseOver = m_gfxWindowState->m_mouseOver;
+
     ///
     m_work.postMessage(msg);
     m_numWaitedRepaints += 1;
@@ -597,6 +645,21 @@ void YsfxGraphicsView::Impl::updateYsfxMousePosition(const juce::MouseEvent &eve
     double bitmapScale = m_gfxTarget->m_bitmapScale;
     m_gfxInputState->m_ysfxMouseX = juce::roundToInt((event.x - off.x) * bitmapScale);
     m_gfxInputState->m_ysfxMouseY = juce::roundToInt((event.y - off.y) * bitmapScale);
+}
+
+void YsfxGraphicsView::Impl::updateYsfxMouseOver(bool isOver)
+{
+    m_gfxWindowState->m_mouseOver = isOver;
+}
+
+void YsfxGraphicsView::Impl::updateYsfxVisible(bool visible)
+{
+    m_gfxWindowState->m_isVisible = visible;
+}
+
+void YsfxGraphicsView::Impl::updateYsfxHasFocus(bool hasFocus)
+{
+    m_gfxWindowState->m_hasFocus = hasFocus;
 }
 
 void YsfxGraphicsView::Impl::updateYsfxMouseButtons(const juce::MouseEvent &event)
@@ -793,6 +856,7 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
 {
     ysfx_t *fx = msg.m_fx.get();
     GfxInputState &input = msg.m_input;
+    GfxWindowState &windowState = msg.m_windowState;
 
     while (!input.m_ysfxKeys.empty()) {
         GfxInputState::YsfxKeyEvent event = input.m_ysfxKeys.front();
@@ -801,6 +865,7 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
     }
 
     ysfx_gfx_update_mouse(fx, input.m_ysfxMouseMods, input.m_ysfxMouseX, input.m_ysfxMouseY, input.m_ysfxMouseButtons, input.m_ysfxWheel, input.m_ysfxHWheel);
+    ysfx_gfx_set_window_state(fx, windowState.m_hasFocus, windowState.m_isVisible, windowState.m_mouseOver);
 
     ///
     GfxTarget *target = msg.m_target.get();
