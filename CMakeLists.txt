@@ -16,7 +16,7 @@
 #
 
 cmake_minimum_required(VERSION 3.15)
-project(ysfx VERSION "0.0.0" LANGUAGES C CXX ASM)
+project(ysfx VERSION "0.0.41" LANGUAGES C CXX ASM)
 
 # check if we are building from this project, or are imported by another
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
