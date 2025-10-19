@@ -82,6 +82,7 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
         double m_hasFocus = false;
         double m_isVisible = false;
         double m_mouseOver = false;
+        double m_justReopened = true;
 
         using Ptr = std::shared_ptr<GfxWindowState>;
     };
@@ -596,6 +597,8 @@ void YsfxGraphicsView::Impl::tickGfx()
     msg->m_windowState.m_hasFocus = m_gfxWindowState->m_hasFocus;
     msg->m_windowState.m_isVisible = m_gfxWindowState->m_isVisible;
     msg->m_windowState.m_mouseOver = m_gfxWindowState->m_mouseOver;
+    msg->m_windowState.m_justReopened = m_gfxWindowState->m_justReopened;
+    m_gfxWindowState->m_justReopened = false;
 
     ///
     m_work.postMessage(msg);
@@ -871,7 +874,8 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
     }
 
     ysfx_gfx_update_mouse(fx, input.m_ysfxMouseMods, input.m_ysfxMouseX, input.m_ysfxMouseY, input.m_ysfxMouseButtons, input.m_ysfxWheel, input.m_ysfxHWheel);
-    ysfx_gfx_set_window_state(fx, windowState.m_hasFocus, windowState.m_isVisible, windowState.m_mouseOver);
+    // first gfx cycle after opening, REAPER still sets visible to false
+    ysfx_gfx_set_window_state(fx, windowState.m_hasFocus, windowState.m_isVisible && !windowState.m_justReopened, windowState.m_mouseOver);
 
     ///
     GfxTarget *target = msg.m_target.get();
