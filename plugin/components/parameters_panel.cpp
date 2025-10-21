@@ -572,6 +572,7 @@ void YsfxParametersPanel::setParametersDisplayed(const juce::Array<YsfxParameter
     }
 
     setSize(maxWidth, getRecommendedHeight());
+    resized();
 }
 
 int YsfxParametersPanel::getRecommendedHeight(int heightAtLeast) const
