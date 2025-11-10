@@ -165,6 +165,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         juce::Time m_lastLoad{0};
         juce::File m_file;
         ysfx_bank_shared m_bank;
+        int m_useNativeFilePicker{1};
 
         std::unique_ptr<juce::AlertWindow> m_editDialog;
         std::unique_ptr<BankItemsListBoxModel> m_listBox;
@@ -191,6 +192,11 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_listBox->setBounds(temp);
         }
 
+        void setUseNativeFilePicker(int useNativeFilePicker)
+        {
+            m_useNativeFilePicker = useNativeFilePicker;
+        }
+
         void setBankUpdatedCallback(std::function<void(void)> bankUpdatedCallback)
         {
             m_bankUpdatedCallback = bankUpdatedCallback;
@@ -210,7 +216,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             if (m_file != juce::File{}) {
                 initialPath = m_file.getParentDirectory();
             }
-            m_fileChooser.reset(new juce::FileChooser(TRANS("Open bank..."), initialPath));
+            m_fileChooser.reset(new juce::FileChooser(TRANS("Open bank..."), initialPath, juce::String(), m_useNativeFilePicker));
             m_fileChooser->launchAsync(
                 juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
                 [this](const juce::FileChooser &chooser) {
@@ -459,6 +465,11 @@ YsfxRPLView::YsfxRPLView()
 
 YsfxRPLView::~YsfxRPLView()
 {
+}
+
+void YsfxRPLView::setUseNativeFilePicker(int useNativeFilePicker) {
+    m_impl->m_left.setUseNativeFilePicker(useNativeFilePicker);
+    m_impl->m_right.setUseNativeFilePicker(useNativeFilePicker);
 }
 
 void YsfxRPLView::setEffect(ysfx_t *fx)

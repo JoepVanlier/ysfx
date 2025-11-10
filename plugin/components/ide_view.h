@@ -32,6 +32,7 @@ public:
     void setEffect(ysfx_t *fx, juce::Time timeStamp, juce::File mainFile);
     void setStatusText(const juce::String &text);
     void focusOnCodeEditor();
+    void setUseNativeFilePicker(int useNativeFilePicker);
 
     std::function<void(const juce::File &)> onFileSaved;
     std::function<void(const juce::File &)> onReloadRequested;
