@@ -29,6 +29,9 @@ And the 32 bit version here: https://aka.ms/vs/17/release/vc_redist.x86.exe
 Note that the plugin may crash if you have an outdated version of the MSVC
 redistributable on your system.
 
+Alternatively, you can use the portable version of the plugin, which has the
+redistributable baked into the plugin.
+
 #### macOS
 
 Binaries are not signed. That means you have to explicitly allow it to be 
@@ -38,6 +41,24 @@ run (since it is not from an identified developer). Usually it involves invoking
   `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx-s instrument.vst3`
 
 Where you should fill in the path where the plugin is located on your system.
+
+# Troubleshooting FAQ
+
+#### - I'm running YSFX and "Load" doesn't bring up a file browser.
+
+On some versions of Linux (reported for Debian Trixie at least), the native file
+file chooser may fail to open. If this happens, you can set an option in the
+preferences file to use a built-in file browsing dialog instead.
+
+- Go to your application config folder, (likely `~/.config`, though this depends on
+your system configuration).
+- Locate a file named  `ysfx_saike_mod.prefs`.
+- Open the file and find the field `ysfx_use_native_file_picker`.
+- Set its value to `0` and save the file (make sure the plugin is *not* running 
+while you make this change).
+- Next time you run the plugin, it should use the fallback file dialog.
+
+It may not be as nice as native, but at least you'll be able to load files.
 
 # Helping out
 
@@ -90,7 +111,7 @@ Example:
 - `My JSFX/Effects/guitar/amp-model`
 - `My JSFX/Data/amp_models/Marshall JCM800 - Marshall Stock 70.wav`
 
-## Differences to JSFX
+## Differences to JSFX (for developers)
 
 There are still quite a few differences between `ysfx` and `jsfx` and some things may not work as well.
 Please report bugs and missing features, but also be mindful of the limited time I can spend on fixing them.

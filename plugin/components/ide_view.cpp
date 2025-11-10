@@ -48,6 +48,7 @@ struct YsfxIDEView::Impl {
     std::unique_ptr<YSFXTabbedButtonBar> m_tabs;
 
     bool m_fileChooserActive{false};
+    int m_useNativeFilePicker{1};
 
     struct VariableUI {
         ysfx_real *m_var = nullptr;
@@ -96,6 +97,11 @@ YsfxIDEView::YsfxIDEView()
 
 YsfxIDEView::~YsfxIDEView()
 {
+}
+
+void YsfxIDEView::setUseNativeFilePicker(int useNativeFilePicker)
+{
+    m_impl->m_useNativeFilePicker = useNativeFilePicker;
 }
 
 void YsfxIDEView::setColourScheme(std::map<std::string, std::array<uint8_t, 3>> colormap)
@@ -251,7 +257,7 @@ void YsfxIDEView::Impl::saveAs()
     auto editor = m_editors[m_currentEditorIndex];
     juce::File initialPath = editor->getPath().getParentDirectory();
 
-    m_fileChooser.reset(new juce::FileChooser(TRANS("Choose filename to save JSFX to"), initialPath));
+    m_fileChooser.reset(new juce::FileChooser(TRANS("Choose filename to save JSFX to"), initialPath, juce::String(), m_useNativeFilePicker));
     m_fileChooser->launchAsync(
         juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::canSelectFiles,
         [this, editor](const juce::FileChooser &chooser) {

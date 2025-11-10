@@ -60,6 +60,7 @@ struct YsfxEditor::Impl {
     bool m_maintainState = false;
     int m_keepUndoState{1};
     int m_softwareRenderer{0};
+    int m_useNativeFilePicker{1};
     WindowBehaviour m_windowBehaviour{WindowBehaviour::alwaysOnTop};
     float m_currentScaling{1.0f};
     uint64_t m_sliderVisible[ysfx_max_slider_groups]{0};
@@ -589,10 +590,10 @@ void YsfxEditor::Impl::chooseFileAndLoad()
     bool normalLoad = (m_proc->retryLoad() == RetryState::ok);
 
     if (normalLoad) {
-        m_fileChooser.reset(new juce::FileChooser(TRANS("Open jsfx..."), initialPath));
+        m_fileChooser.reset(new juce::FileChooser(TRANS("Open jsfx..."), initialPath, juce::String(), m_useNativeFilePicker));
     } else {
         juce::File fullpath{m_proc->lastLoadPath()};
-        m_fileChooser.reset(new juce::FileChooser(TRANS("JSFX missing! Please locate jsfx named ") + fullpath.getFileNameWithoutExtension(), fullpath.getParentDirectory(), fullpath.getFileName()));
+        m_fileChooser.reset(new juce::FileChooser(TRANS("JSFX missing! Please locate jsfx named ") + fullpath.getFileNameWithoutExtension(), fullpath.getParentDirectory(), fullpath.getFileName(), m_useNativeFilePicker));
     }
     
     bool mustAskConfirmation = normalLoad && ysfx_is_compiled(fx);
@@ -1029,21 +1030,18 @@ void YsfxEditor::Impl::initializeProperties()
     {
         juce::ScopedLock lock{m_pluginProperties->getLock()};
 
-        auto key = juce::String("ysfx_maintain_serialization_undo");
-        if (m_pluginProperties->containsKey(key)) {
-            m_keepUndoState = m_pluginProperties->getIntValue(key);
-        } else {
-            m_pluginProperties->setValue(key, 1);
-            m_pluginProperties->setNeedsToBeSaved(true);
-        }
+        auto initProperty = [this](const juce::String& key, int defaultValue, int& target) {
+            if (m_pluginProperties->containsKey(key))
+                target = m_pluginProperties->getIntValue(key);
+            else {
+                m_pluginProperties->setValue(key, defaultValue);
+                m_pluginProperties->setNeedsToBeSaved(true);
+            }
+        };
 
-        auto sw_key = juce::String("ysfx_force_software_rendering");
-        if (m_pluginProperties->containsKey(sw_key)) {
-            m_softwareRenderer = m_pluginProperties->getIntValue(sw_key);
-        } else {
-            m_pluginProperties->setValue(sw_key, juce::var{0});
-            m_pluginProperties->setNeedsToBeSaved(true);
-        }
+        initProperty("ysfx_maintain_serialization_undo", 1, m_keepUndoState);
+        initProperty("ysfx_force_software_rendering", 0, m_softwareRenderer);
+        initProperty("ysfx_use_native_file_picker", 1, m_useNativeFilePicker);
 
         auto accessibility = juce::String("ysfx_shortcuts");
         if (m_pluginProperties->containsKey(accessibility)) {
@@ -1062,6 +1060,9 @@ void YsfxEditor::Impl::initializeProperties()
             m_pluginProperties->setNeedsToBeSaved(true);
         }
     }
+
+    m_rplView->setUseNativeFilePicker(m_useNativeFilePicker);
+    m_ideView->setUseNativeFilePicker(m_useNativeFilePicker);
 }
 
 bool YsfxEditor::keyPressed(const juce::KeyPress& k)

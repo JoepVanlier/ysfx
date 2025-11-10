@@ -28,6 +28,7 @@ public:
     void setLoadPresetCallback(std::function<void(std::string)> loadPresetCallback);
 
     void focusOnPresetViewer();
+    void setUseNativeFilePicker(int useNativeFilePicker);
 
 protected:
     void resized() override;
