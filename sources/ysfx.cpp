@@ -313,10 +313,23 @@ bool ysfx_load_file(ysfx_t *fx, const char *filepath, uint32_t loadopts)
         fx->source.main_file_path.assign(filepath);
 
         // find the bank file, if present
-        ysfx::case_resolve(
-            ysfx::path_directory(filepath).c_str(),
-            (ysfx::path_file_name(filepath) + ".rpl").c_str(),
-            fx->source.bank_path);
+        const auto directory = ysfx::path_directory(filepath);
+        auto filename = ysfx::path_file_name(filepath);
+        int found_bank = ysfx::case_resolve(directory.c_str(),
+                                            (filename + ".rpl").c_str(),
+                                            fx->source.bank_path);
+        if (found_bank == 0) {
+            if (filename.length() > 5) {
+                std::string ext = filename.substr(filename.length() - 5, 5);
+                std::transform(ext.begin(), ext.end(), ext.begin(), ysfx::ascii_tolower);
+                if (ext == ".jsfx") {
+                    filename = filename.substr(0, filename.length() - 5);
+                    ysfx::case_resolve(directory.c_str(),
+                                       (filename + ".rpl").c_str(),
+                                       fx->source.bank_path);
+                }
+            }
+        }
 
         // fill the file enums with the contents of directories
         ysfx_fill_file_enums(fx);
