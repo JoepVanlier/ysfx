@@ -30,9 +30,7 @@ if(WIN32)
 endif()
 target_compile_definitions(wdl-base PUBLIC "WDL_FFT_REALSIZE=8")
 target_compile_definitions(wdl-base PUBLIC "WDL_LINEPARSE_ATOF=ysfx_wdl_atof")
-if(NOT WIN32)
-    target_compile_definitions(wdl-base PRIVATE "_FILE_OFFSET_BITS=64")
-endif()
+target_compile_definitions(wdl-base PRIVATE "${YSFX_FILE_OFFSET_BITS_GENEXP}")
 if(MSVC)
     target_compile_definitions(wdl-base PRIVATE "_CRT_NONSTDC_NO_WARNINGS")
 endif()
@@ -57,7 +55,7 @@ if(YSFX_GFX)
             "thirdparty/WDL/source/WDL/lice/lice_texgen.cpp"
             "thirdparty/WDL/source/WDL/lice/lice_text.cpp"
             "thirdparty/WDL/source/WDL/lice/lice_textnew.cpp")
-    target_compile_definitions(lice PRIVATE "_FILE_OFFSET_BITS=64")
+    target_compile_definitions(lice PRIVATE "${YSFX_FILE_OFFSET_BITS_GENEXP}")
     target_link_libraries(lice
         PUBLIC
             wdl-base
@@ -158,9 +156,8 @@ endif()
 target_compile_definitions(eel2
     PRIVATE
         "NSEEL_ATOF=ysfx_wdl_atof")
-if(NOT WIN32)
-    target_compile_definitions(eel2 PRIVATE "_FILE_OFFSET_BITS=64")
-endif()
+
+target_compile_definitions(eel2 PRIVATE "${YSFX_FILE_OFFSET_BITS_GENEXP}")
 if(MSVC)
     target_compile_definitions(eel2 PRIVATE "_CRT_NONSTDC_NO_WARNINGS")
 endif()

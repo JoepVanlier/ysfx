@@ -62,7 +62,7 @@ add_library(ysfx-private
         "sources/base64/Base64.hpp")
 target_compile_definitions(ysfx-private
     PRIVATE
-        "_FILE_OFFSET_BITS=64")
+        "${YSFX_FILE_OFFSET_BITS_GENEXP}")
 if(MSVC)
     target_compile_definitions(ysfx-private
         PRIVATE
