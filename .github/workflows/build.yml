@@ -73,6 +73,22 @@ jobs:
             shell: bash
             artifacts: yes
             want_static_crt: OFF
+          - name: mingw32
+            display-name: MSYS MinGW 32-bit
+            runs-on: windows-2025
+            platform: i686
+            msystem: MINGW32
+            os-type: MinGW
+            shell: msys2 {0}
+            artifacts: yes
+          - name: mingw64
+            display-name: MSYS MinGW 64-bit
+            runs-on: windows-2025
+            platform: x86_64
+            msystem: MINGW64
+            os-type: MinGW
+            shell: msys2 {0}
+            artifacts: yes
       fail-fast: false
     name: Compile for ${{matrix.display-name}}
     runs-on: ${{matrix.runs-on}}
@@ -110,6 +126,17 @@ jobs:
             gcc-10
       - uses: ilammy/setup-nasm@v1
         if: ${{matrix.os-type == 'Windows'}}
+      - uses: msys2/setup-msys2@v2
+        if: ${{matrix.os-type == 'MinGW'}}
+        with:
+          msystem: ${{matrix.msystem}}
+          update: true
+          install: >-
+            git
+            mingw-w64-${{matrix.platform}}-toolchain
+            mingw-w64-${{matrix.platform}}-cmake
+            mingw-w64-${{matrix.platform}}-ninja
+            mingw-w64-${{matrix.platform}}-libsndfile
       - name: Create Build Directory
         working-directory: ${{runner.workspace}}
         run: cmake -E make_directory build
