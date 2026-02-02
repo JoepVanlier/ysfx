@@ -62,7 +62,8 @@ struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
         int m_gfxHeight = 0;
         bool m_wantRetina = false;
         juce::Image m_renderBitmap{juce::Image::ARGB, 1, 1, false, juce::SoftwareImageType{}};
-        double m_bitmapScale = 1;
+        double m_bitmapScale = 1.0;
+        double m_dpiScale = 1.0;
         using Ptr = std::shared_ptr<GfxTarget>;
     };
 
@@ -610,7 +611,8 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
     GfxTarget *target = m_gfxTarget.get();
 
     float output_scaling = m_self->m_outputScalingFactor.load();
-    float pixel_factor = m_self->m_pixelFactor.load() / output_scaling;
+    double dpi_scaling = static_cast<double>(m_self->m_pixelFactor.load());
+    float pixel_factor = dpi_scaling / output_scaling;
 
     // newWidth is set when the JSFX initializes
     float scaling_factor = 1.0f / (output_scaling > 1.1f ? pixel_factor : 1.0f);
@@ -637,6 +639,7 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
         target->m_wantRetina = (bool)newRetina;
         target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width), juce::jmax(1, internal_height), true, juce::SoftwareImageType{});
         target->m_bitmapScale = pixel_factor;
+        target->m_dpiScale = dpi_scaling;
     }
 
     return needsUpdate;
@@ -890,7 +893,7 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
         gc.pixel_height = (uint32_t)bdata.height;
         gc.pixel_stride = (uint32_t)bdata.lineStride;
         gc.pixels = bdata.data;
-        gc.scale_factor = 1.0;  // This is handled by setting the UI size in the plugin ourselves
+        gc.scale_factor = static_cast<ysfx_real>(target->m_dpiScale);
         gc.show_menu = &showYsfxMenu;
         gc.set_cursor = &setYsfxCursor;
         gc.get_drop_file = &getYsfxDropFile;

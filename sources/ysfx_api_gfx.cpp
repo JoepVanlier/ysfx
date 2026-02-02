@@ -397,8 +397,6 @@ void ysfx_gfx_prepare(ysfx_t *fx)
     ysfx_real gfx_w = (ysfx_real)lice->m_framebuffer->getWidth();
     ysfx_real gfx_h = (ysfx_real)lice->m_framebuffer->getHeight();
     if (state->scale > 1.0) {
-        gfx_w *= state->scale;
-        gfx_h *= state->scale;
         *fx->var.gfx_ext_retina = state->scale;
     }
     *fx->var.gfx_w = gfx_w;
