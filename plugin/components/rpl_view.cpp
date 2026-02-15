@@ -348,24 +348,31 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             }
 
             juce::Time newTime = m_file.getLastModificationTime();
-            if (newTime <= m_lastLoad) {
-                return;
-            }
-            m_lastLoad = newTime;
+            if (newTime.toMilliseconds() == 0) {
+                // File does not exist -> create a new empty bank!
+                auto path = m_file.getFileNameWithoutExtension().toStdString();
+                if (path.empty()) return;
 
-            ysfx_bank_t* bank = load_bank(m_file.getFullPathName().toStdString().c_str());
-            if (!bank)
-                return;
-            
-            m_bank = make_ysfx_bank_shared(bank);
+                m_bank = make_ysfx_bank_shared(ysfx_create_empty_bank(path.c_str()));
+            } else {
+                // already loaded this one
+                if (newTime <= m_lastLoad) {
+                    return;
+                }
+
+                ysfx_bank_t* bank = load_bank(m_file.getFullPathName().toStdString().c_str());
+                m_bank = make_ysfx_bank_shared(bank);
+
+                m_lastLoad = newTime;
+            }
 
             std::vector<juce::String> names;
             for (uint32_t i = 0; i < m_bank->preset_count; ++i) {
                 names.push_back(juce::String::fromUTF8(m_bank->presets[i].name));
             }
             m_listBox->setItems(names);
-            m_listBox->updateContent();           
-            m_label->setText(m_file.getFileName() + juce::String(" (") + juce::String(bank->name) + juce::String(")"), juce::dontSendNotification);
+            m_listBox->updateContent();
+            m_label->setText(m_file.getFileName() + juce::String(" (") + juce::String(m_bank->name) + juce::String(")"), juce::dontSendNotification);
             repaint();
         }
 
@@ -385,6 +392,8 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         {
             auto idx = indices.back();
             indices.pop_back();
+
+            if (!m_bank) return;
 
             auto copy_lambda = [this, indices, src_bank, idx, force_accept](int result){
                 bool alwaysAccept = force_accept;
@@ -526,9 +535,18 @@ void YsfxRPLView::Impl::checkFileForModifications()
     juce::File customBankPath = getCustomBankLocation(fx);
 
     if (customBankPath.existsAsFile()) {
+        // Prefer the custom one if it exists
         m_left.setFile(customBankPath);
     } else {
-        m_left.setFile(juce::File{bankpath});
+        // It doesn't exist? See if a default one exists.
+        auto defaultBankPath = juce::File{bankpath};
+
+        if (defaultBankPath.existsAsFile()) {
+            m_left.setFile(defaultBankPath);
+        } else {
+            // It doesn't exist either? => Go for custom again and just create on next action.
+            m_left.setFile(customBankPath);    
+        }
     }
 
     m_left.tryRead();
