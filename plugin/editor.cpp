@@ -525,9 +525,8 @@ void YsfxEditor::Impl::updateInfo()
         }
     );
     m_rplView->setLoadPresetCallback(
-        [this](std::string preset) {
+        [this](ysfx_bank_shared bank, std::string preset) {
             YsfxInfo::Ptr ysfx_info = m_info;
-            ysfx_bank_shared bank = m_bank;
             if (!bank) return;
 
             auto index = ysfx_preset_exists(bank.get(), preset.c_str());

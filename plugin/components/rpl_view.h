@@ -25,7 +25,7 @@ public:
     ~YsfxRPLView() override;
     void setEffect(ysfx_t *fx);
     void setBankUpdateCallback(std::function<void(void)> bankUpdateCallback);
-    void setLoadPresetCallback(std::function<void(std::string)> loadPresetCallback);
+    void setLoadPresetCallback(std::function<void(ysfx_bank_shared, std::string)> loadPresetCallback);
 
     void focusOnPresetViewer();
     void setUseNativeFilePicker(int useNativeFilePicker);

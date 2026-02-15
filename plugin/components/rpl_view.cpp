@@ -174,7 +174,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         std::unique_ptr<juce::FileChooser> m_fileChooser;
 
         std::function<void(void)> m_bankUpdatedCallback;
-        std::function<void(std::string)> m_loadPresetCallback;
+        std::function<void(ysfx_bank_shared, std::string)> m_loadPresetCallback;
         
     public:
         void resized() override
@@ -202,7 +202,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_bankUpdatedCallback = bankUpdatedCallback;
         }
 
-        void setLoadPresetCallback(std::function<void(std::string)> loadPresetCallback)
+        void setLoadPresetCallback(std::function<void(ysfx_bank_shared bank, std::string)> loadPresetCallback)
         {
             m_loadPresetCallback = loadPresetCallback;
         }
@@ -328,7 +328,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_listBox->setDropCallback([this](std::vector<uint32_t> indices, juce::WeakReference<juce::Component> ref) { this->transferPresets(indices, ref); });
             m_listBox->setDeleteCallback([this](std::vector<uint32_t> indices) { this->deletePresets(indices); });
             m_listBox->setRenameCallback([this](int row) { this->renamePreset(row); });
-            m_listBox->setDoubleClickCallback([this](int idx) { if (m_loadPresetCallback) m_loadPresetCallback(std::string{m_bank->presets[idx].name}); });
+            m_listBox->setDoubleClickCallback([this](int idx) { if (m_loadPresetCallback) m_loadPresetCallback(m_bank, std::string{m_bank->presets[idx].name}); });
             addAndMakeVisible(*m_listBox);
             addAndMakeVisible(*m_label);
         }
@@ -450,7 +450,7 @@ struct YsfxRPLView::Impl {
     std::unique_ptr<juce::Timer> m_relayoutTimer;
     std::unique_ptr<juce::Timer> m_fileCheckTimer;
     std::function<void(void)> m_bankUpdateCallback;
-    std::function<void(std::string)> m_loadPresetCallback;
+    std::function<void(ysfx_bank_shared bank, std::string)> m_loadPresetCallback;
 
     //==========================================================================
     void createUI();
@@ -497,7 +497,7 @@ void YsfxRPLView::setBankUpdateCallback(std::function<void(void)> bankUpdateCall
      m_impl->m_bankUpdateCallback = bankUpdateCallback;
 }
 
-void YsfxRPLView::setLoadPresetCallback(std::function<void(std::string)> loadPresetCallback) {
+void YsfxRPLView::setLoadPresetCallback(std::function<void(ysfx_bank_shared, std::string)> loadPresetCallback) {
     m_impl->m_loadPresetCallback = loadPresetCallback;
 }
 
@@ -507,11 +507,12 @@ void YsfxRPLView::Impl::createUI()
     m_left.setLabelTooltip("Location of the currently loaded presets");
     m_self->addAndMakeVisible(m_left);
     m_left.setBankUpdatedCallback([this](void) { if (m_bankUpdateCallback) m_bankUpdateCallback(); });
-    m_left.setLoadPresetCallback([this](std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(name); });
+    m_left.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_left.getBank(), name); });
 
     m_right.createUI(true);
     m_right.setLabelTooltip("Click to select preset file to import from");
     m_self->addAndMakeVisible(m_right);
+    m_right.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_right.getBank(), name); });
 
     juce::Timer *timer = FunctionalTimer::create([this]() { checkFileForModifications(); });
     m_fileCheckTimer.reset(timer);
