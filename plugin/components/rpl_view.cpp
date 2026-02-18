@@ -243,6 +243,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             ysfx_bank_shared src_bank = loadedBank->getBank();
             if (!src_bank) return;
 
+            std::reverse(indices.begin(), indices.end());
             transferPresetRecursive(indices, src_bank, false);
         }
 
