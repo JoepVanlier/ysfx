@@ -61,6 +61,7 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
         std::function<void(int)> m_dblClickCallback;
         std::function<void(std::vector<uint32_t>, juce::WeakReference<juce::Component>)> m_dropCallback;
         std::function<void(std::vector<uint32_t>)> m_deleteCallback;
+        bool m_allowModification;
 
         int getNumRows() override
         {
@@ -117,7 +118,7 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
             std::vector<uint32_t> elements;
             for (const auto& value : *payload) elements.push_back(static_cast<uint32_t>(static_cast<int>(value)));
 
-            if (!elements.empty()) {
+            if (!elements.empty() && m_dropCallback) {
                 m_dropCallback(elements, dragSourceDetails.sourceComponent);
             }
         }
@@ -131,7 +132,7 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
             for (int i = 0; i < selection.size(); ++i)
                 elements.push_back(static_cast<uint32_t>(selection[i]));
             
-            if (!elements.empty()) {
+            if (!elements.empty() && m_deleteCallback) {
                 m_deleteCallback(elements);
             }
         }
@@ -172,6 +173,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         std::unique_ptr<juce::Label> m_label;
         std::unique_ptr<juce::TextButton> m_btnLoadFile;
         std::unique_ptr<juce::FileChooser> m_fileChooser;
+        std::unique_ptr<juce::ToggleButton> m_fileLock;
 
         std::function<void(void)> m_bankUpdatedCallback;
         std::function<void(ysfx_bank_shared, std::string)> m_loadPresetCallback;
@@ -189,6 +191,14 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 m_btnLoadFile->setBounds(labelSpace.removeFromRight(80).withTrimmedTop(3).withTrimmedBottom(3));
             }
             m_label->setBounds(labelSpace);
+
+            if (m_fileLock) {
+                auto checkboxSpace = temp.removeFromBottom(30);
+                m_fileLock->setButtonText(TRANS("Allow modification"));
+                m_fileLock->setTooltip("Enable this to allow modification of the RPL file on the right.\n\nNote that deleting, renaming and overwriting presets modifies the original RPL file.");
+                m_fileLock->setBounds(checkboxSpace.withTrimmedTop(3).withTrimmedBottom(3));
+            }
+
             m_listBox->setBounds(temp);
         }
 
@@ -315,7 +325,33 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             );
         }
 
-        void createUI(bool withLoad)
+        void setupDestructiveCallbacks()
+        {
+            m_listBox->setDropCallback(
+                [this](std::vector<uint32_t> indices, juce::WeakReference<juce::Component> ref) {
+                    this->transferPresets(indices, ref);
+                }
+            );
+            m_listBox->setDeleteCallback(
+                [this](std::vector<uint32_t> indices) {
+                    this->deletePresets(indices);
+                }
+            );
+            m_listBox->setRenameCallback(
+                [this](int row) {
+                    this->renamePreset(row);
+                }
+            );
+        }
+
+        void clearDestructiveCallbacks()
+        {
+            m_listBox->setDropCallback(nullptr);
+            m_listBox->setDeleteCallback(nullptr);
+            m_listBox->setRenameCallback(nullptr);
+        }
+
+        void createUI(bool withLoad, bool withModificationProtection)
         {
             m_listBox.reset(new BankItemsListBoxModel());
             m_label.reset(new juce::Label);
@@ -325,10 +361,22 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 m_btnLoadFile->onClick = [this]() { chooseFileAndLoad(); };
                 addAndMakeVisible(*m_btnLoadFile);
             }
+            if (withModificationProtection) {
+                m_fileLock.reset(new juce::ToggleButton());
+                addAndMakeVisible(*m_fileLock);
+                
+                m_fileLock->onStateChange = [this]() {
+                    if (this->m_fileLock->getToggleState()) {
+                        setupDestructiveCallbacks();
+                    } else {
+                        clearDestructiveCallbacks();
+                    }
+                };
+                m_fileLock->onStateChange();
+            } else {
+                setupDestructiveCallbacks();
+            }
             m_listBox->setOutlineThickness(1);
-            m_listBox->setDropCallback([this](std::vector<uint32_t> indices, juce::WeakReference<juce::Component> ref) { this->transferPresets(indices, ref); });
-            m_listBox->setDeleteCallback([this](std::vector<uint32_t> indices) { this->deletePresets(indices); });
-            m_listBox->setRenameCallback([this](int row) { this->renamePreset(row); });
             m_listBox->setDoubleClickCallback([this](int idx) { if (m_loadPresetCallback) m_loadPresetCallback(m_bank, std::string{m_bank->presets[idx].name}); });
             addAndMakeVisible(*m_listBox);
             addAndMakeVisible(*m_label);
@@ -504,13 +552,13 @@ void YsfxRPLView::setLoadPresetCallback(std::function<void(ysfx_bank_shared, std
 
 void YsfxRPLView::Impl::createUI()
 {
-    m_left.createUI(false);
+    m_left.createUI(false, false);
     m_left.setLabelTooltip("Location of the currently loaded presets");
     m_self->addAndMakeVisible(m_left);
     m_left.setBankUpdatedCallback([this](void) { if (m_bankUpdateCallback) m_bankUpdateCallback(); });
     m_left.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_left.getBank(), name); });
 
-    m_right.createUI(true);
+    m_right.createUI(true, true);
     m_right.setLabelTooltip("Click to select preset file to import from");
     m_self->addAndMakeVisible(m_right);
     m_right.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_right.getBank(), name); });
