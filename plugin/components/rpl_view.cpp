@@ -142,6 +142,11 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
             m_dblClickCallback(row);
         }
 
+        void returnKeyPressed (int lastRowSelected) override
+        {
+            m_dblClickCallback(lastRowSelected);
+        }
+
         void listBoxItemClicked(int row, const juce::MouseEvent& evnt) override
         {
             if (evnt.mods.isRightButtonDown() && m_renameCallback) {
