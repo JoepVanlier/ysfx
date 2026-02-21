@@ -251,6 +251,91 @@ TEST_CASE("preset handling", "[preset]")
         validatePreset(&new_bank->presets[1], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
         validatePreset(&new_bank->presets[2], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
     }
+
+    SECTION("Swap preset in bank")
+    {
+        const char *source_text =
+            "desc:TestCaseRPL" "\n"
+            "slider1:0<0,1,0.01>S1" "\n"
+            "slider2:0<0,1,0.01>S2" "\n"
+            "slider4:0<0,1,0.01>S4" "\n"
+            "@serialize" "\n"
+            "file_var(0, slider4);" "\n"
+            "file_var(0, slider2);" "\n"
+            "file_var(0, slider1);" "\n";
+
+        const char *rpl_text =
+            "<REAPER_PRESET_LIBRARY \"JS: TestCaseRPL\"" "\n"
+            "  <PRESET `1.defaults`" "\n"
+            "    MCAwIC0gMCAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g" "\n"
+            "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAxLmRlZmF1bHRzAAAAAAAAAAAAAAAAAA==" "\n"
+            "  >" "\n"
+            "  <PRESET `2.a preset with spaces in the name`" "\n"
+            "    MC4zNCAwLjc1IC0gMC42MiAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAt" "\n"
+            "    IC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAiMi5hIHByZXNldCB3aXRoIHNwYWNlcyBpbiB0aGUgbmFtZSIAUrgePwAAQD97FK4+" "\n"
+            "  >" "\n"
+            "  <PRESET `3.a preset with \"quotes\" in the name`" "\n"
+            "    MC44NiAwLjA3IC0gMC4yNSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAt" "\n"
+            "    IC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAnMy5hIHByZXNldCB3aXRoICJxdW90ZXMiIGluIHRoZSBuYW1lJwAAAIA+KVyPPfYoXD8=" "\n"
+            "  >" "\n"
+            "  <PRESET `>`" "\n"
+            "    MSAwLjkgLSAwLjggLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g" "\n"
+            "    LSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gPgDNzEw/ZmZmPwAAgD8=" "\n"
+            "  >" "\n"
+            ">" "\n";
+
+        scoped_new_dir dir_fx("${root}/Effects");
+        scoped_new_txt file_main("${root}/Effects/example.jsfx", source_text);
+        scoped_new_txt file_rpl("${root}/Effects/example.jsfx.rpl", rpl_text);
+
+        ysfx_bank_u bank{ysfx_load_bank(file_rpl.m_path.c_str())};
+        REQUIRE(bank);
+
+        REQUIRE(!strcmp(bank->name, "JS: TestCaseRPL"));
+
+        REQUIRE(bank->presets != nullptr);
+        REQUIRE(bank->preset_count == 4);
+
+        validatePreset(&bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+
+        // Does nothing
+        ysfx_swap_preset_in_bank(bank.get(), 0, 0);
+        ysfx_swap_preset_in_bank(bank.get(), -1, 0);
+        ysfx_swap_preset_in_bank(bank.get(), 0, -1);
+        ysfx_swap_preset_in_bank(bank.get(), 100, 0);
+        ysfx_swap_preset_in_bank(bank.get(), 0, 100);
+
+        REQUIRE(bank->preset_count == 4);
+        validatePreset(&bank->presets[0], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[1], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+
+        ysfx_swap_preset_in_bank(bank.get(), 0, 1);
+        REQUIRE(bank->preset_count == 4);
+        validatePreset(&bank->presets[0], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+        validatePreset(&bank->presets[1], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+
+        ysfx_swap_preset_in_bank(bank.get(), 0, 3);
+        REQUIRE(bank->preset_count == 4);
+        validatePreset(&bank->presets[0], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+        validatePreset(&bank->presets[1], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+
+        // Does nothing
+        ysfx_swap_preset_in_bank(bank.get(), 0, 4);
+        REQUIRE(bank->preset_count == 4);
+        validatePreset(&bank->presets[0], ">", ">", 1.0f, 0.9f, 0.8f, 0.8f, 0.9f, 1.0f);
+        validatePreset(&bank->presets[1], "1.defaults", "1.defaults", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        validatePreset(&bank->presets[2], "3.a preset with \"quotes\" in the name", "'3.a preset with \"quotes\" in the name'", 0.86f, 0.07f, 0.25f, 0.25f, 0.07f, 0.86f);
+        validatePreset(&bank->presets[3], "2.a preset with spaces in the name", "\"2.a preset with spaces in the name\"", 0.34f, 0.75f, 0.62f, 0.62f, 0.75f, 0.34f);
+    }
     
     SECTION("Create empty bank")
     {

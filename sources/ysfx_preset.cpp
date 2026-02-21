@@ -26,6 +26,7 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include <utility>
 
 #include <iomanip>
 #include <sstream>
@@ -413,6 +414,23 @@ ysfx_bank_t *ysfx_rename_preset_from_bank(ysfx_bank_t *bank_in, const char* pres
     }
 
     return bank.release();
+}
+
+// Swap two presets in-place. Does not clear the bank
+void ysfx_swap_preset_in_bank(ysfx_bank_t *bank, int32_t preset_idx_1, int32_t preset_idx_2)
+{
+    // Early out if we get invalid counts or in the no-change situation
+    if (
+        preset_idx_1 >= static_cast<int32_t>(bank->preset_count) || 
+        preset_idx_2 >= static_cast<int32_t>(bank->preset_count) || 
+        preset_idx_1 < 0 || 
+        preset_idx_2 < 0 ||
+        preset_idx_1 == preset_idx_2
+    ) {
+        return;
+    }
+
+    std::swap(bank->presets[preset_idx_1], bank->presets[preset_idx_2]);
 }
 
 std::string double_string(double value) {
