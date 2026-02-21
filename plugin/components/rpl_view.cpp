@@ -179,6 +179,8 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         std::unique_ptr<juce::TextButton> m_btnLoadFile;
         std::unique_ptr<juce::FileChooser> m_fileChooser;
         std::unique_ptr<juce::ToggleButton> m_fileLock;
+        std::unique_ptr<juce::TextButton> m_movePresetUp;
+        std::unique_ptr<juce::TextButton> m_movePresetDown;
 
         std::function<void(void)> m_bankUpdatedCallback;
         std::function<void(ysfx_bank_shared, std::string)> m_loadPresetCallback;
@@ -197,11 +199,15 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             }
             m_label->setBounds(labelSpace);
 
-            if (m_fileLock) {
-                auto checkboxSpace = temp.removeFromBottom(30);
+            auto bottomRow = temp.removeFromBottom(30);
+
+            m_movePresetDown->setBounds(bottomRow.removeFromRight(60));
+            m_movePresetUp->setBounds(bottomRow.removeFromRight(60));
+
+            if (m_fileLock) {    
                 m_fileLock->setButtonText(TRANS("Allow modification"));
                 m_fileLock->setTooltip("Enable this to allow modification of the RPL file on the right.\n\nNote that deleting, renaming and overwriting presets modifies the original RPL file.");
-                m_fileLock->setBounds(checkboxSpace.withTrimmedTop(3).withTrimmedBottom(3));
+                m_fileLock->setBounds(bottomRow.withTrimmedTop(3).withTrimmedBottom(3));
             }
 
             m_listBox->setBounds(temp);
@@ -347,6 +353,8 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                     this->renamePreset(row);
                 }
             );
+            m_movePresetUp->setEnabled(true);
+            m_movePresetDown->setEnabled(true);
         }
 
         void clearDestructiveCallbacks()
@@ -354,6 +362,9 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_listBox->setDropCallback(nullptr);
             m_listBox->setDeleteCallback(nullptr);
             m_listBox->setRenameCallback(nullptr);
+
+            m_movePresetUp->setEnabled(false);
+            m_movePresetDown->setEnabled(false);
         }
 
         void createUI(bool withLoad, bool withModificationProtection)
@@ -366,6 +377,33 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 m_btnLoadFile->onClick = [this]() { chooseFileAndLoad(); };
                 addAndMakeVisible(*m_btnLoadFile);
             }
+
+            m_movePresetUp.reset(new juce::TextButton());
+            m_movePresetUp->setButtonText(TRANS("Up"));
+            m_movePresetUp->setTooltip(TRANS("Move preset up"));
+            addAndMakeVisible(*m_movePresetUp);
+
+            m_movePresetUp->onClick = [this]() {
+                if (m_listBox->getSelectedRow() > 0 && getBank()) {
+                    ysfx_swap_preset_in_bank(m_bank.get(), m_listBox->getSelectedRow() - 1, m_listBox->getSelectedRow());
+                    save_bank(m_file.getFullPathName().toStdString().c_str(), m_bank.get());
+                    m_listBox->selectRow(std::max(m_listBox->getSelectedRow() - 1, 0), false, true);
+                }
+            };
+            
+            m_movePresetDown.reset(new juce::TextButton());
+            m_movePresetDown->setButtonText(TRANS("Down"));
+            m_movePresetDown->setTooltip(TRANS("Move preset down"));
+            addAndMakeVisible(*m_movePresetDown);
+            
+            m_movePresetDown->onClick = [this]() {
+                if (m_listBox->getSelectedRow() < m_listBox->getModel()->getNumRows() - 1 && getBank()) {
+                    ysfx_swap_preset_in_bank(m_bank.get(), m_listBox->getSelectedRow(), m_listBox->getSelectedRow() + 1);
+                    save_bank(m_file.getFullPathName().toStdString().c_str(), m_bank.get());
+                    m_listBox->selectRow(std::min(m_listBox->getSelectedRow() + 1, m_listBox->getModel()->getNumRows()), false, true);
+                }
+            };
+
             if (withModificationProtection) {
                 m_fileLock.reset(new juce::ToggleButton());
                 addAndMakeVisible(*m_fileLock);
