@@ -418,6 +418,8 @@ YSFX_API uint32_t ysfx_preset_exists(ysfx_bank_t *bank_in, const char* preset_na
 YSFX_API ysfx_bank_t *ysfx_delete_preset_from_bank(ysfx_bank_t *bank_in, const char* preset_name);
 // renames a preset from the bank and returns a *new* bank without freeing the old bank
 YSFX_API ysfx_bank_t *ysfx_rename_preset_from_bank(ysfx_bank_t *bank_in, const char* preset_name, const char* new_preset_name);
+// swaps two presets in a bank (swaps in place!)
+YSFX_API void ysfx_swap_preset_in_bank(ysfx_bank_t *bank, int32_t preset_idx_1, int32_t preset_idx_2);
 
 // type of a function which can enumerate VM variables; returning 0 ends the search
 typedef int (ysfx_enum_vars_callback_t)(const char *name, ysfx_real *var, void *userdata);
