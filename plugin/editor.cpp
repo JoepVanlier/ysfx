@@ -630,6 +630,14 @@ void YsfxEditor::Impl::saveScaling()
                 m_pluginProperties->setValue(getKey("_divider"), m_divider->m_position);
             }
         }
+
+        if (m_presetWindow) {
+            auto position = m_presetWindow->getPosition();
+            m_pluginProperties->setValue("preset_manager_x", position.getX());
+            m_pluginProperties->setValue("preset_manager_y", position.getY());
+            m_pluginProperties->setValue("preset_manager_height", m_presetWindow->getHeight());
+            m_pluginProperties->setValue("preset_manager_width", m_presetWindow->getWidth());
+        }
     }
 }
 
@@ -940,6 +948,26 @@ void YsfxEditor::Impl::openPresetWindow()
         m_presetWindow.reset(new SubWindow(TRANS("Preset Manager"), m_self->findColour(juce::DocumentWindow::backgroundColourId), juce::DocumentWindow::allButtons, true, m_windowBehaviour));
         m_presetWindow->setResizable(true, false);
         m_presetWindow->setContentNonOwned(m_rplView.get(), true);
+    
+        juce::ComponentBoundsConstrainer constraint;
+        constraint.setMinimumOnscreenAmounts(50, 50, 50, 50);
+    
+        auto x = m_pluginProperties->getIntValue("preset_manager_x", -1);
+        auto y = m_pluginProperties->getIntValue("preset_manager_y", -1);
+        auto width = m_pluginProperties->getIntValue("preset_manager_width", -1);
+        auto height = m_pluginProperties->getIntValue("preset_manager_height", -1);
+
+        if (x >= 0 && y >= 0 && width > 0 && height > 0) {
+            auto savedBounds = juce::Rectangle<int>(x, y, width, height);
+
+            constraint.checkBounds(
+                savedBounds,
+                savedBounds,
+                juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea,
+                false, false, false, false
+            );
+            m_presetWindow->setBounds(savedBounds);
+        }
     }
 
     m_presetWindow->setVisible(true);
