@@ -181,6 +181,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         std::unique_ptr<juce::ToggleButton> m_fileLock;
         std::unique_ptr<juce::TextButton> m_movePresetUp;
         std::unique_ptr<juce::TextButton> m_movePresetDown;
+        std::unique_ptr<juce::TextButton> m_btnCloseFile;
 
         std::function<void(void)> m_bankUpdatedCallback;
         std::function<void(ysfx_bank_shared, std::string)> m_loadPresetCallback;
@@ -201,6 +202,9 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
 
             auto bottomRow = temp.removeFromBottom(30);
 
+            if (m_btnCloseFile) {
+                m_btnCloseFile->setBounds(bottomRow.removeFromRight(60));
+            }
             m_movePresetDown->setBounds(bottomRow.removeFromRight(60));
             m_movePresetUp->setBounds(bottomRow.removeFromRight(60));
 
@@ -247,6 +251,18 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                     }
                 }
             );
+        }
+
+        void closeFile() {
+            setFile(juce::File{});
+        }
+
+        void clearBank() {
+            m_listBox->setItems({});
+            m_listBox->updateContent();
+            m_label->setText(TRANS("No RPL loaded"), juce::dontSendNotification);
+            m_bank.reset();
+            if (m_btnCloseFile) m_btnCloseFile->setEnabled(false);
         }
 
         ysfx_bank_shared getBank()
@@ -367,7 +383,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_movePresetDown->setEnabled(false);
         }
 
-        void createUI(bool withLoad, bool withModificationProtection)
+        void createUI(bool withLoad, bool withModificationProtection, bool withClose)
         {
             m_listBox.reset(new BankItemsListBoxModel());
             m_label.reset(new juce::Label);
@@ -376,6 +392,14 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 m_btnLoadFile.reset(new juce::TextButton());
                 m_btnLoadFile->onClick = [this]() { chooseFileAndLoad(); };
                 addAndMakeVisible(*m_btnLoadFile);
+            }
+
+            if (withClose) {
+                m_btnCloseFile.reset(new juce::TextButton());
+                m_btnCloseFile->onClick = [this]() { closeFile(); };
+                m_btnCloseFile->setButtonText(TRANS("Close"));
+                m_btnCloseFile->setTooltip(TRANS("Close RPL file"));
+                addAndMakeVisible(*m_btnCloseFile);
             }
 
             m_movePresetUp.reset(new juce::TextButton());
@@ -433,8 +457,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         void tryRead()
         {
             if (m_file == juce::File{}) {
-                m_listBox->setItems({});
-                m_listBox->updateContent();
+                clearBank();
                 repaint();
                 return;
             }
@@ -466,6 +489,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_listBox->updateContent();
             m_label->setText(m_file.getFileName() + juce::String(" (") + juce::String(m_bank->name) + juce::String(")"), juce::dontSendNotification);
             repaint();
+            if (m_btnCloseFile) m_btnCloseFile->setEnabled(true);
         }
 
         void setFile(juce::File file)
@@ -595,13 +619,13 @@ void YsfxRPLView::setLoadPresetCallback(std::function<void(ysfx_bank_shared, std
 
 void YsfxRPLView::Impl::createUI()
 {
-    m_left.createUI(false, false);
+    m_left.createUI(false, false, false);
     m_left.setLabelTooltip("Location of the currently loaded presets");
     m_self->addAndMakeVisible(m_left);
     m_left.setBankUpdatedCallback([this](void) { if (m_bankUpdateCallback) m_bankUpdateCallback(); });
     m_left.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_left.getBank(), name); });
 
-    m_right.createUI(true, true);
+    m_right.createUI(true, true, true);
     m_right.setLabelTooltip("Click to select preset file to import from");
     m_self->addAndMakeVisible(m_right);
     m_right.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_right.getBank(), name); });
