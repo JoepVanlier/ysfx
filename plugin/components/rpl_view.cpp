@@ -164,6 +164,11 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
                 });
             }
         }
+
+        void backgroundClicked(const juce::MouseEvent &_) override
+        {
+            deselectAllRows();
+        }
 };
 
 class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
