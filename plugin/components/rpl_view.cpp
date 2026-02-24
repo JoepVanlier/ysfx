@@ -172,6 +172,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
         juce::File m_file;
         ysfx_bank_shared m_bank;
         int m_useNativeFilePicker{1};
+        bool m_alignLeft{false};
 
         std::unique_ptr<juce::AlertWindow> m_editDialog;
         std::unique_ptr<BankItemsListBoxModel> m_listBox;
@@ -203,10 +204,15 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             auto bottomRow = temp.removeFromBottom(30);
 
             if (m_btnCloseFile) {
-                m_btnCloseFile->setBounds(bottomRow.removeFromRight(60));
+                m_btnCloseFile->setBounds(bottomRow.removeFromRight(80));
             }
-            m_movePresetDown->setBounds(bottomRow.removeFromRight(60));
-            m_movePresetUp->setBounds(bottomRow.removeFromRight(60));
+            if (m_alignLeft) {
+                m_movePresetDown->setBounds(bottomRow.removeFromLeft(80));
+                m_movePresetUp->setBounds(bottomRow.removeFromLeft(80));
+            } else {
+                m_movePresetDown->setBounds(bottomRow.removeFromRight(80));
+                m_movePresetUp->setBounds(bottomRow.removeFromRight(80));
+            }
 
             if (m_fileLock) {    
                 m_fileLock->setButtonText(TRANS("Allow modification"));
@@ -383,8 +389,10 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             m_movePresetDown->setEnabled(false);
         }
 
-        void createUI(bool withLoad, bool withModificationProtection, bool withClose)
+        void createUI(bool withLoad, bool withModificationProtection, bool withClose, bool alignLeft)
         {
+            m_alignLeft = alignLeft;
+
             m_listBox.reset(new BankItemsListBoxModel());
             m_label.reset(new juce::Label);
             m_label->setText(TRANS("No RPL loaded"), juce::dontSendNotification);
@@ -619,13 +627,13 @@ void YsfxRPLView::setLoadPresetCallback(std::function<void(ysfx_bank_shared, std
 
 void YsfxRPLView::Impl::createUI()
 {
-    m_left.createUI(false, false, false);
+    m_left.createUI(false, false, false, true);
     m_left.setLabelTooltip("Location of the currently loaded presets");
     m_self->addAndMakeVisible(m_left);
     m_left.setBankUpdatedCallback([this](void) { if (m_bankUpdateCallback) m_bankUpdateCallback(); });
     m_left.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_left.getBank(), name); });
 
-    m_right.createUI(true, true, true);
+    m_right.createUI(true, true, true, false);
     m_right.setLabelTooltip("Click to select preset file to import from");
     m_self->addAndMakeVisible(m_right);
     m_right.setLoadPresetCallback([this](ysfx_bank_shared bank, std::string name) { if (m_loadPresetCallback) this->m_loadPresetCallback(m_right.getBank(), name); });
