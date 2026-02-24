@@ -252,7 +252,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             if (m_file != juce::File{}) {
                 initialPath = m_file.getParentDirectory();
             }
-            m_fileChooser.reset(new juce::FileChooser(TRANS("Open bank..."), initialPath, juce::String(), m_useNativeFilePicker));
+            m_fileChooser.reset(new juce::FileChooser(TRANS("Open bank..."), initialPath, juce::String("*.rpl"), m_useNativeFilePicker));
             m_fileChooser->launchAsync(
                 juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectFiles,
                 [this](const juce::FileChooser &chooser) {
