@@ -489,6 +489,19 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
                 }
 
                 ysfx_bank_t* bank = load_bank(m_file.getFullPathName().toStdString().c_str());
+                if (!bank) {
+                    juce::AlertWindow::showAsync(
+                        juce::MessageBoxOptions()
+                            .withIconType(juce::MessageBoxIconType::WarningIcon)
+                            .withTitle("Error")
+                            .withMessage(m_file.getFileName().toStdString().c_str() + TRANS(" is not a valid RPL file."))
+                            .withButton("OK"),
+                        nullptr
+                    );
+                    m_file = juce::File{};
+
+                    return;
+                }
                 m_bank = make_ysfx_bank_shared(bank);
 
                 m_lastLoad = newTime;
