@@ -397,16 +397,16 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             if (withClose) {
                 m_btnCloseFile.reset(new juce::TextButton());
                 m_btnCloseFile->onClick = [this]() { closeFile(); };
-                m_btnCloseFile->setButtonText(TRANS("Close"));
-                m_btnCloseFile->setTooltip(TRANS("Close RPL file"));
+                m_btnCloseFile->setButtonText(TRANS("Clear"));
+                m_btnCloseFile->setTooltip(TRANS("Close RPL file and clear preset list"));
                 addAndMakeVisible(*m_btnCloseFile);
             }
 
             m_movePresetUp.reset(new juce::TextButton());
-            m_movePresetUp->setButtonText(TRANS("Up"));
+            m_movePresetUp->setButtonText(TRANS("Move up"));
             m_movePresetUp->setTooltip(TRANS("Move preset up"));
             addAndMakeVisible(*m_movePresetUp);
-
+            
             m_movePresetUp->onClick = [this]() {
                 if (m_listBox->getSelectedRow() > 0 && getBank()) {
                     ysfx_swap_preset_in_bank(m_bank.get(), m_listBox->getSelectedRow() - 1, m_listBox->getSelectedRow());
@@ -416,7 +416,7 @@ class LoadedBank : public juce::Component, public juce::DragAndDropContainer {
             };
             
             m_movePresetDown.reset(new juce::TextButton());
-            m_movePresetDown->setButtonText(TRANS("Down"));
+            m_movePresetDown->setButtonText(TRANS("Move down"));
             m_movePresetDown->setTooltip(TRANS("Move preset down"));
             addAndMakeVisible(*m_movePresetDown);
             
