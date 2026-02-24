@@ -73,7 +73,7 @@ class BankItemsListBoxModel final : public juce::ListBox, public juce::ListBoxMo
             if (rowNumber < 0) return;
 
             if (rowIsSelected)
-                g.fillAll (juce::Colours::lightblue);
+                g.fillAll(findColour(ListBox::backgroundColourId).contrasting(0.2f));
 
             g.setColour(juce::LookAndFeel::getDefaultLookAndFeel().findColour(juce::Label::textColourId));
             g.setFont((float) height * 0.7f);
