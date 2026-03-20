@@ -638,6 +638,8 @@ void YsfxEditor::Impl::saveScaling()
             m_pluginProperties->setValue("preset_manager_height", m_presetWindow->getHeight());
             m_pluginProperties->setValue("preset_manager_width", m_presetWindow->getWidth());
         }
+
+        m_pluginProperties->setValue("ysfx_ide_font_size", m_ideView->getFontSize());  
     }
 }
 
@@ -1069,6 +1071,9 @@ void YsfxEditor::Impl::initializeProperties()
         initProperty("ysfx_maintain_serialization_undo", 1, m_keepUndoState);
         initProperty("ysfx_force_software_rendering", 0, m_softwareRenderer);
         initProperty("ysfx_use_native_file_picker", 1, m_useNativeFilePicker);
+
+        if (m_pluginProperties->containsKey("ysfx_ide_font_size"))
+            m_ideView->setFontSize(m_pluginProperties->getIntValue("ysfx_ide_font_size"));
 
         auto accessibility = juce::String("ysfx_shortcuts");
         if (m_pluginProperties->containsKey(accessibility)) {

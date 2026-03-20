@@ -51,8 +51,8 @@ class CodeEditor : public juce::CodeEditorComponent
 {
     public:
         CodeEditor(
-            juce::CodeDocument& doc, juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback
-        ) : CodeEditorComponent(doc, tokenizer), m_keyPressCallback{keyPressCallback}, m_dblClickCallback{dblClickCallback} {}
+            juce::CodeDocument& doc, juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback, std::function<bool(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)> wheelCallback
+        ) : CodeEditorComponent(doc, tokenizer), m_keyPressCallback{keyPressCallback}, m_dblClickCallback{dblClickCallback}, m_wheelCallback(wheelCallback) {}
         
         bool keyPressed(const juce::KeyPress &key) override 
         {
@@ -68,6 +68,25 @@ class CodeEditor : public juce::CodeEditorComponent
             if (!m_dblClickCallback(e.x, e.y)) {
                 return juce::CodeEditorComponent::mouseDoubleClick(e);
             };
+        }
+
+        void mouseWheelMove(const juce::MouseEvent &e, const juce::MouseWheelDetails& wheel) override
+        {
+            if (!m_wheelCallback(e, wheel)) {
+                return juce::CodeEditorComponent::mouseWheelMove(e, wheel);
+            };
+        }
+
+        void setFontSize(float size)
+        {
+            auto currentFont = getFont();
+            currentFont.setHeight(size);
+            setFont(currentFont);
+        }
+
+        float getFontSize()
+        {
+            return getFont().getHeight();
         }
 
         juce::String getLineAt(int x, int y) const {
@@ -120,16 +139,17 @@ class CodeEditor : public juce::CodeEditorComponent
     private:
         std::function<bool(const juce::KeyPress&)> m_keyPressCallback;
         std::function<bool(int x, int y)> m_dblClickCallback;
+        std::function<bool(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)> m_wheelCallback;
 };
 
 
 class YSFXCodeEditor : public juce::CodeDocument::Listener
 {
     public:
-        YSFXCodeEditor(juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback) {
+        YSFXCodeEditor(juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback, std::function<bool(const juce::MouseEvent &e, const juce::MouseWheelDetails& wheel)> wheelCallback) {
             m_document = std::make_unique<YSFXCodeDocument>();
             m_document->addListener(this);
-            m_editor = std::make_unique<CodeEditor>(*m_document, tokenizer, keyPressCallback, dblClickCallback);
+            m_editor = std::make_unique<CodeEditor>(*m_document, tokenizer, keyPressCallback, dblClickCallback, wheelCallback);
             m_editor->setVisible(false);
         }
         ~YSFXCodeEditor() override {
@@ -170,6 +190,15 @@ class YSFXCodeEditor : public juce::CodeDocument::Listener
             } else return false;
         }
         int search(juce::String text, bool reverse = false) { return m_editor->search(text, reverse); }
+        
+        float getFontSize() {
+            return m_editor->getFontSize();
+        }
+
+        void setFontSize(float size) {
+            m_editor->setFontSize(size);
+        }
+
 
         bool hasFocus() {
             juce::Component *focus = m_editor->getCurrentlyFocusedComponent();
