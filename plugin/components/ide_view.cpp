@@ -59,6 +59,7 @@ struct YsfxIDEView::Impl {
     juce::Array<VariableUI> m_vars;
     std::unique_ptr<juce::Timer> m_varsUpdateTimer;
     juce::String searchString{""};
+    float m_fontSize{0.0f};
 
     bool m_forceUpdate{false};
     size_t m_currentEditorIndex{0};
@@ -79,6 +80,9 @@ struct YsfxIDEView::Impl {
     void connectUI();
     void relayoutUI();
     void relayoutUILater();
+
+    float getFontSize();
+    void setFontSize(float fontSize);
 };
 
 YsfxIDEView::YsfxIDEView()
@@ -143,6 +147,16 @@ void YsfxIDEView::resized()
 void YsfxIDEView::focusOnCodeEditor()
 {
     m_impl->m_forceUpdate = true;
+}
+
+float YsfxIDEView::getFontSize()
+{
+    return m_impl->getFontSize();
+}
+
+void YsfxIDEView::setFontSize(float size)
+{
+    m_impl->setFontSize(size);
 }
 
 std::shared_ptr<YSFXCodeEditor> YsfxIDEView::Impl::getCurrentEditor()
@@ -338,6 +352,26 @@ void YsfxIDEView::Impl::setCurrentEditor(int editorIndex)
     relayoutUILater();
 }
 
+void YsfxIDEView::Impl::setFontSize(float fontSize)
+{
+    m_fontSize = fontSize;
+    for (const auto& editor : m_editors)
+        editor->setFontSize(fontSize);
+    
+    auto font = m_searchBox->getFont();
+    font.setHeight(fontSize);
+    m_searchBox->setFont(font);
+    m_searchEditor->setFont(font);
+    m_lblVariablesHeading->setFont(font);
+    m_lblStatus->setFont(font);
+    relayoutUILater();
+}
+
+float YsfxIDEView::Impl::getFontSize()
+{
+    return m_fontSize;
+}
+
 std::shared_ptr<YSFXCodeEditor> YsfxIDEView::Impl::addEditor()
 {
     auto keyPressCallback = [this](const juce::KeyPress& key) -> bool {
@@ -440,14 +474,31 @@ std::shared_ptr<YSFXCodeEditor> YsfxIDEView::Impl::addEditor()
         return false;
     };
 
-    m_editors.push_back(std::make_shared<YSFXCodeEditor>(m_tokenizer.get(), keyPressCallback, dblClickCallback));
+    auto wheelCallback = [this](const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) -> bool {
+        if (e.mods.isCtrlDown())
+        {
+            auto fontSize = this->getFontSize();
+
+            fontSize += wheel.deltaY * 2.0f;
+            fontSize = juce::jlimit(8.0f, 40.0f, fontSize);
+
+            this->setFontSize(fontSize);
+            
+            return true;
+        }
+        return false;
+    };
+
+    m_editors.push_back(std::make_shared<YSFXCodeEditor>(m_tokenizer.get(), keyPressCallback, dblClickCallback, wheelCallback));
     m_self->addAndMakeVisible(m_editors.back()->getVisibleComponent());
+    if (m_fontSize) m_editors.back()->setFontSize(m_fontSize);
     return m_editors.back();
 }
 
 void YsfxIDEView::Impl::createUI()
 {
     addEditor();
+    m_fontSize = m_editors[m_currentEditorIndex]->getFontSize();
     m_btnSave.reset(new juce::TextButton(TRANS("Save")));
     m_btnSave->addShortcut(juce::KeyPress('s', juce::ModifierKeys::ctrlModifier, 0));
     m_self->addAndMakeVisible(*m_btnSave);
@@ -522,7 +573,7 @@ void YsfxIDEView::Impl::connectUI()
 
 void YsfxIDEView::Impl::relayoutUI()
 {
-    const int statusBarHeight = 20;
+    const int statusBarHeight = 4 + m_fontSize;
     const int topHeight = 50;
     juce::Rectangle<int> temp;
     const juce::Rectangle<int> bounds = m_self->getLocalBounds();
@@ -554,12 +605,12 @@ void YsfxIDEView::Impl::relayoutUI()
     temp = topRow.reduced(10, 10);
     m_btnSave->setBounds(temp.removeFromLeft(100));
     m_btnUpdate->setBounds(temp.removeFromLeft(100));
-    
+
     ///
     temp = debugArea;
     temp.removeFromBottom(statusBarHeight);
     m_lblVariablesHeading->setBounds(temp.removeFromTop(50).reduced(10, 10));
-    m_searchBox->setBounds(temp.removeFromBottom(25).reduced(10, 0));
+    m_searchBox->setBounds(temp.removeFromBottom(statusBarHeight + 5).reduced(10, 0));
     m_vpVariables->setBounds(temp.reduced(10, 10));
 
     const int varRowHeight = 20;
@@ -572,6 +623,11 @@ void YsfxIDEView::Impl::relayoutUI()
         juce::Rectangle<int> varTemp = varRow;
         var.m_lblValue->setBounds(varTemp.removeFromRight(100));
         var.m_lblName->setBounds(varTemp);
+
+        auto font = var.m_lblValue->getFont();
+        font.setHeight(m_fontSize);
+        var.m_lblValue->setFont(font);
+        var.m_lblName->setFont(font);
     }
     m_compVariables->setSize(m_vpVariables->getWidth(), m_vars.size() * varRowHeight);
 
