@@ -104,8 +104,9 @@ jobs:
       want_static_crt: ${{matrix.want_static_crt}}
       build_type: Release
       num_jobs: 2
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Install dependencies (Linux)
@@ -124,8 +125,9 @@ jobs:
             libxss-dev
             g++-10
             gcc-10
-      - uses: ilammy/setup-nasm@v1
+      - name: Install NASM (Windows)
         if: ${{matrix.os-type == 'Windows'}}
+        run: choco install nasm -y
       - uses: msys2/setup-msys2@v2
         if: ${{matrix.os-type == 'MinGW'}}
         with:
@@ -202,24 +204,24 @@ jobs:
         run: |
           mkdir -p AU
           cp -r ./build/*_artefacts/${{env.build_type}}/AU/*.component ./AU
-      - uses: actions/upload-artifact@v4
-        if: ${{matrix.artifacts == 'yes'}} && {{matrix.os-type != 'MinGW'}}
+      - uses: actions/upload-artifact@v6
+        if: ${{ matrix.artifacts == 'yes' && matrix.os-type != 'MinGW' }}
         with:
           name: YSFX ${{matrix.display-name}} VST3
           path: |
             ${{runner.workspace}}/VST3/*
             ${{runner.workspace}}/LICENSE
             ${{runner.workspace}}/README
-      - uses: actions/upload-artifact@v4
-        if: ${{matrix.artifacts == 'yes'}} && {{matrix.os-type != 'MinGW'}}
+      - uses: actions/upload-artifact@v6
+        if: ${{ matrix.artifacts == 'yes' && matrix.os-type != 'MinGW' }}
         with:
           name: YSFX ${{matrix.display-name}} CLAP
           path: |
             ${{runner.workspace}}/CLAP/*
             ${{runner.workspace}}/LICENSE
             ${{runner.workspace}}/README
-      - uses: actions/upload-artifact@v4
-        if: ${{matrix.os-type == 'macOS' && matrix.artifacts == 'yes'}}
+      - uses: actions/upload-artifact@v6
+        if: ${{matrix.os-type == 'macOS'   && matrix.artifacts == 'yes'}}
         with:
           name: YSFX ${{matrix.display-name}} AU
           path: |
