@@ -76,7 +76,7 @@ jobs:
             cmake_arch: arm64
           - name: macos_x64
             display-name: macOS x86_64
-            runs-on: macos-13
+            runs-on: macos-14-intel
             os-type: macOS
             shell: bash
             artifacts: yes
