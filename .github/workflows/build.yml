@@ -68,7 +68,7 @@ jobs:
             want_static_crt: OFF
           - name: macos_arm64
             display-name: macOS ARM64
-            runs-on: macos-latest
+            runs-on: macos-15
             os-type: macOS
             shell: bash
             artifacts: yes
