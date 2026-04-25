@@ -66,13 +66,22 @@ jobs:
             shell: bash
             artifacts: yes
             want_static_crt: OFF
-          - name: macos
-            display-name: macOS
-            runs-on: macos-latest
+          - name: macos_arm64
+            display-name: macOS ARM64
+            runs-on: macos-15
             os-type: macOS
             shell: bash
             artifacts: yes
             want_static_crt: OFF
+            cmake_arch: arm64
+          - name: macos_x64
+            display-name: macOS x86_64
+            runs-on: macos-14-large
+            os-type: macOS
+            shell: bash
+            artifacts: yes
+            want_static_crt: OFF
+            cmake_arch: x86_64
           - name: mingw32
             display-name: MSYS MinGW 32-bit
             runs-on: windows-2025
@@ -149,11 +158,11 @@ jobs:
       - name: Configure CMake (macOS)
         if: ${{matrix.os-type == 'macOS'}}
         working-directory: ${{runner.workspace}}/build
-        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DYSFX_TESTS=ON
+        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="${{matrix.cmake_arch}}" -DYSFX_TESTS=ON
       - name: Configure CMake (Linux)
         if: ${{matrix.os-type == 'Linux'}}
         working-directory: ${{runner.workspace}}/build
-        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DYSFX_TESTS=ON
+        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DYSFX_TESTS=ON
         env:
           CC:   gcc-10
           CXX:  g++-10
