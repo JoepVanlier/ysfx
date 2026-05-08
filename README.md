@@ -24,19 +24,6 @@ macOS systems.
 Installation should be as easy as dropping the plugin into your VST3, AU or CLAP
 folder. 
 
-#### Windows
-
-First install the MSVC redistributable.
-
-You can download the 64-bit version here: https://aka.ms/vs/17/release/vc_redist.x64.exe
-And the 32 bit version here: https://aka.ms/vs/17/release/vc_redist.x86.exe
-
-Note that the plugin may crash if you have an outdated version of the MSVC
-redistributable on your system.
-
-Alternatively, you can use the portable version of the plugin, which has the
-redistributable baked into the plugin.
-
 #### macOS
 
 The macOS builds are Intel 64-bit only and require macOS 10.15 Catalina or
@@ -49,24 +36,6 @@ run (since it is not from an identified developer). Usually it involves invoking
   `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx64 instrument.vst3`
 
 Where you should fill in the path where the plugin is located on your system.
-
-# Troubleshooting FAQ
-
-#### - I'm running ysfx64 and "Load" doesn't bring up a file browser.
-
-On some versions of Linux (reported for Debian Trixie at least), the native file
-file chooser may fail to open. If this happens, you can set an option in the
-preferences file to use a built-in file browsing dialog instead.
-
-- Go to your application config folder, (likely `~/.config`, though this depends on
-your system configuration).
-- Locate a file named  `ysfx_saike_mod.prefs`.
-- Open the file and find the field `ysfx_use_native_file_picker`.
-- Set its value to `0` and save the file (make sure the plugin is *not* running 
-while you make this change).
-- Next time you run the plugin, it should use the fallback file dialog.
-
-It may not be as nice as native, but at least you'll be able to load files.
 
 # Helping out
 
@@ -95,10 +64,6 @@ Some time after the realization of this project, Cockos announced the release of
 JSFX as open source under the LGPL. This does not affect the development of this
 project, which remains a custom implementation based on the liberally licensed
 bits of the WDL.
-
-Unfortunately, the original maintainer (jpcima) seems to have disappeared, so 
-I (Joep Vanlier) have decided to fork the project to update it with some more 
-recent JSFX features and bugfixes.
 
 # Usage notes
 
@@ -168,19 +133,3 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DCMAKE_OSX_ARCHITECTURES=x86_64 ..
 cmake --build .
 ```
-
-## JSFX resources
-
-There are many JSFX out there!
-
-- Saike (my own): https://github.com/JoepVanlier/JSFX
-- Geraint Luff: https://github.com/geraintluff/jsfx
-- tilr JSFX: https://github.com/tiagolr/tilr_jsfx
-- Mawi JSFX: https://github.com/mawi-design/JSFX
-- Justin Johnson: https://github.com/Justin-Johnson/ReJJ
-- Tukan Studios: https://github.com/TukanStudios/TUKAN_STUDIOS_PLUGINS
-- Jozmac: https://github.com/jozmac/reapack-jm
-- JClones: https://github.com/JClones/JSFXClones
-- Sonic Anomaly: https://github.com/Sonic-Anomaly/Sonic-Anomaly-JSFX
-
-For a list with many more, please see: https://www.keithhaydon.com/Reaper/JSFX2.pdf
