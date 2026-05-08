@@ -67,8 +67,10 @@ jobs:
             artifacts: yes
             want_static_crt: OFF
           - name: macos
-            display-name: macOS
-            runs-on: macos-latest
+            display-name: macOS Intel 64-bit
+            runs-on: macos-15-intel
+            platform: x86_64
+            release-arch: macOS64
             os-type: macOS
             shell: bash
             artifacts: yes
@@ -149,11 +151,11 @@ jobs:
       - name: Configure CMake (macOS)
         if: ${{matrix.os-type == 'macOS'}}
         working-directory: ${{runner.workspace}}/build
-        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DYSFX_TESTS=ON
+        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.15" -DCMAKE_OSX_ARCHITECTURES="x86_64" -DYSFX64_MACOS_INTEL_CPU="core2" -DYSFX_TESTS=ON
       - name: Configure CMake (Linux)
         if: ${{matrix.os-type == 'Linux'}}
         working-directory: ${{runner.workspace}}/build
-        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DYSFX_TESTS=ON
+        run: cmake "${GITHUB_WORKSPACE}" -DCMAKE_BUILD_TYPE="${build_type}" -DYSFX_TESTS=ON
         env:
           CC:   gcc-10
           CXX:  g++-10
@@ -207,7 +209,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: ${{ matrix.artifacts == 'yes' && matrix.os-type != 'MinGW' }}
         with:
-          name: YSFX ${{matrix.display-name}} VST3
+          name: YSFX64 ${{matrix.display-name}} VST3
           path: |
             ${{runner.workspace}}/VST3/*
             ${{runner.workspace}}/LICENSE
@@ -215,7 +217,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: ${{ matrix.artifacts == 'yes' && matrix.os-type != 'MinGW' }}
         with:
-          name: YSFX ${{matrix.display-name}} CLAP
+          name: YSFX64 ${{matrix.display-name}} CLAP
           path: |
             ${{runner.workspace}}/CLAP/*
             ${{runner.workspace}}/LICENSE
@@ -223,7 +225,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: ${{matrix.os-type == 'macOS'   && matrix.artifacts == 'yes'}}
         with:
-          name: YSFX ${{matrix.display-name}} AU
+          name: YSFX64 ${{matrix.display-name}} AU
           path: |
             ${{runner.workspace}}/AU/*
             ${{runner.workspace}}/LICENSE

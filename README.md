@@ -1,6 +1,6 @@
-# ysfx
+# ysfx64
 
-Hosting library and audio plugin for JSFX
+Intel macOS-focused hosting library and audio plugin for JSFX
 
 ![capture](docs/capture.png)
 
@@ -13,6 +13,11 @@ natively by hosting software.
 This contains a hosting library, providing a JSFX compiler and runtime.
 In addition, there is an audio plugin which can act as a JSFX host in a digital
 audio workstation.
+
+ysfx64 is an Intel-only fork of ysfx. The macOS plugin build targets x86_64
+only, uses macOS 10.15 as its deployment target, and avoids universal
+Apple Silicon slices so the shipped binaries remain compatible with older Intel
+macOS systems.
 
 ## Installation
 
@@ -34,17 +39,20 @@ redistributable baked into the plugin.
 
 #### macOS
 
+The macOS builds are Intel 64-bit only and require macOS 10.15 Catalina or
+newer.
+
 Binaries are not signed. That means you have to explicitly allow it to be 
 run (since it is not from an identified developer). Usually it involves invoking:
 
-  `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx-s FX.vst3`
-  `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx-s instrument.vst3`
+  `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx64 FX.vst3`
+  `xattr -dr com.apple.quarantine /Path/To/Plugin/VST3/ysfx64 instrument.vst3`
 
 Where you should fill in the path where the plugin is located on your system.
 
 # Troubleshooting FAQ
 
-#### - I'm running YSFX and "Load" doesn't bring up a file browser.
+#### - I'm running ysfx64 and "Load" doesn't bring up a file browser.
 
 On some versions of Linux (reported for Debian Trixie at least), the native file
 file chooser may fail to open. If this happens, you can set an option in the
@@ -71,7 +79,8 @@ I will do my best to fix it. Thank you!
 # Forked Project
 
 Note, this is a fork of YSFX with a few modifications to support newer JSFX
-features and fix some existing bugs.
+features, fix some existing bugs, and keep current macOS builds compatible with
+older Intel machines.
 
 ## Remarks
 
@@ -99,8 +108,8 @@ user folders, if these exist.
 The effects are source code files which end with the extension `.jsfx`, or with
 no extension at all.
 
-Note that, unlike REAPER, ysfx will let you install JSFX wherever you want.
-If you use effects from a custom folder, ysfx will usually figure things out, but
+Note that, unlike REAPER, ysfx64 will let you install JSFX wherever you want.
+If you use effects from a custom folder, ysfx64 will usually figure things out, but
 not always.
 
 The ideal hierarchy is one where there exists at least a pair of folders named
@@ -113,12 +122,12 @@ Example:
 
 ## Differences to JSFX (for developers)
 
-There are still quite a few differences between `ysfx` and `jsfx` and some things may not work as well.
+There are still quite a few differences between `ysfx64` and `jsfx` and some things may not work as well.
 Please report bugs and missing features, but also be mindful of the limited time I can spend on fixing them.
 
 I will keep a list of differences I have noticed so far here:
 
-- Do not load images in `@init`, it is terrible for performance in `ysfx`.
+- Do not load images in `@init`, it is terrible for performance in `ysfx64`.
 While it will work, it will reload those images on every `@init`.
 Better is to either use the file syntax at the top of the script, e.g.
 
@@ -141,8 +150,8 @@ So something like:
 
 ## Download development builds
 
-You can find the most recent builds [here](https://github.com/JoepVanlier/ysfx/releases).
-Note that I don't know how to do code signing yet, so the Mac builds are not signed.
+You can find the most recent builds [here](https://github.com/subhankardas15071992-cloud/ysfx64/releases).
+Note that the Mac builds are not signed.
 
 ## Building
 
@@ -151,12 +160,12 @@ equipped with Git and CMake. One can then build the library and the audio
 plugin, by entering commands as follows:
 
 ```
-git clone https://github.com/JoepVanlier/ysfx.git
-cd ysfx
+git clone https://github.com/subhankardas15071992-cloud/ysfx64.git
+cd ysfx64
 git submodule update --init --recursive
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DCMAKE_OSX_ARCHITECTURES=x86_64 ..
 cmake --build .
 ```
 

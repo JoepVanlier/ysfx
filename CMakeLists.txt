@@ -16,7 +16,29 @@
 #
 
 cmake_minimum_required(VERSION 3.15)
-project(ysfx VERSION "0.0.45" LANGUAGES C CXX ASM)
+
+set(YSFX64_MACOS_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version supported by ysfx64.")
+set(YSFX64_MACOS_ARCHITECTURES "x86_64" CACHE STRING "macOS architectures supported by ysfx64.")
+set(YSFX64_MACOS_INTEL_CPU "core2" CACHE STRING "Oldest Intel CPU family that ysfx64 may optimize for on macOS.")
+
+if(CMAKE_HOST_APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "${YSFX64_MACOS_DEPLOYMENT_TARGET}" CACHE STRING "Minimum macOS version supported by ysfx64." FORCE)
+    set(CMAKE_OSX_ARCHITECTURES "${YSFX64_MACOS_ARCHITECTURES}" CACHE STRING "macOS architectures supported by ysfx64." FORCE)
+endif()
+
+project(ysfx64 VERSION "0.0.45" LANGUAGES C CXX ASM)
+
+if(APPLE)
+    if(NOT CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+        message(FATAL_ERROR "ysfx64 is an Intel-only macOS build. Set CMAKE_OSX_ARCHITECTURES=x86_64.")
+    endif()
+
+    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET VERSION_EQUAL "10.15")
+        message(FATAL_ERROR "ysfx64 macOS builds must target macOS 10.15 for old Intel compatibility.")
+    endif()
+
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-march=${YSFX64_MACOS_INTEL_CPU}>")
+endif()
 
 # check if we are building from this project, or are imported by another
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)

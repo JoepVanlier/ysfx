@@ -44,26 +44,29 @@ add_subdirectory(thirdparty/clap-juce-extensions EXCLUDE_FROM_ALL)
 function(add_new_target target_name is_synth)
     if(${is_synth})
         set(SUFFIX " instrument")
-        set(CODE_END "y")
+        set(PLUGIN_CODE "y64y")
+        set(BUNDLE_SUFFIX ".instrument")
         set(CLAP_SUFFIX "")
         set(CATEGORY "Instrument")
         set(CLAP_TYPE "instrument")
     else()
         set(SUFFIX " FX")
-        set(CODE_END "z")
+        set(PLUGIN_CODE "y64z")
+        set(BUNDLE_SUFFIX ".fx")
         set(CLAP_SUFFIX "-fx")
         set(CATEGORY "Fx")
         set(CLAP_TYPE "audio-effect")
     endif()
+    set(CLAP_BUNDLE_NAME "ysfx64${SUFFIX}.clap")
 
     juce_add_plugin("${target_name}"
-        PLUGIN_CODE "ysf${CODE_END}"
+        PLUGIN_CODE "${PLUGIN_CODE}"
         PLUGIN_MANUFACTURER_CODE "S4IK"
-        PRODUCT_NAME "ysfx-s${SUFFIX}"
-        JUCE_PLUGIN_NAME "ysfx-s${SUFFIX}"
+        PRODUCT_NAME "ysfx64${SUFFIX}"
+        JUCE_PLUGIN_NAME "ysfx64${SUFFIX}"
         JUCE_DESCRIPTION "Host for JSFX plugins"
         COMPANY_NAME "Jean Pierre Cimalando / Joep Vanlier"
-        BUNDLE_ID "Jean_Pierre_Cimalando__Joep_Vanlier"
+        BUNDLE_ID "org.saike.ysfx64${BUNDLE_SUFFIX}"
         FORMATS VST3 AU
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT TRUE
@@ -145,14 +148,28 @@ function(add_new_target target_name is_synth)
 
     clap_juce_extensions_plugin(
         TARGET "${target_name}"
-        PLUGIN_NAME "ysfx-s${SUFFIX}"
-        CLAP_ID "org.saike.ysfx-s${CLAP_SUFFIX}"
+        PLUGIN_NAME "ysfx64${SUFFIX}"
+        CLAP_ID "org.saike.ysfx64${CLAP_SUFFIX}"
         CLAP_FEATURES "${CLAP_TYPE}"
         CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 64
         CLAP_USE_JUCE_PARAMETER_RANGES DISCRETE
         MANUFACTURER_NAME "Sai'ke"
         MANUFACTURER_CODE S4IK)
+
+    if(APPLE AND YSFX_PLUGIN_COPY)
+        add_custom_command(TARGET "${target_name}_CLAP" POST_BUILD
+            COMMAND codesign --force --sign - "$<TARGET_BUNDLE_DIR:${target_name}_CLAP>"
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "$ENV{HOME}/Library/Audio/Plug-Ins/CLAP"
+            COMMAND "${CMAKE_COMMAND}" -E copy_directory "$<TARGET_BUNDLE_DIR:${target_name}_CLAP>" "$ENV{HOME}/Library/Audio/Plug-Ins/CLAP/${CLAP_BUNDLE_NAME}"
+            COMMENT "Ad-hoc signing and installing CLAP bundle"
+            VERBATIM)
+    elseif(APPLE)
+        add_custom_command(TARGET "${target_name}_CLAP" POST_BUILD
+            COMMAND codesign --force --sign - "$<TARGET_BUNDLE_DIR:${target_name}_CLAP>"
+            COMMENT "Ad-hoc signing CLAP bundle"
+            VERBATIM)
+    endif()
 endfunction()
 
-add_new_target(ysfx_plugin_instrument TRUE)
-add_new_target(ysfx_plugin FALSE)
+add_new_target(ysfx64_plugin_instrument TRUE)
+add_new_target(ysfx64_plugin FALSE)

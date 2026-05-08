@@ -1,5 +1,5 @@
-About YSFX
-----------
+About ysfx64
+------------
 
 This package provides a plugin to run audio and MIDI effects developed with the JSFX language. These effects exist in source code form, and they are compiled and ran natively by hosting software.
 Despite what the name might suggest, JSFX is not JavaScript. These technologies are unrelated to each other.
@@ -20,4 +20,4 @@ Unfortunately, the original maintainer (jpcima) seems to have disappeared, so I 
 License
 -------
 
-Note that this distribution of the plugin is licensed under aGPLv3. You can find the source code that produced these binaries here: https://github.com/joepvanlier/ysfx
+Note that this distribution of the plugin is licensed under aGPLv3. You can find the source code that produced these binaries here: https://github.com/subhankardas15071992-cloud/ysfx64
