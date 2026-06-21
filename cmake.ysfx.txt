@@ -45,6 +45,8 @@ add_library(ysfx-private
         "sources/ysfx_utils_fts.cpp"
         "sources/ysfx_api_eel.cpp"
         "sources/ysfx_api_eel.hpp"
+        "sources/ysfx_gmem.cpp"
+        "sources/ysfx_gmem.hpp"
         "sources/ysfx_api_reaper.cpp"
         "sources/ysfx_api_reaper.hpp"
         "sources/ysfx_api_file.cpp"

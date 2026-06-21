@@ -179,6 +179,8 @@ struct ysfx_s {
 #endif
 
     std::atomic<uint32_t> ref_count{1};
+
+    std::string gmem_name{""};
 };
 
 ysfx_thread_id_t ysfx_get_thread_id();
