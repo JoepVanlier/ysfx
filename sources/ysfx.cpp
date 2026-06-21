@@ -25,6 +25,7 @@
 #include "ysfx_preprocess.hpp"
 #include "ysfx_api_host_interaction_dummy.hpp"
 #include "ysfx_api_gfx.hpp"
+#include "ysfx_gmem.hpp"
 #include <type_traits>
 #include <algorithm>
 #include <functional>
@@ -208,7 +209,10 @@ void ysfx_free(ysfx_t *fx)
         return;
 
     if (fx->ref_count.fetch_sub(1, std::memory_order_acq_rel) == 1)
+    {
+        ysfx_gmem_detach(fx);
         delete fx;
+    }
 }
 
 void ysfx_add_ref(ysfx_t *fx)
@@ -456,6 +460,8 @@ bool ysfx_compile(ysfx_t *fx, uint32_t compileopts)
         if (fx->source.main->header.options.prealloc != 0) {
             NSEEL_VM_preallocram(vm, (int) fx->source.main->header.options.prealloc);
         };
+
+        ysfx_gmem_attach(fx, fx->source.main->header.options.gmem);
     }
 
     //--------------------------------------------------------------------------
