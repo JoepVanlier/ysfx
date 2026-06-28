@@ -19,7 +19,7 @@ jobs:
         include:
           - name: win32
             display-name: Windows 32-bit
-            runs-on: windows-2025
+            runs-on: windows-2022
             platform: x86
             release-arch: Win32
             cmake-generator: Visual Studio 17 2022
@@ -29,7 +29,7 @@ jobs:
             want_static_crt: OFF
           - name: win64
             display-name: Windows 64-bit
-            runs-on: windows-2025
+            runs-on: windows-2022
             platform: x64
             release-arch: x64
             cmake-generator: Visual Studio 17 2022
@@ -39,7 +39,7 @@ jobs:
             want_static_crt: OFF
           - name: win32_portable
             display-name: Windows 32-bit (portable)
-            runs-on: windows-2025
+            runs-on: windows-2022
             platform: x86
             release-arch: Win32
             cmake-generator: Visual Studio 17 2022
@@ -49,7 +49,7 @@ jobs:
             want_static_crt: ON
           - name: win64_portable
             display-name: Windows 64-bit (portable)
-            runs-on: windows-2025
+            runs-on: windows-2022
             platform: x64
             release-arch: x64
             cmake-generator: Visual Studio 17 2022
@@ -128,6 +128,16 @@ jobs:
       - name: Install NASM (Windows)
         if: ${{matrix.os-type == 'Windows'}}
         run: choco install nasm -y
+      - name: Add NASM to PATH
+        if: ${{matrix.os-type == 'Windows'}}
+        shell: pwsh
+        run: |
+          $nasm = Get-ChildItem "C:\Program Files*" -Recurse -Filter nasm.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($nasm) {
+            echo $nasm.Directory.FullName | Out-File -Append $env:GITHUB_PATH
+          } else {
+            throw "NASM not found after install"
+          }
       - uses: msys2/setup-msys2@v2
         if: ${{matrix.os-type == 'MinGW'}}
         with:
