@@ -1263,6 +1263,8 @@ void ysfx_init(ysfx_t *fx)
     if (!fx->code.compiled)
         return;
 
+    bool no_init = *fx->var.ext_noinit;
+
     *fx->var.samplesblock = (EEL_F)fx->block_size;
     *fx->var.srate = fx->sample_rate;
 
@@ -1276,7 +1278,7 @@ void ysfx_init(ysfx_t *fx)
         fx->is_freshly_compiled = false;
     } else {
         // This matches the reaper behavior
-        if (!fx->has_serialize) {
+        if (!fx->has_serialize && !no_init) {
             ysfx_reinitialize_vars(fx);
         }
     }
@@ -1286,7 +1288,9 @@ void ysfx_init(ysfx_t *fx)
     for (size_t i = 0; i < fx->code.init.size(); ++i)
     {
         // TODO: @init should never run concurrently with any other thread
-        NSEEL_code_execute(fx->code.init[i].get());
+        if (!no_init) {
+            NSEEL_code_execute(fx->code.init[i].get());
+        }
     };
 
     fx->must_compute_init = false;
