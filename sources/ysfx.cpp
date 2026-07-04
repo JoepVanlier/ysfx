@@ -1258,6 +1258,17 @@ void ysfx_set_midi_capacity(ysfx_t *fx, uint32_t capacity, bool extensible)
     ysfx_midi_reserve(fx->midi.out.get(), capacity, extensible);
 }
 
+void ysfx_delayed_init(ysfx_t *fx)
+{
+    if (!fx->code.compiled)
+        return;
+
+    if (*fx->var.ext_noinit)
+        return;
+
+    fx->must_compute_init = true;
+}
+
 void ysfx_init(ysfx_t *fx)
 {
     if (!fx->code.compiled)

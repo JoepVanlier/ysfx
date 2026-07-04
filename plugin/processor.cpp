@@ -532,6 +532,12 @@ void YsfxProcessor::releaseResources()
 {
 }
 
+void YsfxProcessor::reset()
+{
+    ysfx_t *fx = m_impl->m_fx.get();
+    ysfx_delayed_init(fx);
+}
+
 void YsfxProcessor::Impl::processBlockGenerically(const void *inputs[], void *outputs[], uint32_t numIns, uint32_t numOuts, uint32_t numFrames, uint32_t processBits, juce::MidiBuffer &midiMessages)
 {
     ysfx_t *fx = m_fx.get();
