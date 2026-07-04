@@ -275,6 +275,9 @@ YSFX_API void ysfx_set_sample_rate(ysfx_t *fx, ysfx_real samplerate);
 // set the capacity of the MIDI buffer
 YSFX_API void ysfx_set_midi_capacity(ysfx_t *fx, uint32_t capacity, bool extensible);
 
+// call init on the next cycle
+YSFX_API void ysfx_delayed_init(ysfx_t *fx);
+
 // activate and invoke @init
 YSFX_API void ysfx_init(ysfx_t *fx);
 
