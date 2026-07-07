@@ -391,7 +391,14 @@ TEST_CASE("integration", "[integration]")
         "@init" "\n" 
         "gmem[0] = 12345678;" "\n";
 
-        const char *jsfx3 =
+        const char *jsfx_reader =
+        "desc:test" "\n"
+        "options:gmem=GmemTesterC" "\n"
+        "out_pin:output" "\n"
+        "@init" "\n" 
+        "a = gmem[2];" "\n";
+
+        const char *jsfx_writer =
         "desc:test" "\n"
         "options:gmem=GmemTesterC" "\n"
         "out_pin:output" "\n"
@@ -438,17 +445,26 @@ TEST_CASE("integration", "[integration]")
         REQUIRE(*slot1 == *slot1b);
         REQUIRE(*slot2 == *slot2b);
 
-        auto fx3 = get_compiled_fx(jsfx3);
-        auto slot3 = get_gmem_address(fx3.get());
-        
-        ysfx_init(fx3.get());
+        for (auto i = 0; i < 2; ++i) {
+            // Run reader only
+            auto read = get_compiled_fx(jsfx_reader);
+            ysfx_init(read.get());
+            REQUIRE(ysfx_read_var(read.get(), "a") == 0);
 
-        fx3.reset();  // Destroy fx3
-        auto fx3b = get_compiled_fx(jsfx3);
-        auto slot3b = get_gmem_address(fx3b.get());
-        REQUIRE(slot3 != slot3b);
+            // Assign to gmem, have second plugin read from gmem and verify that the value is there.
+            auto write = get_compiled_fx(jsfx_writer);
+            ysfx_init(write.get());  // Value gets written
+            REQUIRE(ysfx_read_var(read.get(), "a") == 0);
+            ysfx_init(read.get());  // Value gets read
+            REQUIRE(ysfx_read_var(read.get(), "a") == 1337);
 
-        ysfx_init(fx3b.get());
+            write.reset();  // Destroy writer
+            ysfx_init(read.get());
+            REQUIRE(ysfx_read_var(read.get(), "a") == 1337);  // Verify value still in place
+            read.reset();  // Destroy reader
+
+            // gmem should now be cleared. We repeat the cycle to validate that gmem is zero again.
+        }
     };
 
     SECTION("read_jsfx")
