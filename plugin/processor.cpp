@@ -182,6 +182,10 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
 //==============================================================================
 YsfxProcessor::YsfxProcessor()
     : AudioProcessor(BusesProperties()
+                    #ifdef YSFX_PLUGIN_FLEXIBLE_ROUTING
+                     .withInput ("Input",  juce::AudioChannelSet::discreteChannels(64), true)
+                     .withOutput("Output", juce::AudioChannelSet::discreteChannels(64), true)   
+                    #else
                      .withInput("Input", juce::AudioChannelSet::stereo(), true)
                      .withInput("Input 2", juce::AudioChannelSet::stereo(), false)
                      .withInput("Input 3", juce::AudioChannelSet::stereo(), false)
@@ -212,6 +216,7 @@ YsfxProcessor::YsfxProcessor()
                      .withOutput("Output 13", juce::AudioChannelSet::stereo(), false)
                      .withOutput("Output 14", juce::AudioChannelSet::stereo(), false)
                      .withOutput("Output 15", juce::AudioChannelSet::stereo(), false)
+                    #endif
                      ),
                      
     m_impl(new Impl)

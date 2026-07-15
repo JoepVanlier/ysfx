@@ -41,7 +41,8 @@ endif()
 
 add_subdirectory(thirdparty/clap-juce-extensions EXCLUDE_FROM_ALL)
 
-function(add_new_target target_name is_synth)
+function(add_new_target base_target_name is_synth flexible)
+
     if(${is_synth})
         set(SUFFIX " instrument")
         set(CODE_END "y")
@@ -56,11 +57,23 @@ function(add_new_target target_name is_synth)
         set(CLAP_TYPE "audio-effect")
     endif()
 
-    juce_add_plugin("${target_name}"
-        PLUGIN_CODE "ysf${CODE_END}"
+    if(${flexible})
+        set(FLEX_SUFFIX " Multichannel routing")
+        set(TARGET_SUFFIX "_flex")
+        set(CODE_VARIANT "F")
+    else()
+        set(FLEX_SUFFIX "")
+        set(TARGET_SUFFIX "")
+        set(CODE_VARIANT "f")
+    endif()
+
+    set(target "${base_target_name}${TARGET_SUFFIX}")
+
+    juce_add_plugin("${target}"
+        PLUGIN_CODE "ys${CODE_VARIANT}${CODE_END}"
         PLUGIN_MANUFACTURER_CODE "S4IK"
-        PRODUCT_NAME "ysfx-s${SUFFIX}"
-        JUCE_PLUGIN_NAME "ysfx-s${SUFFIX}"
+        PRODUCT_NAME "ysfx-s${SUFFIX}${FLEX_SUFFIX}"
+        JUCE_PLUGIN_NAME "ysfx-s${SUFFIX}${FLEX_SUFFIX}"
         JUCE_DESCRIPTION "Host for JSFX plugins"
         COMPANY_NAME "Jean Pierre Cimalando / Joep Vanlier"
         BUNDLE_ID "Jean_Pierre_Cimalando__Joep_Vanlier"
@@ -74,7 +87,7 @@ function(add_new_target target_name is_synth)
         AU_MAIN_TYPE "kAudioUnitType_Effect"
         COPY_PLUGIN_AFTER_BUILD "${YSFX_PLUGIN_COPY}")
 
-    target_sources("${target_name}"
+    target_sources("${target}"
         PRIVATE
             "plugin/processor.cpp"
             "plugin/processor.h"
@@ -87,7 +100,7 @@ function(add_new_target target_name is_synth)
             "plugin/info.cpp"
             "plugin/info.h"
             "plugin/bank_io.cpp"
-            "plugin/bank_io.h"            
+            "plugin/bank_io.h"
             "plugin/components/parameters_panel.cpp"
             "plugin/components/parameters_panel.h"
             "plugin/components/graphics_view.cpp"
@@ -113,18 +126,19 @@ function(add_new_target target_name is_synth)
             "plugin/utility/rt_semaphore.h"
             "plugin/utility/sync_bitset.hpp")
 
-    target_compile_definitions("${target_name}"
-    PUBLIC
-        VERSION_STRING="${PROJECT_VERSION}"
-        "JUCE_WEB_BROWSER=0"
-        "JUCE_USE_CURL=0"
-        "JUCE_VST3_CAN_REPLACE_VST2=0")
+    target_compile_definitions("${target}"
+        PUBLIC
+            VERSION_STRING="${PROJECT_VERSION}"
+            JUCE_WEB_BROWSER=0
+            JUCE_USE_CURL=0
+            JUCE_VST3_CAN_REPLACE_VST2=0
+            $<$<BOOL:${flexible}>:YSFX_PLUGIN_FLEXIBLE_ROUTING=1>)
 
-    target_include_directories("${target_name}"
+    target_include_directories("${target}"
         PRIVATE
             "plugin")
 
-    target_link_libraries("${target_name}"
+    target_link_libraries("${target}"
     PRIVATE
         ysfx::ysfx
         json
@@ -136,17 +150,17 @@ function(add_new_target target_name is_synth)
         juce::juce_recommended_warning_flags)
 
     if(YSFX_PLUGIN_LTO)
-        target_link_libraries("${target_name}" PRIVATE juce::juce_recommended_lto_flags)
+        target_link_libraries("${target}" PRIVATE juce::juce_recommended_lto_flags)
     endif()
 
     if(YSFX_PLUGIN_FORCE_DEBUG)
-        target_compile_definitions("${target_name}" PRIVATE "JUCE_FORCE_DEBUG=1")
+        target_compile_definitions("${target}" PRIVATE JUCE_FORCE_DEBUG=1)
     endif()
 
     clap_juce_extensions_plugin(
-        TARGET "${target_name}"
-        PLUGIN_NAME "ysfx-s${SUFFIX}"
-        CLAP_ID "org.saike.ysfx-s${CLAP_SUFFIX}"
+        TARGET "${target}"
+        PLUGIN_NAME "ysfx-s${SUFFIX}${FLEX_SUFFIX}"
+        CLAP_ID "org.saike.ysfx-s${CLAP_SUFFIX}${TARGET_SUFFIX}"
         CLAP_FEATURES "${CLAP_TYPE}"
         CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 64
         CLAP_USE_JUCE_PARAMETER_RANGES DISCRETE
@@ -154,5 +168,8 @@ function(add_new_target target_name is_synth)
         MANUFACTURER_CODE S4IK)
 endfunction()
 
-add_new_target(ysfx_plugin_instrument TRUE)
-add_new_target(ysfx_plugin FALSE)
+add_new_target(ysfx_plugin_instrument TRUE FALSE)
+add_new_target(ysfx_plugin FALSE FALSE)
+
+add_new_target(ysfx_plugin_instrument TRUE TRUE)
+add_new_target(ysfx_plugin FALSE TRUE)
