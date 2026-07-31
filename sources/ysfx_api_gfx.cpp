@@ -327,9 +327,6 @@ void ysfx_gfx_enter(ysfx_t *fx, bool doinit)
 
     if (doinit) {
         if (fx->gfx.must_init.exchange(false, std::memory_order_acquire)) {
-            *fx->var.gfx_r = 1.0;
-            *fx->var.gfx_g = 1.0;
-            *fx->var.gfx_b = 1.0;
             *fx->var.gfx_a = 1.0;
             *fx->var.gfx_a2 = 1.0;
             *fx->var.gfx_dest = -1.0;
@@ -401,6 +398,9 @@ void ysfx_gfx_prepare(ysfx_t *fx)
     }
     *fx->var.gfx_w = gfx_w;
     *fx->var.gfx_h = gfx_h;
+    *fx->var.gfx_a = 1.0;
+    *fx->var.gfx_a2 = 1.0;
+    *fx->var.gfx_dest = -1.0;
 }
 
 #endif // !defined(YSFX_NO_GFX)
