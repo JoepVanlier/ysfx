@@ -30,6 +30,7 @@
 #include "components/searchable_popup.h"
 #include "components/dialogs.h"
 #include "components/divider.h"
+#include "components/misc_buttons.h"
 #include "utility/functional_timer.h"
 #include "ysfx.h"
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -91,6 +92,7 @@ struct YsfxEditor::Impl {
     void toggleShortcuts();
     void loadScaling();
     void saveScaling();
+    void saveScalingFactor();
     void resetScaling(const juce::File &jsfxFilePath);
     juce::String getJsfxName();
 
@@ -154,7 +156,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::TextButton> m_btnReload;
     std::unique_ptr<juce::TextButton> m_btnUndo;
     std::unique_ptr<juce::TextButton> m_btnRedo;
-    std::unique_ptr<juce::TextButton> m_btnGfxScaling;
+    std::unique_ptr<ScalingButton> m_btnGfxScaling;
 
     std::unique_ptr<juce::Label> m_lblFilePath;
     std::unique_ptr<juce::Label> m_lblIO;
@@ -1133,7 +1135,7 @@ void YsfxEditor::Impl::createUI()
     m_btnEditCode.reset(new juce::TextButton(TRANS("Edit")));
     m_btnEditCode->setTooltip(TRANS("Edit the JSFX code for this plugin"));
     m_self->addAndMakeVisible(*m_btnEditCode);
-    m_btnGfxScaling.reset(new juce::TextButton(TRANS("x1")));
+    m_btnGfxScaling.reset(new ScalingButton(TRANS("x1")));
     m_self->addAndMakeVisible(*m_btnGfxScaling);
     m_btnGfxScaling->setTooltip(TRANS("Render JSFX UI at lower resolution and upscale the result. Ths is intended for JSFX that do not implement scaling themselves. For JSFX that do, it is better to simply resize the plugin."));
     m_btnLoadPreset.reset(new juce::TextButton(TRANS("Preset")));
@@ -1185,9 +1187,31 @@ void YsfxEditor::Impl::createUI()
 
 void YsfxEditor::Impl::setScale(float newScaling)
 {
-    newScaling = ((newScaling < 1.0f) || (newScaling > 2.1f)) ? 1.0f : newScaling;
+    newScaling = std::max(0.5f, std::min(newScaling, 4.0f));
     m_graphicsView->setScaling(newScaling);
     m_btnGfxScaling->setButtonText(TRANS(juce::String::formatted("%.1f", newScaling)));
+}
+
+float nextZoomLevel(float current)
+{
+    constexpr std::array levels{1.0f, 1.5f, 2.0f};
+
+    for (float level : levels) {
+        if (current < level)
+            return level;
+    }
+
+    return levels.front();
+}
+
+void YsfxEditor::Impl::saveScalingFactor()
+{
+    juce::String key = getJsfxName() + juce::String("_scaling_factor");
+    {
+        juce::ScopedLock lock{m_pluginProperties->getLock()};
+        m_pluginProperties->setValue(key, juce::String::formatted("%.3f", m_graphicsView->getScaling()));
+        m_pluginProperties->save();
+    }
 }
 
 void YsfxEditor::Impl::connectUI()
@@ -1221,18 +1245,33 @@ void YsfxEditor::Impl::connectUI()
 
     m_btnGfxScaling->onClick = [this] {
         if (m_graphicsView) {
-            float newScaling = (m_graphicsView->getScaling() + 0.5f);
+            auto newScaling = nextZoomLevel(m_graphicsView->getScaling());
             setScale(newScaling);
             m_mustResizeToGfx = true;
             relayoutUILater();
-
-            juce::String key = getJsfxName() + juce::String("_scaling_factor");
-            {
-                juce::ScopedLock lock{m_pluginProperties->getLock()};
-                m_pluginProperties->setValue(key, juce::String::formatted("%.3f", newScaling));
-                m_pluginProperties->save();
-            }
+            saveScalingFactor();
         }
+    };
+
+    m_btnGfxScaling->onPopupClick = [this]
+    {
+        auto editor = std::make_unique<ScalingEditor>(
+            m_graphicsView->getScaling(),
+            [this](float scale)
+            {
+                setScale(scale);
+                m_mustResizeToGfx = true;
+                relayoutUILater();
+                saveScalingFactor();
+            }
+        );
+        auto scale = juce::Component::getApproximateScaleFactorForComponent(this->m_self);
+        editor->setTransform(juce::AffineTransform::scale(scale));
+
+        juce::CallOutBox::launchAsynchronously(
+            std::move(editor),
+            m_btnGfxScaling->getScreenBounds(),
+            nullptr);
     };
 
     m_ideView->onFileSaved = [this](const juce::File &file) { 
