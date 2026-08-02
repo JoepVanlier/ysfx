@@ -105,6 +105,8 @@ function(add_new_target target_name is_synth)
             "plugin/components/tokenizer.cpp"
             "plugin/components/ysfx_document.h"
             "plugin/components/ysfx_document.cpp"
+            "plugin/components/misc_buttons.h"
+            "plugin/components/misc_buttons.cpp"
             "plugin/utility/audio_processor_suspender.h"
             "plugin/utility/functional_timer.h"
             "plugin/utility/async_updater.cpp"
