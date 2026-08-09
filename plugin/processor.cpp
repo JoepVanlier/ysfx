@@ -254,6 +254,9 @@ YsfxProcessor::YsfxProcessor()
     ///
     m_impl->m_background.reset(new Impl::Background(m_impl.get()));
 
+    m_dryWetParameter = new juce::AudioParameterFloat("ysfx dryWet", "ysfx Dry/Wet", juce::NormalisableRange<float> (0.0f, 1.0f), 1.0f);
+    addParameter(m_dryWetParameter);
+
     ///
     addListener(m_impl.get());
 }
@@ -688,6 +691,11 @@ void YsfxProcessor::getStateInformation(juce::MemoryBlock &destData)
     root.setProperty("version", 1, nullptr);
     root.setProperty("path", path.getFullPathName(), nullptr);
 
+    juce::ValueTree parameters("ysfx host parameters");
+    parameters.setProperty("ysfx dry wet", getDryWetParameter()->convertTo0to1(getDryWetParameter()->get()), nullptr);
+
+    root.addChild(parameters, -1, nullptr);
+
     if (state) {
         juce::ValueTree stateTree("state");
 
@@ -718,6 +726,14 @@ void YsfxProcessor::setStateInformation(const void *data, int sizeInBytes)
         return;
 
     path = root.getProperty("path").toString();
+
+    auto parameters = root.getChildWithName("ysfx host parameters");
+
+    if (parameters.isValid())
+    {
+        const float normalizedValue = static_cast<float>(parameters.getProperty("ysfx dry wet", getDryWetParameter()->convertTo0to1(getDryWetParameter()->get())));
+        static_cast<juce::AudioProcessorParameter*>(getDryWetParameter())->setValue(normalizedValue);
+    }
 
     juce::ValueTree stateTree = root.getChildWithName("state");
     if (stateTree != juce::ValueTree{}) {

@@ -88,9 +88,15 @@ public:
     RetryState retryLoad();
     juce::String lastLoadPath();
 
+    juce::AudioParameterFloat* getDryWetParameter()
+    {
+        return m_dryWetParameter;
+    }
+
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
+    juce::AudioParameterFloat* m_dryWetParameter = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(YsfxProcessor)
 };
