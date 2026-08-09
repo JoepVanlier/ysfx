@@ -52,3 +52,16 @@ class ScalingEditor : public juce::Component
         juce::TextEditor editor;
         std::function<void(float)> onAccept;
 };
+
+
+class ViewToggleButton : public juce::TextButton
+{
+public:
+    ViewToggleButton();
+
+    void clicked() override;
+    void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override;
+    void mouseUp(const juce::MouseEvent& e);
+
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+};

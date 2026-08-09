@@ -152,7 +152,7 @@ struct YsfxEditor::Impl {
     std::unique_ptr<juce::TextButton> m_btnEditCode;
     std::unique_ptr<juce::TextButton> m_btnLoadPreset;
     std::unique_ptr<juce::TextButton> m_btnPresetOpts;
-    std::unique_ptr<juce::TextButton> m_btnSwitchEditor;
+    std::unique_ptr<ViewToggleButton> m_btnSwitchEditor;
     std::unique_ptr<juce::TextButton> m_btnReload;
     std::unique_ptr<juce::TextButton> m_btnUndo;
     std::unique_ptr<juce::TextButton> m_btnRedo;
@@ -926,8 +926,6 @@ void YsfxEditor::Impl::popupPresets()
 
 void YsfxEditor::Impl::switchEditor(bool showGfx)
 {
-    juce::String text = showGfx ? TRANS("Graphics") : TRANS("Sliders");
-    m_btnSwitchEditor->setButtonText(text);
     m_btnSwitchEditor->setToggleState(showGfx, juce::dontSendNotification);
 
     relayoutUILater();
@@ -1147,7 +1145,7 @@ void YsfxEditor::Impl::createUI()
     m_btnRecentFilesOpts.reset(new juce::TextButton(TRANS(juce::CharPointer_UTF8("\xe2\x96\xBC"))));
     m_btnRecentFilesOpts->setTooltip(TRANS("Modify the recently used list."));
     m_self->addAndMakeVisible(*m_btnRecentFilesOpts);
-    m_btnSwitchEditor.reset(new juce::TextButton(TRANS("Sliders")));
+    m_btnSwitchEditor.reset(new ViewToggleButton());
     m_btnSwitchEditor->setClickingTogglesState(true);
     m_btnSwitchEditor->setTooltip(TRANS("Switch between graphical user interface (when the JSFX has one) and pure slider view."));
     m_self->addAndMakeVisible(*m_btnSwitchEditor);
