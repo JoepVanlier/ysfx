@@ -18,7 +18,16 @@
 #include "ysfx_utils.hpp"
 #include "ysfx_test_utils.hpp"
 #include <catch.hpp>
-#include <filesystem>
+
+
+bool compare_paths(std::string test, std::string expected) {
+    auto split_path_components = [](const char *path) {
+        return ysfx::split_strings_noempty(path, &ysfx::is_path_separator);
+    };
+
+    return split_path_components(test.c_str()) == split_path_components(expected.c_str());
+}
+
 
 TEST_CASE("file system utilities", "[filesystem]")
 {
@@ -117,14 +126,14 @@ TEST_CASE("file system utilities", "[filesystem]")
 
         {
             char *test = ysfx_resolve_path_and_allocate(fx.get(), "test.jsfx-inc", file_main.m_path.c_str());
-            REQUIRE(std::filesystem::path(test) == std::filesystem::path(root.m_path + "dir1/test.jsfx-inc"));
+            REQUIRE(compare_paths(test, root.m_path + "dir1/test.jsfx-inc"));
             ysfx_free_resolved_path(test);
         }
 
         {
             // Prefer path relative to loaded file
             char *test = ysfx_resolve_path_and_allocate(fx.get(), "second_file.jsfx-inc", file2.m_path.c_str());
-            REQUIRE(std::filesystem::path(test) == std::filesystem::path(root.m_path + "dir1/second_file.jsfx-inc"));
+            REQUIRE(compare_paths(test, root.m_path + "dir1/second_file.jsfx-inc"));
             ysfx_free_resolved_path(test);
         }
     }    
