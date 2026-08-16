@@ -190,6 +190,17 @@ jobs:
         if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS' || matrix.os-type == 'MinGW'}}
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config "${build_type}" -j "${num_jobs}"
+      - name: Inspect macOS VST3
+        if: ${{matrix.os-type == 'macOS'}}
+        working-directory: ${{runner.workspace}}
+        run: |
+          file build/*_artefacts/${{env.build_type}}/VST3/*.vst3/Contents/MacOS/*
+          otool -l build/*_artefacts/${{env.build_type}}/VST3/*.vst3/Contents/MacOS/* | head -200
+      - name: Test codesigning
+        if: ${{matrix.os-type == 'macOS'}}
+        working-directory: ${{runner.workspace}}
+        run: |
+          codesign --force --sign - build/*_artefacts/${{env.build_type}}/VST3/*.vst3
       - name: Reorganize files (windows)
         if: ${{matrix.os-type == 'Windows'}}
         working-directory: ${{runner.workspace}}
