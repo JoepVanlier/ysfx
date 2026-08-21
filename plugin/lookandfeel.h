@@ -141,4 +141,28 @@ public:
                 drawLinearSliderOutline (g, x, y, width, height, style, slider);
         }
     }
+
+    void drawRotarySlider (juce::Graphics& g,
+        int x, int y,
+        int width, int height,
+        float sliderPos,
+        float rotaryStartAngle,
+        float rotaryEndAngle,
+        juce::Slider& slider
+    ) override
+    {
+        auto bounds = juce::Rectangle<float> ((float) x, (float) y, (float) width, (float) height);
+        auto centre = bounds.getCentre();
+        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 1.0f;
+
+        juce::Colour bc (this->findColour(juce::TextButton::buttonOnColourId).withMultipliedSaturation(0.3f));
+        g.setColour(bc.contrasting().withAlpha(true ? 0.6f : 0.4f));
+        g.drawEllipse(centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f, 1.0f);
+
+        auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+
+        auto end = centre.getPointOnCircumference(radius * 0.75f, angle);
+
+        g.drawLine(juce::Line<float>(centre, end), 1.0f);
+    }
 };

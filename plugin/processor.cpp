@@ -32,6 +32,7 @@
 #include <deque>
 #include <algorithm>
 
+
 struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     YsfxProcessor *m_self = nullptr;
     ysfx_u m_fx;
@@ -47,11 +48,13 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     uint32_t m_block_size{256};
 
     //==========================================================================
-    void processBlockGenerically(const void *inputs[], void *outputs[], uint32_t numIns, uint32_t numOuts, uint32_t numFrames, uint32_t processBits, juce::MidiBuffer &midiMessages);
+    template <typename SampleType>
+    void processBlockGenerically(juce::AudioBuffer<SampleType> &buffer, uint32_t numIns, uint32_t numOuts, juce::MidiBuffer &midiMessages);
     void processMidiInput(juce::MidiBuffer &midi);
     void processMidiOutput(juce::MidiBuffer &midi);
     void processSliderChanges();
     void processLatency();
+    void updateDryWetMixer(int num_samples_latency, int numInputChannels, bool force_reinit);
     void updateTimeInfo();
     void syncParametersToSliders();
     void syncSlidersToParameters(bool notify);
@@ -177,6 +180,21 @@ struct YsfxProcessor::Impl : public juce::AudioProcessorListener {
     juce::CriticalSection m_loadLock;
     juce::String m_lastLoadPath{""};
     ysfx_state_u m_failedLoadState{nullptr};  // Holds the state of a failed load
+
+    //==========================================================================
+    int m_num_samples_latency{0};
+    int m_max_samples_latency{0};
+    std::unique_ptr<juce::dsp::DryWetMixer<float>> m_dry_wet_mixer_float{std::make_unique<juce::dsp::DryWetMixer<float>>(0)};
+    std::unique_ptr<juce::dsp::DryWetMixer<double>> m_dry_wet_mixer_double{std::make_unique<juce::dsp::DryWetMixer<double>>(0)};
+
+    template <typename SampleType>
+    auto* getDryWetMixer()
+    {
+        if constexpr (std::is_same_v<SampleType, float>)
+            return m_dry_wet_mixer_float.get();
+        else
+            return m_dry_wet_mixer_double.get();
+    }
 };
 
 //==============================================================================
@@ -253,6 +271,9 @@ YsfxProcessor::YsfxProcessor()
 
     ///
     m_impl->m_background.reset(new Impl::Background(m_impl.get()));
+
+    m_dryWetParameter = new juce::AudioParameterFloat("ysfx dryWet", "ysfx Dry/Wet", juce::NormalisableRange<float> (0.0f, 1.0f), 1.0f);
+    addParameter(m_dryWetParameter);
 
     ///
     addListener(m_impl.get());
@@ -517,6 +538,8 @@ void YsfxProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     sus.lockCallbacks();
 
     ysfx_t *fx = m_impl->m_fx.get();
+    bool changed_params = m_impl->m_sample_rate != sampleRate || m_impl->m_block_size != samplesPerBlock;
+
     m_impl->m_sample_rate = sampleRate;
     m_impl->m_block_size = static_cast<uint32_t>(samplesPerBlock);
 
@@ -524,6 +547,9 @@ void YsfxProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     ysfx_set_block_size(fx, (uint32_t)samplesPerBlock);
 
     ysfx_init(fx);
+
+    /* Force recreation of buffers for changed samplerate / block size */
+    if (changed_params) m_impl->updateDryWetMixer(0, std::max<int>(getNumInputChannels(), getNumOutputChannels()), true);  
 
     m_impl->processLatency();
 }
@@ -538,7 +564,8 @@ void YsfxProcessor::reset()
     ysfx_delayed_init(fx);
 }
 
-void YsfxProcessor::Impl::processBlockGenerically(const void *inputs[], void *outputs[], uint32_t numIns, uint32_t numOuts, uint32_t numFrames, uint32_t processBits, juce::MidiBuffer &midiMessages)
+template <typename SampleType>
+void YsfxProcessor::Impl::processBlockGenerically(juce::AudioBuffer<SampleType> &buffer, uint32_t numIns, uint32_t numOuts, juce::MidiBuffer &midiMessages)
 {
     ysfx_t *fx = m_fx.get();
 
@@ -560,16 +587,31 @@ void YsfxProcessor::Impl::processBlockGenerically(const void *inputs[], void *ou
 
     processMidiInput(midiMessages);
 
-    switch (processBits) {
-    case 32:
-        ysfx_process_float(fx, (const float **)inputs, (float **)outputs, numIns, numOuts, numFrames);
-        break;
-    case 64:
-        ysfx_process_double(fx, (const double **)inputs, (double **)outputs, numIns, numOuts, numFrames);
-        break;
-    default:
-        jassertfalse;
+    auto* mixer = getDryWetMixer<SampleType>();
+    mixer->setWetMixProportion(*m_self->getDryWetParameter());
+    mixer->pushDrySamples(buffer);
+
+    if constexpr (std::is_same_v<SampleType, float>) {
+        ysfx_process_float(
+            fx,
+            buffer.getArrayOfReadPointers(),
+            buffer.getArrayOfWritePointers(),
+            numIns,
+            numOuts,
+            buffer.getNumSamples()
+        );
+    } else {
+        ysfx_process_double(
+            fx,
+            buffer.getArrayOfReadPointers(),
+            buffer.getArrayOfWritePointers(),
+            numIns,
+            numOuts,
+            buffer.getNumSamples()
+        );
     }
+
+    mixer->mixWetSamples(buffer);
 
     processMidiOutput(midiMessages);
     processSliderChanges();
@@ -578,26 +620,22 @@ void YsfxProcessor::Impl::processBlockGenerically(const void *inputs[], void *ou
 
 void YsfxProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
 {
-    m_impl->processBlockGenerically(
-        (const void **)buffer.getArrayOfReadPointers(),
-        (void **)buffer.getArrayOfWritePointers(),
+    m_impl->processBlockGenerically<float>(
+        buffer,
         (uint32_t)getTotalNumInputChannels(),
         (uint32_t)getTotalNumOutputChannels(),
-        (uint32_t)buffer.getNumSamples(),
-        8 * sizeof(buffer.getSample(0, 0)),
-        midiMessages);
+        midiMessages
+    );
 }
 
 void YsfxProcessor::processBlock(juce::AudioBuffer<double> &buffer, juce::MidiBuffer &midiMessages)
 {
-    m_impl->processBlockGenerically(
-        (const void **)buffer.getArrayOfReadPointers(),
-        (void **)buffer.getArrayOfWritePointers(),
+    m_impl->processBlockGenerically<double>(
+        buffer,
         (uint32_t)getTotalNumInputChannels(),
         (uint32_t)getTotalNumOutputChannels(),
-        (uint32_t)buffer.getNumSamples(),
-        8 * sizeof(buffer.getSample(0, 0)),
-        midiMessages);
+        midiMessages
+    );
 }
 
 bool YsfxProcessor::supportsDoublePrecisionProcessing() const
@@ -688,6 +726,11 @@ void YsfxProcessor::getStateInformation(juce::MemoryBlock &destData)
     root.setProperty("version", 1, nullptr);
     root.setProperty("path", path.getFullPathName(), nullptr);
 
+    juce::ValueTree parameters("ysfx host parameters");
+    parameters.setProperty("ysfx dry wet", getDryWetParameter()->convertTo0to1(getDryWetParameter()->get()), nullptr);
+
+    root.addChild(parameters, -1, nullptr);
+
     if (state) {
         juce::ValueTree stateTree("state");
 
@@ -718,6 +761,14 @@ void YsfxProcessor::setStateInformation(const void *data, int sizeInBytes)
         return;
 
     path = root.getProperty("path").toString();
+
+    auto parameters = root.getChildWithName("ysfx host parameters");
+
+    if (parameters.isValid())
+    {
+        const float normalizedValue = static_cast<float>(parameters.getProperty("ysfx dry wet", getDryWetParameter()->convertTo0to1(getDryWetParameter()->get())));
+        static_cast<juce::AudioProcessorParameter*>(getDryWetParameter())->setValue(normalizedValue);
+    }
 
     juce::ValueTree stateTree = root.getChildWithName("state");
     if (stateTree != juce::ValueTree{}) {
@@ -826,6 +877,24 @@ void YsfxProcessor::Impl::processLatency()
 
     int samples = juce::roundToInt(latency);
     m_self->setLatencySamples(samples);
+    updateDryWetMixer(samples, std::max<int>(m_self->getNumInputChannels(), m_self->getNumOutputChannels()), false);
+}
+
+void YsfxProcessor::Impl::updateDryWetMixer(int num_samples_latency, int numChannels, bool force_reinit)
+{
+    if (num_samples_latency > m_max_samples_latency || force_reinit) {
+        m_max_samples_latency = std::max<int>(m_max_samples_latency, 2 * num_samples_latency);
+        m_dry_wet_mixer_double = std::make_unique<juce::dsp::DryWetMixer<double>>(m_max_samples_latency);
+        m_dry_wet_mixer_float = std::make_unique<juce::dsp::DryWetMixer<float>>(m_max_samples_latency);
+
+        juce::dsp::ProcessSpec spec {m_sample_rate, m_block_size, static_cast<juce::uint32>(numChannels)};
+        m_dry_wet_mixer_float->prepare(spec);
+        m_dry_wet_mixer_double->prepare(spec);
+    }
+    
+    m_num_samples_latency = num_samples_latency;
+    m_dry_wet_mixer_float->setWetLatency(num_samples_latency);
+    m_dry_wet_mixer_double->setWetLatency(num_samples_latency);
 }
 
 void YsfxProcessor::Impl::updateTimeInfo()

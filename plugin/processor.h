@@ -18,6 +18,7 @@
 #pragma once
 #include "info.h"
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_dsp/juce_dsp.h>
 #include <memory>
 class YsfxParameter;
 using ysfx_t = struct ysfx_s;
@@ -88,9 +89,15 @@ public:
     RetryState retryLoad();
     juce::String lastLoadPath();
 
+    juce::AudioParameterFloat* getDryWetParameter()
+    {
+        return m_dryWetParameter;
+    }
+
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
+    juce::AudioParameterFloat* m_dryWetParameter = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(YsfxProcessor)
 };

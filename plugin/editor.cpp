@@ -146,6 +146,7 @@ struct YsfxEditor::Impl {
     };
 
     //==========================================================================
+    std::unique_ptr<ParameterSliderAttachment> m_dryWetAttachment;
     std::unique_ptr<juce::TextButton> m_btnLoadFile;
     std::unique_ptr<juce::TextButton> m_btnRecentFiles;
     std::unique_ptr<juce::TextButton> m_btnRecentFilesOpts;
@@ -1117,6 +1118,14 @@ bool YsfxEditor::keyPressed(const juce::KeyPress& k)
 
 void YsfxEditor::Impl::createUI()
 {
+    m_dryWetAttachment = std::make_unique<ParameterSliderAttachment>(*m_proc->getDryWetParameter());
+
+    auto& slider = m_dryWetAttachment->getSlider();
+    slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    slider.setRange(0.0, 1.0, 0.001);
+    m_self->addAndMakeVisible(slider);
+
     m_btnLoadFile.reset(new juce::TextButton(TRANS("Load")));
     m_self->addAndMakeVisible(*m_btnLoadFile);
     m_btnLoadFile->setTooltip(TRANS("Load a JSFX file."));
@@ -1324,10 +1333,13 @@ void YsfxEditor::Impl::relayoutUI()
     const juce::Rectangle<int> topRow = temp.removeFromTop(m_self->m_headerSize);
     const juce::Rectangle<int> centerArea = temp.withTrimmedLeft(sideTrim).withTrimmedRight(sideTrim).withTrimmedBottom(bottomTrim);
 
-    int width = 70;
-    int spacing = 8;
+    int width = 66;
+    int spacing = 6;
 
     temp = topRow.reduced(10, 10);
+    auto knobArea = temp.removeFromRight(25);
+    m_dryWetAttachment->getSlider().setBounds(knobArea.withSizeKeepingCentre(25, 25));
+    temp.removeFromRight(spacing);
     m_btnSwitchEditor->setBounds(temp.removeFromRight(80));
     temp.removeFromRight(spacing);
     m_btnPresetOpts->setBounds(temp.removeFromRight(25));

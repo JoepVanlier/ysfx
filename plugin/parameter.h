@@ -57,3 +57,67 @@ private:
     juce::String m_displayName;
     const juce::NormalisableRange<float> m_range{0.0f, 1.0f};
 };
+
+
+class ParameterSliderAttachment
+    : private juce::AudioProcessorParameter::Listener,
+      private juce::AsyncUpdater
+{
+public:
+    explicit ParameterSliderAttachment(juce::AudioProcessorParameter& parameter) : m_parameter(parameter)
+    {
+        m_parameter.addListener(this);
+
+        m_slider.setValue(m_parameter.getValue(), juce::dontSendNotification);
+
+        m_slider.onDragStart = [this]
+        {
+            m_parameter.beginChangeGesture();
+        };
+
+        m_slider.onValueChange = [this]
+        {
+            m_parameter.setValueNotifyingHost(static_cast<float>(m_slider.getValue()));
+        };
+
+        m_slider.onDragEnd = [this]
+        {
+            m_parameter.endChangeGesture();
+        };
+    }
+
+    ~ParameterSliderAttachment() override
+    {
+        m_parameter.removeListener(this);
+        cancelPendingUpdate();
+
+        m_slider.onDragStart = nullptr;
+        m_slider.onValueChange = nullptr;
+        m_slider.onDragEnd = nullptr;
+    }
+
+    juce::Slider& getSlider() noexcept
+    {
+        return m_slider;
+    }
+
+private:
+    void parameterValueChanged(int, float newValue) override
+    {
+        m_pendingValue.store(newValue, std::memory_order_relaxed);
+        triggerAsyncUpdate();
+    }
+
+    void parameterGestureChanged(int, bool) override
+    {
+    }
+
+    void handleAsyncUpdate() override
+    {
+        m_slider.setValue(m_pendingValue.load(std::memory_order_relaxed), juce::dontSendNotification);
+    }
+
+    juce::AudioProcessorParameter& m_parameter;
+    juce::Slider m_slider;
+    std::atomic<float> m_pendingValue { 0.0f };
+};

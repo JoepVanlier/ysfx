@@ -131,6 +131,7 @@ function(add_new_target target_name is_synth)
         ysfx::ysfx
         json
         juce::juce_audio_processors
+        juce::juce_dsp
         juce::juce_gui_basics
         juce::juce_gui_extra
         juce::juce_opengl
