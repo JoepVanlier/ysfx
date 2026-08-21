@@ -57,10 +57,10 @@ function(add_new_target target_name is_synth)
     endif()
 
     juce_add_plugin("${target_name}"
-        PLUGIN_CODE "ysf${CODE_END}"
+        PLUGIN_CODE "ysD${CODE_END}"
         PLUGIN_MANUFACTURER_CODE "S4IK"
-        PRODUCT_NAME "ysfx-s${SUFFIX}"
-        JUCE_PLUGIN_NAME "ysfx-s${SUFFIX}"
+        PRODUCT_NAME "ysfx-logspam-s${SUFFIX}"
+        JUCE_PLUGIN_NAME "ysfx-logspam-s${SUFFIX}"
         JUCE_DESCRIPTION "Host for JSFX plugins"
         COMPANY_NAME "Jean Pierre Cimalando / Joep Vanlier"
         BUNDLE_ID "Jean_Pierre_Cimalando__Joep_Vanlier"
@@ -147,7 +147,7 @@ function(add_new_target target_name is_synth)
 
     clap_juce_extensions_plugin(
         TARGET "${target_name}"
-        PLUGIN_NAME "ysfx-s${SUFFIX}"
+        PLUGIN_NAME "logspam-ysfx-s${SUFFIX}"
         CLAP_ID "org.saike.ysfx-s${CLAP_SUFFIX}"
         CLAP_FEATURES "${CLAP_TYPE}"
         CLAP_PROCESS_EVENTS_RESOLUTION_SAMPLES 64

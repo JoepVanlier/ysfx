@@ -33,6 +33,18 @@
 #include <cmath>
 #include <cstdio>
 
+static std::mutex logMutex;
+
+static void gfxDebugLog(const juce::String& message)
+{
+    std::lock_guard<std::mutex> lock(logMutex);
+
+    auto file = juce::File::getSpecialLocation(
+        juce::File::userDocumentsDirectory).getChildFile("ysfx-gfx-debug.txt");
+
+    file.appendText(message + "\n");
+}
+
 struct YsfxGraphicsView::Impl final : public better::AsyncUpdater::Listener {
     static uint32_t translateKeyCode(int code);
     static uint32_t translateModifiers(juce::ModifierKeys mods);
@@ -322,7 +334,9 @@ void YsfxGraphicsView::paint(juce::Graphics &g)
 
 void YsfxGraphicsView::resized()
 {
+    gfxDebugLog("resized/before component: " + juce::String(getWidth()) + "x" + juce::String(getHeight()));
     Component::resized();
+    gfxDebugLog("resized/after component: " + juce::String(getWidth()) + "x" + juce::String(getHeight()));
     if (m_impl->updateGfxTarget(-1, -1, -1))
         m_impl->m_gfxDirty = true;
 }
@@ -569,6 +583,9 @@ void YsfxGraphicsView::Impl::tickGfx()
     uint32_t gfxDim[2] = {};
     ysfx_get_gfx_dim(fx, gfxDim);
 
+    gfxDebugLog("tickGfx/gfxDim: " + juce::String(gfxDim[0]) + "x" + juce::String(gfxDim[1]));
+    gfxDebugLog("tickGfx/m_self->getWidth/getHeight: " + juce::String(m_self->getWidth()) + "x" + juce::String(m_self->getHeight()));
+    
     bool gfxWantRetina = ysfx_gfx_wants_retina(fx);
     
     if (m_gfxInitialized ? updateGfxTarget(-1, -1, -1) : updateGfxTarget((int)gfxDim[0], (int)gfxDim[1], gfxWantRetina)) {
@@ -614,6 +631,9 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
     double dpi_scaling = static_cast<double>(m_self->m_pixelFactor.load());
     float pixel_factor = dpi_scaling / output_scaling;
 
+    gfxDebugLog("updateGfxTarget/newWidth/newHeight: " + juce::String(newWidth) + "x" + juce::String(newHeight));
+    gfxDebugLog("updateGfxTarget/m_self->getWidth/getHeight: " + juce::String(m_self->getWidth()) + "x" + juce::String(m_self->getHeight()));
+
     // newWidth is set when the JSFX initializes
     float scaling_factor = 1.0f / (output_scaling > 1.1f ? pixel_factor : 1.0f);
     newWidth = (newWidth == -1) ? m_self->getWidth() : (int) (newWidth * scaling_factor);
@@ -640,6 +660,8 @@ bool YsfxGraphicsView::Impl::updateGfxTarget(int newWidth, int newHeight, int ne
         target->m_renderBitmap = juce::Image(juce::Image::ARGB, juce::jmax(1, internal_width), juce::jmax(1, internal_height), true, juce::SoftwareImageType{});
         target->m_bitmapScale = pixel_factor;
         target->m_dpiScale = dpi_scaling;
+
+        gfxDebugLog("update gfx target passed update: " + juce::String(internal_width) + "x" + juce::String(internal_height));
     }
 
     return needsUpdate;
@@ -886,6 +908,8 @@ void YsfxGraphicsView::Impl::BackgroundWork::processGfxMessage(GfxMessage &msg)
 
     {
         juce::Image::BitmapData bdata{target->m_renderBitmap, juce::Image::BitmapData::readWrite};
+
+        gfxDebugLog("processGfxMessage/bdata.width/height: " + juce::String(bdata.width) + "x" + juce::String(bdata.height));
 
         ysfx_gfx_config_t gc{};
         gc.user_data = msg.m_userData;
