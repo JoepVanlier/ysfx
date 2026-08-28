@@ -123,6 +123,7 @@ jobs:
             libxinerama-dev
             libxcursor-dev
             libxss-dev
+            libxi-dev
             g++-10
             gcc-10
       - name: Install NASM (Windows)
@@ -203,6 +204,12 @@ jobs:
         if: ${{matrix.os-type == 'Linux' || matrix.os-type == 'macOS'}}
         working-directory: ${{runner.workspace}}
         run: |
+          echo "Artefacts:"
+          find build -maxdepth 5 -type d -print | sort
+
+          echo "CLAP:"
+          find build -name "*.clap" -print
+
           mkdir -p VST3
           mkdir -p CLAP
           cp -r build/*_artefacts/${{env.build_type}}/VST3/*.vst3 ./VST3
