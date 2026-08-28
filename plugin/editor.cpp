@@ -1073,7 +1073,7 @@ void YsfxEditor::Impl::initializeProperties()
         initProperty("ysfx_use_native_file_picker", 1, m_useNativeFilePicker);
 
         if (m_pluginProperties->containsKey("ysfx_ide_font_size"))
-            m_ideView->setFontSize(m_pluginProperties->getIntValue("ysfx_ide_font_size"));
+            m_ideView->setFontSize(static_cast<float>(m_pluginProperties->getIntValue("ysfx_ide_font_size")));
 
         auto accessibility = juce::String("ysfx_shortcuts");
         if (m_pluginProperties->containsKey(accessibility)) {
@@ -1369,7 +1369,7 @@ void YsfxEditor::Impl::relayoutUI()
 
     int max_text_width = 0;
     for (auto line : lines) {
-        int current_text_width = static_cast<int>(m_lblFilePath->getFont().getStringWidthFloat(line));
+        const int current_text_width{static_cast<int>(juce::GlyphArrangement::getStringWidth(m_lblFilePath->getFont(), line))};
         if (current_text_width > max_text_width) max_text_width = current_text_width;
     }
 

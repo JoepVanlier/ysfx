@@ -207,8 +207,8 @@
                     search_label.setColour (juce::Label::textColourId, text_colour.withAlpha (0.5f));
                     search_label.setFont (font);
                     search_label.setJustificationType (juce::Justification::bottomLeft);
-                    search_label.setSize (search_label.getBorderSize().getLeftAndRight() + int (font.getStringWidth (search_label.getText())),
-                                          item_height);
+                    const int stringWidth{static_cast<int>(juce::GlyphArrangement::getStringWidth(font, search_label.getText()))};
+                    search_label.setSize (search_label.getBorderSize().getLeftAndRight() + stringWidth, item_height);
                     addAndMakeVisible (search_label);
 
                     editor.setBounds (search_label.getRight(), 0, item_width - search_label.getRight(), item_height);
