@@ -201,8 +201,7 @@ class YSFXCodeEditor : public juce::CodeDocument::Listener
 
 
         bool hasFocus() {
-            juce::Component *focus = m_editor->getCurrentlyFocusedComponent();
-            return focus == m_editor.get();
+            return m_editor != nullptr && m_editor->hasKeyboardFocus(true);
         }
 
         juce::String getLineAt(int x, int y) const { return m_editor->getLineAt(x, y); }
