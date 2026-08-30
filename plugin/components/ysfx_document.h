@@ -54,13 +54,9 @@ class CodeEditor : public juce::CodeEditorComponent
             juce::CodeDocument& doc, juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback, std::function<bool(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)> wheelCallback
         ) : CodeEditorComponent(doc, tokenizer), m_keyPressCallback{keyPressCallback}, m_dblClickCallback{dblClickCallback}, m_wheelCallback(wheelCallback) {}
         
-        bool keyPressed(const juce::KeyPress &key) override 
+        bool keyPressed(const juce::KeyPress& key) override
         {
-            if (!m_keyPressCallback(key)) {
-                return juce::CodeEditorComponent::keyPressed(key);
-            } else {
-                return true;
-            };
+            return juce::CodeEditorComponent::keyPressed(key);
         }
 
         void mouseDoubleClick(const juce::MouseEvent &e) override
@@ -148,8 +144,8 @@ class YSFXCodeEditor : public juce::CodeDocument::Listener
     public:
         YSFXCodeEditor(juce::CodeTokeniser* tokenizer, std::function<bool(const juce::KeyPress&)> keyPressCallback, std::function<bool(int x, int y)> dblClickCallback, std::function<bool(const juce::MouseEvent &e, const juce::MouseWheelDetails& wheel)> wheelCallback) {
             m_document = std::make_unique<YSFXCodeDocument>();
-            m_document->addListener(this);
-            m_editor = std::make_unique<CodeEditor>(*m_document, tokenizer, keyPressCallback, dblClickCallback, wheelCallback);
+            //m_document->addListener(this);
+            m_editor = std::make_unique<CodeEditor>(*m_document, nullptr, keyPressCallback, dblClickCallback, wheelCallback);
             m_editor->setVisible(false);
         }
         ~YSFXCodeEditor() override {
